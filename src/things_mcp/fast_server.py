@@ -338,8 +338,8 @@ def add_task(
             if not launch_things():
                 return "Error: Unable to launch Things app"
                 
-        # Execute the add_todo URL command
-        result = add_todo(
+        # Build the add_todo URL command and execute it
+        url = add_todo(
             title=title,
             notes=notes,
             when=when,
@@ -350,8 +350,13 @@ def add_task(
             list_title=list_title,
             heading=heading
         )
-        
-        if not result:
+
+        # Log the generated URL before executing
+        logger.debug(f"Add todo URL: {url}")
+
+        success = execute_url(url)
+
+        if not success:
             return "Error: Failed to create todo"
         
         # Invalidate relevant caches after creating a todo
@@ -392,8 +397,8 @@ def add_new_project(
             if not launch_things():
                 return "Error: Unable to launch Things app"
                 
-        # Execute the add_project URL command
-        result = add_project(
+        # Build the add_project URL command and execute it
+        url = add_project(
             title=title,
             notes=notes,
             when=when,
@@ -403,8 +408,13 @@ def add_new_project(
             area_title=area_title,
             todos=todos
         )
-        
-        if not result:
+
+        # Log the generated URL before executing
+        logger.debug(f"Add project URL: {url}")
+
+        success = execute_url(url)
+
+        if not success:
             return "Error: Failed to create project"
             
         return f"Successfully created project: {title}"
@@ -442,8 +452,8 @@ def update_task(
             if not launch_things():
                 return "Error: Unable to launch Things app"
                 
-        # Execute the update_todo URL command
-        result = update_todo(
+        # Build the update_todo URL command and execute it
+        url = update_todo(
             id=id,
             title=title,
             notes=notes,
@@ -453,8 +463,13 @@ def update_task(
             completed=completed,
             canceled=canceled
         )
-        
-        if not result:
+
+        # Log the generated URL before executing
+        logger.debug(f"Update todo URL: {url}")
+
+        success = execute_url(url)
+
+        if not success:
             return "Error: Failed to update todo"
             
         return f"Successfully updated todo with ID: {id}"
@@ -492,8 +507,8 @@ def update_existing_project(
             if not launch_things():
                 return "Error: Unable to launch Things app"
                 
-        # Execute the update_project URL command
-        result = update_project(
+        # Build the update_project URL command and execute it
+        url = update_project(
             id=id,
             title=title,
             notes=notes,
@@ -503,8 +518,13 @@ def update_existing_project(
             completed=completed,
             canceled=canceled
         )
-        
-        if not result:
+
+        # Log the generated URL before executing
+        logger.debug(f"Update project URL: {url}")
+
+        success = execute_url(url)
+
+        if not success:
             return "Error: Failed to update project"
             
         return f"Successfully updated project with ID: {id}"
