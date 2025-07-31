@@ -327,6 +327,8 @@ Use the MCP development server to test changes:
 # Test the FastMCP implementation
 mcp dev things_fast_server.py
 
+# The FastMCP server listens on http://0.0.0.0:8009
+
 # Or test the traditional implementation
 mcp dev things_server.py
 ```
