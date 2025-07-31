@@ -47,7 +47,8 @@ include = [
     "README.md",
     "LICENSE",
     "pyproject.toml",
-    "things_fast_server.py"
+    "things_fast_server.py",
+    "things_server.py"
 ]
 
 [tool.hatch.envs.default]
