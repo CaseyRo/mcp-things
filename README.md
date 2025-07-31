@@ -113,12 +113,13 @@ Add the Things server to the mcpServers key in the configuration file (be sure t
                 "--directory",
                 "/ABSOLUTE/PATH/TO/PARENT/FOLDER/things-mcp",
                 "run",
-                "things_server.py"
+                "things_fast_server.py"
             ]
         }
     }
 }
 ```
+The server listens on `http://0.0.0.0:8008/` when started.
 
 ### Step 6: Configure Authentication Token
 The Things URL scheme requires an authentication token. You can find it in Things → Settings → General.
@@ -297,13 +298,9 @@ This interactive script will prompt you for your token and save it securely in y
 
 This project uses `pyproject.toml` to manage dependencies and build configuration. It's built using the [Model Context Protocol](https://modelcontextprotocol.io), which allows Claude to securely access tools and data.
 
-### Implementation Options
+### Implementation Approach
 
-This project provides two different implementation approaches:
-
-1. **Standard MCP Server** (`things_server.py`) - The original implementation that uses the basic MCP server pattern.
-
-2. **FastMCP Server** (`things_fast_server.py`) - A modern implementation using the FastMCP pattern for cleaner, more maintainable code with decorator-based tool registration.
+This project uses the **FastMCP Server** (`things_fast_server.py`), a modern implementation that provides cleaner, more maintainable code with decorator-based tool registration.
 
 ### Development Workflow
 
@@ -324,11 +321,7 @@ uv pip install -e ".[dev]"  # Install in development mode with extra dependencie
 Use the MCP development server to test changes:
 
 ```bash
-# Test the FastMCP implementation
-mcp dev things_fast_server.py
-
-# Or test the traditional implementation
-mcp dev things_server.py
+python things_fast_server.py
 ```
 
 #### Building the package for PyPI

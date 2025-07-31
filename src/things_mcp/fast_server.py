@@ -31,9 +31,11 @@ logger = get_logger(__name__)
 
 # Create the FastMCP server
 mcp = FastMCP(
-    "Things", 
+    "Things",
     description="Interact with the Things task management app",
-    version="0.1.1"
+    version="0.1.1",
+    host="0.0.0.0",
+    port=8008,
 )
 
 # LIST VIEWS
@@ -630,8 +632,8 @@ def run_things_mcp_server():
     else:
         logger.info("Things app is running and ready for operations")
         
-    # Run the MCP server
-    mcp.run()
+    # Run the MCP server over HTTP
+    mcp.run(transport="streamable-http")
 
 if __name__ == "__main__":
     run_things_mcp_server()
