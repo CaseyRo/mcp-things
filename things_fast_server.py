@@ -6,6 +6,7 @@ This version uses the modern FastMCP pattern for better maintainability.
 import logging
 import sys
 from src.things_mcp.fast_server import run_things_mcp_server
+from src.things_mcp.shutdown import setup_interrupt_handler
 
 # Configure logging
 logging.basicConfig(
@@ -13,6 +14,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Exit immediately on Ctrl+C even if connections remain
+setup_interrupt_handler(logger)
 
 if __name__ == "__main__":
     logger.info("Starting Things FastMCP Server")

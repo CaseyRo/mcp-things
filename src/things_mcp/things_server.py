@@ -13,11 +13,15 @@ import mcp.server.stdio
 from mcp_tools import get_mcp_tools_list
 from handlers import handle_tool_call
 from utils import validate_tool_registration, app_state
+from .shutdown import setup_interrupt_handler
 import url_scheme
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Exit immediately on Ctrl+C even if connections remain
+setup_interrupt_handler(logger)
 
 server = Server("things")
 
@@ -103,4 +107,8 @@ async def main():
         )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+        sys.exit(0)
