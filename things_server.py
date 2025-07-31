@@ -1,3 +1,7 @@
+"""Legacy Things MCP server (deprecated).
+
+This script is kept for compatibility only and is no longer maintained.
+"""
 from typing import Any, List, Optional, Dict
 import logging
 import asyncio
