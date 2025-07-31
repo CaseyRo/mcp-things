@@ -24,6 +24,7 @@ from .url_scheme import (
 from .logging_config import setup_logging, get_logger, log_operation_start, log_operation_end
 # Import caching
 from .cache import cached, invalidate_caches_for, get_cache_stats, CACHE_TTL
+from .tag_handler import ensure_tags_exist
 
 # Configure enhanced logging
 setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
@@ -319,14 +320,14 @@ def add_task(
     heading: Optional[str] = None
 ) -> str:
     """
-    Create a new todo in Things
-    
+    Create a new todo in Things.
+
     Args:
         title: Title of the todo
         notes: Notes for the todo
         when: When to schedule the todo (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD)
         deadline: Deadline for the todo (YYYY-MM-DD)
-        tags: Tags to apply to the todo
+        tags: Tags to apply to the todo. Missing tags will be created automatically.
         checklist_items: Checklist items to add
         list_id: ID of project/area to add to
         list_title: Title of project/area to add to
@@ -337,7 +338,11 @@ def add_task(
         if not app_state.update_app_state():
             if not launch_things():
                 return "Error: Unable to launch Things app"
-                
+
+        # Ensure tags exist before using them
+        if tags:
+            ensure_tags_exist(tags)
+
         # Build the add_todo URL command and execute it
         url = add_todo(
             title=title,
@@ -434,15 +439,15 @@ def update_task(
     canceled: Optional[bool] = None
 ) -> str:
     """
-    Update an existing todo in Things
-    
+    Update an existing todo in Things.
+
     Args:
         id: ID of the todo to update
         title: New title
         notes: New notes
         when: New schedule
         deadline: New deadline
-        tags: New tags
+        tags: New tags. Missing tags will be created automatically.
         completed: Mark as completed
         canceled: Mark as canceled
     """
@@ -451,7 +456,11 @@ def update_task(
         if not app_state.update_app_state():
             if not launch_things():
                 return "Error: Unable to launch Things app"
-                
+
+        # Ensure tags exist before using them
+        if tags:
+            ensure_tags_exist(tags)
+
         # Build the update_todo URL command and execute it
         url = update_todo(
             id=id,
