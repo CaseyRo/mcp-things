@@ -38,8 +38,6 @@ registry:
   installation:
     type: "pip"
     package: "things3-enhanced-mcp"
-    command: "things3-enhanced-mcp"
-    
   # Configuration requirements
   configuration:
     required:

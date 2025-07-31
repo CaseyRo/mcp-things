@@ -28,9 +28,12 @@ This server unlocks the power of AI or automated workflows for your task managem
 
 ## Quick start
 
-1. Install from PyPI:
+1. Clone this repository and install it in editable mode using [uv](https://github.com/astral-sh/uv).
+   If you don't have `uv` installed yet, run `pipx install uv` (or `pip install uv`).
    ```bash
-   pip install things3-enhanced-mcp
+   git clone https://github.com/excelsier/things-fastmcp.git
+   cd things-fastmcp
+   uv pip install -e .
    ```
 2. Configure your Things authentication token:
    ```bash
@@ -38,13 +41,18 @@ This server unlocks the power of AI or automated workflows for your task managem
    ```
 3. Run the server:
    ```bash
-   things3-enhanced-mcp
+   python things_fast_server.py
    ```
    The FastMCP server listens on `http://0.0.0.0:8009`.
+   Alternatively, use:
+   ```bash
+   mcp dev things_fast_server.py
+   ```
+   The `mcp dev` command uses the [MCP development helper](https://github.com/anthropics/mcp-cli#development-helper) for auto-reload during development.
 
 ## Development
 
-Use the MCP development helper to run the server from source:
+Use `mcp dev` from the [MCP development helper](https://github.com/anthropics/mcp-cli#development-helper) to run the server from source:
 
 ```bash
 mcp dev things_fast_server.py
