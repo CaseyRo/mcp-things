@@ -71,3 +71,8 @@ The old MCP server (`things_server.py`) will be removed by the end of 2025. Plea
 3. **Cache Performance**: Use `get-cache-stats` tool to check hit rates
 4. **Enable Debug Logging**: Set console level to DEBUG in `logging_config.py`
 
+## Tribute
+
+This project builds on work by others. The original version was [things-mcp](https://github.com/hald/things-mcp) created by Harald Lindstrøm.
+Later, [Yaroslav Krempovych](https://github.com/excelsier/things-fastmcp) modernized it with a FastMCP implementation.
+
