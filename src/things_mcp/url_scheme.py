@@ -199,7 +199,8 @@ def construct_url(command: str, params: Dict[str, Any]) -> str:
             encoded_params.append(f"{key}={encoded_value}")
         
         url += "?" + "&".join(encoded_params)
-    
+
+    logger.debug(f"Constructed Things URL: {url}")
     return url
 
 
