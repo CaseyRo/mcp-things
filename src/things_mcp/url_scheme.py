@@ -115,17 +115,8 @@ def execute_xcallback_url(action: str, params: Dict[str, Any]) -> bool:
 
 def construct_url(command: str, params: Dict[str, Any]) -> str:
     """Construct a Things URL from command and parameters."""
-    # Pre-process all string parameters to replace any + signs with spaces
-    cleaned_params = {}
-    for key, value in params.items():
-        if isinstance(value, str):
-            # Replace any + signs with spaces in the original input
-            cleaned_params[key] = value.replace("+", " ")
-        else:
-            cleaned_params[key] = value
-    
-    # Use the cleaned params from now on
-    params = cleaned_params
+    # Use parameters as provided. urllib.parse.quote will handle encoding of
+    # spaces and literal plus signs correctly (" " -> "%20", "+" -> "%2B").
     
     # Start with base URL
     url = f"things:///{command}"
@@ -191,11 +182,9 @@ def construct_url(command: str, params: Dict[str, Any]) -> str:
             elif isinstance(value, list):
                 value = ','.join(str(v) for v in value)
             
-            # Ensure proper encoding of the value - use quote_plus to handle spaces correctly
-            # Then replace + with %20 to ensure Things handles spaces correctly
+            # Encode the value. urllib.parse.quote will encode spaces as %20 and
+            # preserve literal plus signs by converting them to %2B.
             encoded_value = urllib.parse.quote(str(value), safe='')
-            # Replace + with %20 for better compatibility with Things
-            encoded_value = encoded_value.replace('+', '%20')
             encoded_params.append(f"{key}={encoded_value}")
         
         url += "?" + "&".join(encoded_params)
