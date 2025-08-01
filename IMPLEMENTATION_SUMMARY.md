@@ -70,7 +70,7 @@ Created comprehensive test scripts:
 ## Configuration Details
 
 ### Authentication Token
-- Token: `2H2TYfJbSfWaEYntMJkreg` (configured for testing)
+- Token: `<your-token>` (configured for testing)
 - Location: `~/.things-mcp/config.json`
 - Environment variable: `THINGS_AUTH_TOKEN`
 
