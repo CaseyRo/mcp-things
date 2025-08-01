@@ -31,7 +31,7 @@ This server unlocks the power of AI or automated workflows for your task managem
 1. Clone this repository and install it in editable mode using [uv](https://github.com/astral-sh/uv).
    If you don't have `uv` installed yet, run `pipx install uv` (or `pip install uv`).
    ```bash
-   git clone https://github.com/excelsier/things-fastmcp.git
+   git clone https://github.com/CaseyRo/things-fastmcp.git
    cd things-fastmcp
    uv pip install -e .
    ```
