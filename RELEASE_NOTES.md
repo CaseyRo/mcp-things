@@ -47,7 +47,7 @@
 
 ## Installation
 ```bash
-pip install things-mcp
+pip install things3-enhanced-mcp
 ```
 
 ## Usage
