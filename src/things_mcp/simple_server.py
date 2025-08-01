@@ -29,8 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Create the FastMCP server
 mcp = FastMCP(
-    "Things", 
-    description="Interact with the Things task management app",
+    "Things",
     version="0.2.0"
 )
 
