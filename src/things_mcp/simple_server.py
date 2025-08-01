@@ -29,9 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Create the FastMCP server
 mcp = FastMCP(
-    "Things", 
-    description="Interact with the Things task management app",
-    version="0.2.0"
+    "Things",
 )
 
 # Simple retry decorator
