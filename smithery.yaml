@@ -30,9 +30,9 @@ registry:
     platform: ["local"]
     
   # Documentation
-  homepage: "https://github.com/excelsier/things-fastmcp"
-  repository: "https://github.com/excelsier/things-fastmcp"
-  documentation: "https://github.com/excelsier/things-fastmcp#readme"
+  homepage: "https://github.com/CaseyRo/things-fastmcp"
+  repository: "https://github.com/CaseyRo/things-fastmcp"
+  documentation: "https://github.com/CaseyRo/things-fastmcp#readme"
   
   # Installation
   installation:
