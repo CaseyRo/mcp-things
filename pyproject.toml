@@ -27,9 +27,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/excelsier/things-fastmcp"
-"Bug Tracker" = "https://github.com/excelsier/things-fastmcp/issues"
-"Documentation" = "https://github.com/excelsier/things-fastmcp#readme"
+"Homepage" = "https://github.com/CaseyRo/things-fastmcp"
+"Bug Tracker" = "https://github.com/CaseyRo/things-fastmcp/issues"
+"Documentation" = "https://github.com/CaseyRo/things-fastmcp#readme"
 
 [build-system]
 requires = ["hatchling"]
