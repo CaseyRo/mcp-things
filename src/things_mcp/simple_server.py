@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 # Create the FastMCP server
 mcp = FastMCP(
     "Things",
-    version="0.2.0"
 )
 
 # Simple retry decorator
