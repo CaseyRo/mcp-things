@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, Union, Callable
 from .utils import app_state, circuit_breaker, dead_letter_queue, rate_limiter, is_things_running
 
 logger = logging.getLogger(__name__)
-        
+
 def launch_things() -> bool:
     """Launch Things app if not already running.
     
@@ -35,6 +35,37 @@ def launch_things() -> bool:
         return is_things_running()
     except Exception as e:
         logger.error(f"Error launching Things: {str(e)}")
+        return False
+
+
+def _open_url_background(url: str) -> bool:
+    """Attempt to open a URL without bringing the browser to the foreground.
+
+    Uses ``osascript`` on macOS to execute ``open -g`` so the URL is handled in
+    the background. Returns ``True`` if the AppleScript command succeeded,
+    otherwise ``False``.
+    """
+    if platform.system() != "Darwin":
+        return False
+
+    try:
+        # Use open -g to avoid stealing focus from the foreground application
+        script = f'do shell script "open -g \\\"{url}\\\""'
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            logger.error(f"osascript error: {result.stderr}")
+            return False
+        return True
+    except FileNotFoundError:
+        logger.warning("osascript not found; falling back to webbrowser")
+        return False
+    except Exception as e:
+        logger.error(f"Error running osascript: {str(e)}")
         return False
 
 def execute_url(url: str) -> bool:
@@ -64,9 +95,11 @@ def execute_url(url: str) -> bool:
                 circuit_breaker.record_failure()
                 return False
         
-        # Execute the URL
-        result = webbrowser.open(url)
-        
+        # Execute the URL - prefer osascript in the background on macOS
+        result = _open_url_background(url)
+        if not result:
+            result = webbrowser.open(url)
+
         if not result:
             circuit_breaker.record_failure()
             logger.error(f"Failed to open URL: {url}")
