@@ -5,15 +5,20 @@ This version uses the modern FastMCP pattern for better maintainability.
 """
 import logging
 import sys
+from rich.console import Console
+from rich.logging import RichHandler
 from src.things_mcp.fast_server import run_things_mcp_server
 from src.things_mcp.shutdown import setup_interrupt_handler
 
-# Configure logging
+# Configure rich logging
+console = Console()
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(console=console, rich_tracebacks=True)]
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("things_fast_server")
 
 # Exit immediately on Ctrl+C even if connections remain
 setup_interrupt_handler(logger)
@@ -25,6 +30,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
         sys.exit(0)
-    except Exception as e:
-        logger.error(f"Error running server: {str(e)}")
+    except Exception:
+        logger.exception("Error running server")
         sys.exit(1)
