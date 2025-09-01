@@ -35,11 +35,12 @@ This server unlocks the power of AI or automated workflows for your task managem
    cd things-fastmcp
    uv pip install -e .
    ```
+   *(The helper script in step 3 will also bootstrap a uv virtual environment if you skip this install step.)*
 2. Configure your Things authentication token:
    ```bash
    python configure_token.py
    ```
-3. Run the server:
+3. Run the server (creates or reuses a uv-managed virtual environment and falls back to system Python if `uv` is unavailable):
    ```bash
    ./run_things_fastmcp.sh
    ```
