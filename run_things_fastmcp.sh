@@ -9,11 +9,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if command -v uv >/dev/null 2>&1; then
-  # Bootstrap a local virtual environment if it doesn't exist yet
+  # Ensure a local virtual environment exists and dependencies are up to date
   if [ ! -d "$SCRIPT_DIR/.venv" ]; then
     uv venv "$SCRIPT_DIR/.venv"
-    UV_PROJECT_PATH="$SCRIPT_DIR" uv pip install -e "$SCRIPT_DIR"
   fi
+  UV_PROJECT_PATH="$SCRIPT_DIR" uv pip install -e "$SCRIPT_DIR"
   # shellcheck disable=SC1091
   source "$SCRIPT_DIR/.venv/bin/activate"
   exec python "$SCRIPT_DIR/things_fast_server.py" "$@"
