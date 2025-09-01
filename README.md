@@ -35,20 +35,25 @@ This server unlocks the power of AI or automated workflows for your task managem
    cd things-fastmcp
    uv pip install -e .
    ```
+   *(The helper script in step 3 will also bootstrap a uv virtual environment if you skip this install step.)*
 2. Configure your Things authentication token:
    ```bash
    python configure_token.py
    ```
-3. Run the server:
+3. Run the server (creates or reuses a uv-managed virtual environment and falls back to system Python if `uv` is unavailable):
    ```bash
-   python things_fast_server.py
+   ./run_things_fastmcp.sh
    ```
-   The FastMCP server listens on `http://0.0.0.0:8009`.
+   The FastMCP server listens on `http://0.0.0.0:8009` and uses [Rich](https://github.com/Textualize/rich) for colorful terminal output.
    Alternatively, use:
    ```bash
    mcp dev things_fast_server.py
    ```
    The `mcp dev` command uses the [MCP development helper](https://github.com/anthropics/mcp-cli#development-helper) for auto-reload during development.
+
+### Why not Docker?
+
+The server interacts with the native Things application through AppleScript and the `open` command. Docker containers on macOS run inside a lightweight VM and don't have access to these host-level scripting capabilities. As a result the MCP server must run directly on macOS rather than inside a Docker container.
 
 ## Development
 
