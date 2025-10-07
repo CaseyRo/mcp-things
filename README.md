@@ -25,6 +25,7 @@ This server unlocks the power of AI or automated workflows for your task managem
 - FastMCP based server entry point [`things_fast_server.py`](things_fast_server.py) that calls `run_things_mcp_server()` from the library
 - Legacy standard MCP implementation in [`things_server.py`](things_server.py) for compatibility
 - Rich set of tools for listing, searching and modifying Things items (see `src/things_mcp/fast_server.py` for decorators)
+- Curated FastMCP metadata so assistants see capabilities, limitations, and support links out of the box
 
 ## Quick start
 
@@ -54,6 +55,16 @@ This server unlocks the power of AI or automated workflows for your task managem
 ### Why not Docker?
 
 The server interacts with the native Things application through AppleScript and the `open` command. Docker containers on macOS run inside a lightweight VM and don't have access to these host-level scripting capabilities. As a result the MCP server must run directly on macOS rather than inside a Docker container.
+
+### Assistant guidance surfaced to clients
+
+When a Model Context Protocol client connects, it now receives:
+
+- **Instructions** outlining the major Things 3 tools that are available, common limitations (macOS requirements, attachment access), and a reminder to review sensitive output.
+- **Website metadata** that points to this repository for documentation and updates.
+- **Iconography** (using an OpenMoji notepad) so the integration is easy to recognize in clients such as ChatGPT or Claude Desktop.
+
+These metadata fields help align what users read in the README with what assistants display in their UI.
 
 ## Development
 
