@@ -8,6 +8,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-07
+- Implemented logging redaction across handlers and the AppleScript bridge so user task content stays out of logs.
+- Confirmed the updates satisfy the latest review feedback and recorded the October 7 follow-up.
 ### 2025-09-01
 - Added `run_things_fastmcp.sh` helper script and integrated Rich logging.
 - Documented macOS limitations preventing Docker usage for opening scripts.
@@ -16,3 +19,4 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ### 2025-09-01
 - Updated run script to bootstrap a uv-managed virtual environment or fall back to system Python.
 - Clarified Quick Start docs about the helper script's environment handling.
+
