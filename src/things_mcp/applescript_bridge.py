@@ -5,6 +5,14 @@ from typing import Optional, List, Dict, Any, Union
 
 logger = logging.getLogger(__name__)
 
+def _script_metadata(command: str, script: str) -> Dict[str, Any]:
+    """Return metadata about an AppleScript command without exposing content."""
+    return {
+        'command': command,
+        'line_count': len(script.splitlines()),
+        'char_count': len(script),
+    }
+
 def run_applescript(script: str) -> Union[str, bool]:
     """Run an AppleScript command and return the result.
     
@@ -15,16 +23,23 @@ def run_applescript(script: str) -> Union[str, bool]:
         The result of the AppleScript execution, or False if it failed
     """
     try:
-        result = subprocess.run(['osascript', '-e', script], 
+        result = subprocess.run(['osascript', '-e', script],
                               capture_output=True, text=True)
-        
+
         if result.returncode != 0:
-            logger.error(f"AppleScript error: {result.stderr}")
+            stderr_output = result.stderr or ""
+            logger.error(
+                "AppleScript process returned error",
+                extra={
+                    'returncode': result.returncode,
+                    'stderr_length': len(stderr_output),
+                }
+            )
             return False
-        
+
         return result.stdout.strip()
-    except Exception as e:
-        logger.error(f"Error running AppleScript: {str(e)}")
+    except Exception:
+        logger.exception("Error running AppleScript")
         return False
 
 def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str] = None,
@@ -72,7 +87,10 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
         else:
             # For date handling, it's safest to just log it and not try to set it
             # This avoids AppleScript date formatting issues
-            logger.warning(f"Custom date format '{when}' not supported, defaulting to today")
+            logger.warning(
+                "Custom date format not supported, defaulting to today",
+                extra={'format_length': len(when) if when else 0}
+            )
     
     # Add tags if provided
     if tags and len(tags) > 0:
@@ -103,7 +121,10 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
     
     # Execute the script
     script = '\n'.join(script_parts)
-    logger.debug(f"Executing AppleScript: {script}")
+    logger.debug(
+        "Executing AppleScript command",
+        extra=_script_metadata('add_todo_direct', script)
+    )
     
     result = run_applescript(script)
     if result:
@@ -199,7 +220,10 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
 ''')
         else:
             # For other formats, just log a warning and don't try to set it
-            logger.warning(f"Schedule format '{when}' not directly supported in this simplified version")
+            logger.warning(
+                "Schedule format not directly supported",
+                extra={'format_length': len(when) if when else 0}
+            )
     
     if deadline:
         # Check if deadline is in YYYY-MM-DD format
@@ -212,7 +236,10 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
     set deadline of theTodo to deadlineDate
 ''')
         else:
-            logger.warning(f"Invalid deadline format: {deadline}. Expected YYYY-MM-DD")
+            logger.warning(
+                "Invalid deadline format",
+                extra={'format_length': len(deadline) if deadline else 0}
+            )
     
     # Handle tags (clearing and adding new ones)
     if tags is not None:
@@ -323,7 +350,10 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
     
     # Execute the script
     script = '\n'.join(script_parts)
-    logger.info(f"Executing AppleScript for update_todo_direct: \n{script}")
+    logger.info(
+        "Executing AppleScript for update_todo_direct",
+        extra=_script_metadata('update_todo_direct', script)
+    )
     
     result = run_applescript(script)
     
@@ -331,5 +361,5 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
         logger.info(f"Successfully updated todo with ID: {id}")
         return True
     else:
-        logger.error(f"AppleScript update_todo_direct failed: {result}")
+        logger.error("AppleScript update_todo_direct failed")
         return False

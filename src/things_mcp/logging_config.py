@@ -7,6 +7,7 @@ import logging
 import logging.handlers
 import os
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -14,6 +15,103 @@ from typing import Dict, Any, Optional
 # Create logs directory if it doesn't exist
 LOGS_DIR = Path.home() / '.things-mcp' / 'logs'
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+REDACTION_TOKEN = "[REDACTED]"
+SENSITIVE_FIELDS = {
+    "title",
+    "notes",
+    "tags",
+    "params",
+    "query",
+    "text",
+    "body",
+    "content",
+    "script",
+    "payload",
+    "list_title",
+    "checklist_items",
+    "stderr",
+    "stdout",
+}
+
+def _is_sensitive_field(field_name: Optional[str]) -> bool:
+    return bool(field_name and field_name.lower() in SENSITIVE_FIELDS)
+
+def redact_sensitive_data(value: Any, field_name: Optional[str] = None) -> Any:
+    """Redact sensitive values while preserving structural hints."""
+    if field_name and _is_sensitive_field(field_name):
+        if isinstance(value, dict):
+            return {key: redact_sensitive_data(val, key) for key, val in value.items()}
+        if isinstance(value, list):
+            return [redact_sensitive_data(item, field_name) for item in value]
+        if isinstance(value, tuple):
+            return tuple(redact_sensitive_data(item, field_name) for item in value)
+        if isinstance(value, set):
+            return {REDACTION_TOKEN for _ in value}
+        if value is None:
+            return None
+        return REDACTION_TOKEN
+
+    if isinstance(value, dict):
+        return {key: redact_sensitive_data(val, key) for key, val in value.items()}
+    if isinstance(value, list):
+        return [redact_sensitive_data(item, field_name) for item in value]
+    if isinstance(value, tuple):
+        return tuple(redact_sensitive_data(item, field_name) for item in value)
+    if isinstance(value, set):
+        return {redact_sensitive_data(item, field_name) for item in value}
+    return value
+
+def sanitize_for_logging(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Return a copy of data with sensitive fields redacted."""
+    if not data:
+        return {}
+    return {key: redact_sensitive_data(value, key) for key, value in data.items()}
+
+def _redact_message_text(message: str) -> str:
+    """Apply conservative redaction to inline messages."""
+    patterns = [
+        (r"(title\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
+        (r"(notes\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
+        (r"(tags\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
+        (r"(params\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
+    ]
+    redacted = message
+    for pattern, repl in patterns:
+        redacted = re.sub(pattern, repl, redacted, flags=re.IGNORECASE)
+    return redacted
+
+def _sanitize_record(record: logging.LogRecord) -> None:
+    """Redact sensitive values attached to the log record."""
+    for key, value in list(vars(record).items()):
+        if key in {"args", "msg"}:
+            continue
+        if _is_sensitive_field(key):
+            setattr(record, key, redact_sensitive_data(value, key))
+        elif isinstance(value, dict):
+            setattr(record, key, sanitize_for_logging(value))
+
+    if isinstance(record.args, dict):
+        record.args = sanitize_for_logging(record.args)
+    elif isinstance(record.args, tuple):
+        record.args = tuple(
+            redact_sensitive_data(arg)
+            if isinstance(arg, (dict, list, tuple, set))
+            else arg
+            for arg in record.args
+        )
+
+    if isinstance(record.msg, dict):
+        record.msg = sanitize_for_logging(record.msg)
+    elif isinstance(record.msg, str):
+        record.msg = _redact_message_text(record.msg)
+
+class SensitiveDataFilter(logging.Filter):
+    """Filter that redacts sensitive information from log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        _sanitize_record(record)
+        return True
 
 class StructuredFormatter(logging.Formatter):
     """Custom formatter that outputs structured JSON logs for better analysis."""
@@ -69,8 +167,9 @@ class OperationLogFilter(logging.Filter):
             setattr(record, key, value)
         return True
 
-# Global operation filter instance
+# Global filters
 operation_filter = OperationLogFilter()
+redaction_filter = SensitiveDataFilter()
 
 def setup_logging(
     console_level: str = "INFO",
@@ -95,6 +194,7 @@ def setup_logging(
     
     # Remove existing handlers
     root_logger.handlers.clear()
+    root_logger.addFilter(redaction_filter)
     
     # Console handler with simple formatting
     console_handler = logging.StreamHandler()
@@ -105,6 +205,7 @@ def setup_logging(
     )
     console_handler.setFormatter(console_format)
     console_handler.addFilter(operation_filter)
+    console_handler.addFilter(redaction_filter)
     root_logger.addHandler(console_handler)
     
     # File handlers with rotation
@@ -118,6 +219,7 @@ def setup_logging(
         json_file_handler.setLevel(getattr(logging, file_level.upper()))
         json_file_handler.setFormatter(StructuredFormatter())
         json_file_handler.addFilter(operation_filter)
+        json_file_handler.addFilter(redaction_filter)
         root_logger.addHandler(json_file_handler)
     
     # Human-readable file logs
@@ -133,6 +235,7 @@ def setup_logging(
     )
     text_file_handler.setFormatter(text_format)
     text_file_handler.addFilter(operation_filter)
+    text_file_handler.addFilter(redaction_filter)
     root_logger.addHandler(text_file_handler)
     
     # Error-only file handler
@@ -144,47 +247,60 @@ def setup_logging(
     error_file_handler.setLevel(logging.ERROR)
     error_file_handler.setFormatter(text_format)
     error_file_handler.addFilter(operation_filter)
+    error_file_handler.addFilter(redaction_filter)
     root_logger.addHandler(error_file_handler)
     
     # Log the logging configuration
     logger = logging.getLogger(__name__)
-    logger.info(f"Logging configured - Console: {console_level}, File: {file_level}, Structured: {structured_logs}")
-    logger.info(f"Log files location: {LOGS_DIR}")
+    logger.info(
+        "Logging configured",
+        extra={
+            'console_level': console_level,
+            'file_level': file_level,
+            'structured_logs': structured_logs,
+            'logs_dir': str(LOGS_DIR),
+        }
+    )
 
 def log_operation_start(operation: str, **kwargs) -> None:
     """Log the start of an operation and set context."""
-    operation_filter.set_operation_context(operation, **kwargs)
+    sanitized_kwargs = sanitize_for_logging(kwargs)
+    operation_filter.set_operation_context(operation, **sanitized_kwargs)
     logger = logging.getLogger(__name__)
-    logger.info(f"Starting operation: {operation}", extra={'operation': operation, **kwargs})
+    logger.info(
+        "Starting operation",
+        extra={'operation': operation, **sanitized_kwargs}
+    )
 
 def log_operation_end(operation: str, success: bool, duration: float = None, **kwargs) -> None:
     """Log the end of an operation."""
     logger = logging.getLogger(__name__)
+    sanitized_kwargs = sanitize_for_logging(kwargs)
     extra = {
         'operation': operation,
         'success': success,
-        **kwargs
+        **sanitized_kwargs
     }
     if duration is not None:
         extra['duration'] = duration
-        
+
     if success:
-        logger.info(f"Operation completed: {operation}", extra=extra)
+        logger.info("Operation completed", extra=extra)
     else:
-        logger.error(f"Operation failed: {operation}", extra=extra)
-    
+        logger.error("Operation failed", extra=extra)
+
     operation_filter.clear_operation_context()
 
 def log_retry_attempt(operation: str, attempt: int, max_attempts: int, error: str) -> None:
     """Log a retry attempt."""
     logger = logging.getLogger(__name__)
     logger.warning(
-        f"Retry attempt {attempt}/{max_attempts} for {operation}: {error}",
+        "Retry attempt",
         extra={
             'operation': operation,
             'retry_count': attempt,
             'max_attempts': max_attempts,
-            'error': error
+            'error': REDACTION_TOKEN if error else None
         }
     )
 
@@ -195,17 +311,17 @@ def log_circuit_breaker_state(state: str, failure_count: int = None) -> None:
     if failure_count is not None:
         extra['failure_count'] = failure_count
         
-    logger.warning(f"Circuit breaker state changed to: {state}", extra=extra)
+    logger.warning("Circuit breaker state changed", extra=extra)
 
 def log_dead_letter_queue(operation: str, params: Dict[str, Any], error: str) -> None:
     """Log when an operation is added to the dead letter queue."""
     logger = logging.getLogger(__name__)
     logger.error(
-        f"Added to dead letter queue: {operation}",
+        "Added to dead letter queue",
         extra={
             'operation': operation,
-            'params': params,
-            'error': error,
+            'params': redact_sensitive_data(params, 'params'),
+            'error': REDACTION_TOKEN if error else None,
             'dlq': True
         }
     )
