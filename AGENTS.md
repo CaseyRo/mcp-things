@@ -20,3 +20,6 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ### 2025-10-07
 - Added FastMCP metadata (instructions, website, icon) constants and wired them into the server instantiation.
 - Documented the surfaced assistant guidance in the README to mirror the MCP experience.
+
+### 2025-10-07
+- Converted MCP icon metadata to use `mcp.types.Icon` objects to satisfy FastMCP validation.

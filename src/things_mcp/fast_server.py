@@ -50,9 +50,12 @@ INSTRUCTIONS_TEXT = (
 
 WEBSITE_URL = "https://github.com/CaseyRo/things-fastmcp"
 
-ICON_URLS = {
-    "64": "https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/72x72/1F4DD.png",
-}
+ICONS: List[types.Icon] = [
+    types.Icon(
+        src="https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/72x72/1F4DD.png",
+        sizes=["64x64"],
+    ),
+]
 
 # Create the FastMCP server
 mcp = FastMCP(
@@ -61,7 +64,7 @@ mcp = FastMCP(
     port=8009,
     instructions=INSTRUCTIONS_TEXT,
     website_url=WEBSITE_URL,
-    icons=ICON_URLS,
+    icons=ICONS,
 )
 
 # LIST VIEWS
