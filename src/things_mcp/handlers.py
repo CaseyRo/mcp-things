@@ -7,13 +7,31 @@ import random
 from .formatters import format_todo, format_project, format_area, format_tag
 from . import url_scheme
 import time
-import subprocess
 from .applescript_bridge import run_applescript
 
 # Import reliability enhancements
 from .utils import app_state, circuit_breaker, dead_letter_queue, rate_limiter, validate_tool_registration
 
 logger = logging.getLogger(__name__)
+
+
+def _summarize_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Return metadata about parameters without exposing raw content."""
+    summary = {
+        'field_count': len(params),
+        'provided_fields': sorted([key for key, value in params.items() if value not in (None, "")]),
+    }
+    if 'tags' in params:
+        tags_value = params.get('tags') or []
+        if isinstance(tags_value, (list, tuple, set)):
+            summary['tag_count'] = len(tags_value)
+        elif tags_value:
+            summary['tag_count'] = 1
+    if 'notes' in params:
+        summary['notes_present'] = params.get('notes') not in (None, "")
+    if 'title' in params:
+        summary['title_present'] = params.get('title') not in (None, "")
+    return summary
 
 def retry_operation(func, max_retries=3, delay=1, operation_name=None, params=None):
     """Retry a function call with exponential backoff and jitter.
@@ -55,16 +73,30 @@ def retry_operation(func, max_retries=3, delay=1, operation_name=None, params=No
                 # Add jitter to prevent thundering herd problem
                 jitter = random.uniform(0.8, 1.2)
                 wait_time = delay * (2 ** attempt) * jitter
-                logger.warning(f"Attempt {attempt+1} failed. Retrying in {wait_time:.2f} seconds: {str(e)}")
+                logger.warning(
+                    "Retrying operation after failure",
+                    extra={
+                        'attempt': attempt + 1,
+                        'max_attempts': max_retries,
+                        'wait_time_seconds': round(wait_time, 2),
+                        'error_type': type(e).__name__,
+                    }
+                )
                 time.sleep(wait_time)
             else:
-                logger.error(f"All {max_retries} attempts failed. Last error: {str(e)}")
-    
+                logger.error(
+                    "Operation failed after maximum retries",
+                    extra={
+                        'attempts': max_retries,
+                        'error_type': type(e).__name__,
+                    }
+                )
+
     # If we have operation details, add to dead letter queue
     if operation_name and params and last_exception:
         dead_letter_queue.add_failed_operation(
-            operation_name, 
-            params, 
+            operation_name,
+            params,
             str(last_exception),
             attempts=max_retries
         )
@@ -287,21 +319,30 @@ async def handle_tool_call(
             # Remove None values
             simple_params = {k: v for k, v in simple_params.items() if v is not None}
             
-            logger.info(f"Using direct AppleScript implementation to add todo: {title}")
-            logger.info(f"Parameters: {simple_params}")
+            logger.info(
+                "Using direct AppleScript implementation to add todo",
+                extra=_summarize_parameters(simple_params)
+            )
+            logger.info(
+                "Prepared direct AppleScript parameters",
+                extra={'parameter_summary': _summarize_parameters(simple_params)}
+            )
             
             # Try direct call without retry to capture actual errors
             try:
-                logger.info("Calling add_todo_direct directly...")
+                logger.info("Calling add_todo_direct directly")
                 task_id = applescript_bridge.add_todo_direct(**simple_params)
-                logger.info(f"Direct result: {task_id}")
+                logger.info(
+                    "Direct AppleScript call returned",
+                    extra={'result_present': bool(task_id)}
+                )
             except Exception as e:
-                logger.error(f"Exception in direct call: {str(e)}")
+                logger.exception("Exception in direct AppleScript call")
                 return [types.TextContent(type="text", text=f"⚠️ Error: {str(e)}")]
             
             # If direct call didn't raise but returned falsy value, try with retry
             if not task_id:
-                logger.info("Direct call failed, trying with retry...")
+                logger.info("Direct call failed, trying with retry")
                 try:
                     task_id = retry_operation(
                         lambda: applescript_bridge.add_todo_direct(**simple_params),
@@ -309,11 +350,11 @@ async def handle_tool_call(
                         params=simple_params
                     )
                 except Exception as e:
-                    logger.error(f"Exception in retry operation: {str(e)}")
+                    logger.exception("Exception in retry operation for add_todo_direct")
                     return [types.TextContent(type="text", text=f"⚠️ Error in retry: {str(e)}")]
-            
+
             if not task_id:
-                logger.error(f"Direct AppleScript creation failed for todo: {title}")
+                logger.error("Direct AppleScript creation failed for todo")
                 return [types.TextContent(type="text", text=f"⚠️ Error: Failed to create todo: {title}")]
                 
             return [types.TextContent(type="text", text=f"✅ Created new todo: {title} (ID: {task_id})")]
@@ -401,7 +442,15 @@ async def handle_tool_call(
             
             # Log the tag update details
             if tag_update_needed:
-                logger.info(f"Tag update needed: {arguments['tags']} for todo ID: {arguments['id']}")
+                tags_argument = arguments.get('tags')
+                tag_count = len(tags_argument) if isinstance(tags_argument, list) else int(bool(tags_argument))
+                logger.info(
+                    "Tag update requested",
+                    extra={
+                        'todo_id': arguments['id'],
+                        'tag_count': tag_count,
+                    }
+                )
                 
             success = False
             
@@ -415,14 +464,27 @@ async def handle_tool_call(
                     tags = arguments['tags']
                     
                     if not isinstance(tags, list) or not tags:
-                        logger.warning(f"Invalid tags format or empty tags list: {tags}")
+                        logger.warning(
+                            "Invalid tags format or empty tags list",
+                            extra={
+                                'todo_id': todo_id,
+                                'tag_type': type(tags).__name__,
+                                'tag_count': len(tags) if isinstance(tags, list) else 0,
+                            }
+                        )
                         return False
-                    
-                    logger.info(f"Updating tags for todo {todo_id}: {tags}")
-                    
+
+                    logger.info(
+                        "Updating tags for todo",
+                        extra={'todo_id': todo_id, 'tag_count': len(tags)}
+                    )
+
                     # Step 1: Clear existing tags by setting empty tags
                     clear_url = url_scheme.update_todo(id=todo_id, tags="")
-                    logger.info(f"Clearing existing tags: {clear_url}")
+                    logger.info(
+                        "Clearing existing tags via URL",
+                        extra={'todo_id': todo_id}
+                    )
                     clear_success = url_scheme.execute_url(clear_url)
                     
                     if not clear_success:
@@ -441,7 +503,10 @@ async def handle_tool_call(
                             continue
                         
                         # Use AppleScript to ensure the tag exists first
-                        logger.info(f"Ensuring tag exists: {tag_str}")
+                        logger.info(
+                            "Ensuring tag exists",
+                            extra={'todo_id': todo_id}
+                        )
                         script = f'''
                         tell application "Things3"
                             set tagExists to false
@@ -465,20 +530,32 @@ async def handle_tool_call(
                         # Run AppleScript to create tag if needed
                         result = run_applescript(script)
                         if result:
-                            logger.info(result)
+                            logger.info(
+                                "Received AppleScript response for tag ensure",
+                                extra={'todo_id': todo_id}
+                            )
                         else:
-                            logger.warning(f"Failed to ensure tag exists: {tag_str}")
+                            logger.warning(
+                                "Failed to ensure tag exists",
+                                extra={'todo_id': todo_id}
+                            )
                         
                         # Short delay after tag creation
                         time.sleep(0.5)
                         
                         # Use add-tags parameter to apply the tag
                         add_tag_url = url_scheme.update_todo(id=todo_id, add_tags=tag_str)
-                        logger.info(f"Adding tag '{tag_str}': {add_tag_url}")
-                        
+                        logger.info(
+                            "Adding tag via URL scheme",
+                            extra={'todo_id': todo_id}
+                        )
+
                         tag_success = url_scheme.execute_url(add_tag_url)
                         if not tag_success:
-                            logger.warning(f"Failed to add tag: {tag_str}")
+                            logger.warning(
+                                "Failed to add requested tag",
+                                extra={'todo_id': todo_id}
+                            )
                             all_tags_added = False
                         
                         # Add a small delay between tag operations
@@ -492,8 +569,8 @@ async def handle_tool_call(
                         # Consider it a partial success if we added at least some tags
                         success = True
                         
-                except Exception as e:
-                    logger.warning(f"Hybrid tag update error: {str(e)}")
+                except Exception:
+                    logger.exception("Hybrid tag update error")
                     
                 # Approach 2: If URL scheme failed, try direct AppleScript
                 if not success:
