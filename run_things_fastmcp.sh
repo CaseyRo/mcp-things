@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Run the Things FastMCP server.
 #
+# By default the server listens on 127.0.0.1. To expose it beyond the local
+# machine export `THINGS_FASTMCP_HOST=0.0.0.0` (or another interface) before
+# launching.
+#
 # If [uv](https://github.com/astral-sh/uv) is installed, this script uses it to
 # create (or reuse) a virtual environment and install dependencies. Otherwise
 # it falls back to the first available python3/python executable.
