@@ -13,6 +13,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Removed duplicate binding announcements from the CLI entrypoint so runtime logging only happens once and cached the binding helper for reuse.
 - Clarified binding logs and helper exports so launchers surface localhost default without double logging.
 - Switched FastMCP server default bind address to localhost with env override and documented exposure steps.
+- Added FastMCP metadata (instructions, website, icon) constants and wired them into the server instantiation.
+- Documented the surfaced assistant guidance in the README to mirror the MCP experience.
+- Converted MCP icon metadata to use `mcp.types.Icon` objects to satisfy FastMCP validation.
 
 ### 2025-09-01
 - Added `run_things_fastmcp.sh` helper script and integrated Rich logging.
@@ -22,4 +25,3 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ### 2025-09-01
 - Updated run script to bootstrap a uv-managed virtual environment or fall back to system Python.
 - Clarified Quick Start docs about the helper script's environment handling.
-
