@@ -25,3 +25,7 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ### 2025-09-01
 - Updated run script to bootstrap a uv-managed virtual environment or fall back to system Python.
 - Clarified Quick Start docs about the helper script's environment handling.
+
+### 2025-10-07
+- Added standalone privacy and terms documents so operators understand local data handling and policy expectations.
+- Updated README to link to the new policies and prompt users to review them before setup, keeping onboarding aligned with compliance guidance.

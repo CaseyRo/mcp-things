@@ -1,6 +1,10 @@
 # Things 3 Enhanced MCP
 
-This repository provides a Model Context Protocol (MCP) server for [Things](https://culturedcode.com/things/). It exposes a set of tools that allow AI assistants or automation platforms—for example Claude Desktop or n8n—to read and modify your tasks, projects and areas via the Things URL scheme.
+This repository provides a Model Context Protocol (MCP) server for [Things](https://culturedcode.com/things/).
+
+> **Important:** Review the [Privacy Notice](PRIVACY.md) and [Terms of Use](TERMS_OF_USE.md) before running or deploying the server.
+
+It exposes a set of tools that allow AI assistants or automation platforms—for example Claude Desktop or n8n—to read and modify your tasks, projects and areas via the Things URL scheme.
 
 The codebase contains a modern implementation using the **FastMCP** pattern. It offers improved reliability features such as caching, rate limiting and an AppleScript fallback. A legacy `things_server.py` still exists for compatibility but will be removed by the end of the year.
 
@@ -28,6 +32,8 @@ This server unlocks the power of AI or automated workflows for your task managem
 - Curated FastMCP metadata so assistants see capabilities, limitations, and support links out of the box
 
 ## Quick start
+
+Before installing dependencies or launching the server, confirm you have read the [Privacy Notice](PRIVACY.md) and [Terms of Use](TERMS_OF_USE.md).
 
 1. Clone this repository and install it in editable mode using [uv](https://github.com/astral-sh/uv).
    If you don't have `uv` installed yet, run `pipx install uv` (or `pip install uv`).
