@@ -4,8 +4,10 @@ Things MCP Server implementation using the FastMCP pattern.
 This provides a more modern and maintainable approach to the Things integration.
 """
 import logging
+import os
 import asyncio
 import traceback
+from functools import lru_cache
 from typing import Dict, Any, Optional, List, Union
 import things
 
@@ -30,10 +32,25 @@ from .tag_handler import ensure_tags_exist
 setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
 
+# Network binding configuration
+HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
+DEFAULT_HOST = "127.0.0.1"
+
+
+@lru_cache(maxsize=1)
+def get_binding_host() -> str:
+    """Return the host for the FastMCP server, honoring the override env var."""
+    value = os.getenv(HOST_ENV_VAR)
+    if value is None:
+        return DEFAULT_HOST
+
+    value = value.strip()
+    return value or DEFAULT_HOST
+
 # Create the FastMCP server
 mcp = FastMCP(
     "Things",
-    host="0.0.0.0",
+    host=get_binding_host(),
     port=8009,
 )
 
@@ -645,6 +662,20 @@ def get_cache_statistics() -> str:
 # Main entry point
 def run_things_mcp_server():
     """Run the Things MCP server"""
+    host = get_binding_host()
+    if host == DEFAULT_HOST:
+        logger.info(
+            "FastMCP will bind to %s (set %s=0.0.0.0 to allow remote connections)",
+            DEFAULT_HOST,
+            HOST_ENV_VAR,
+        )
+    else:
+        logger.info(
+            "FastMCP binding override detected: %s=%s",
+            HOST_ENV_VAR,
+            host,
+        )
+
     # Check if Things app is available
     if not app_state.update_app_state():
         logger.warning("Things app is not running at startup. MCP will attempt to launch it when needed.")

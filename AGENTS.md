@@ -10,7 +10,10 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ## Log
 ### 2025-10-07
 - Implemented logging redaction across handlers and the AppleScript bridge so user task content stays out of logs.
-- Confirmed the updates satisfy the latest review feedback and recorded the October 7 follow-up.
+- Removed duplicate binding announcements from the CLI entrypoint so runtime logging only happens once and cached the binding helper for reuse.
+- Clarified binding logs and helper exports so launchers surface localhost default without double logging.
+- Switched FastMCP server default bind address to localhost with env override and documented exposure steps.
+
 ### 2025-09-01
 - Added `run_things_fastmcp.sh` helper script and integrated Rich logging.
 - Documented macOS limitations preventing Docker usage for opening scripts.
