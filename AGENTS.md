@@ -16,3 +16,7 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ### 2025-09-01
 - Updated run script to bootstrap a uv-managed virtual environment or fall back to system Python.
 - Clarified Quick Start docs about the helper script's environment handling.
+
+### 2025-10-07
+- Added FastMCP metadata (instructions, website, icon) constants and wired them into the server instantiation.
+- Documented the surfaced assistant guidance in the README to mirror the MCP experience.
