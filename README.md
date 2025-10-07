@@ -45,7 +45,7 @@ This server unlocks the power of AI or automated workflows for your task managem
    ```bash
    ./run_things_fastmcp.sh
    ```
-   The FastMCP server listens on `http://0.0.0.0:8009` and uses [Rich](https://github.com/Textualize/rich) for colorful terminal output.
+   The FastMCP server listens on `http://127.0.0.1:8009` by default and uses [Rich](https://github.com/Textualize/rich) for colorful terminal output. To expose it beyond the local machine, export `THINGS_FASTMCP_HOST=0.0.0.0` before launching.
    Alternatively, use:
    ```bash
    mcp dev things_fast_server.py
