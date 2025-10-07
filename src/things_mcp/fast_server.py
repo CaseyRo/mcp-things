@@ -32,6 +32,32 @@ from .tag_handler import ensure_tags_exist
 setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
 
+
+INSTRUCTIONS_TEXT = (
+    "### Things MCP server guidance\n\n"
+    "Use these tools to review and maintain your Things 3 workspace on macOS."
+    "\n\n"
+    "**Capabilities**\n"
+    "- List inbox, Today, Upcoming, Someday, Anytime, and Logbook items\n"
+    "- Inspect and update projects, areas, tags, and todos via the Things URL scheme\n"
+    "- Launch advanced Things automations with pre-built URL actions\n\n"
+    "**Limitations**\n"
+    "- Requires Things 3 for macOS with scripting permissions enabled\n"
+    "- Only accesses data stored locally in Things; attachments remain unavailable\n"
+    "- Some operations depend on the Things URL scheme and may take a few seconds\n\n"
+    "**Support & Contact**\n"
+    "- Review outputs before sharing because personal data may be present\n"
+    "- Report issues or request features at https://github.com/CaseyRo/things-fastmcp/issues\n"
+)
+
+WEBSITE_URL = "https://github.com/CaseyRo/things-fastmcp"
+
+ICONS: List[types.Icon] = [
+    types.Icon(
+        src="https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/72x72/1F4DD.png",
+        sizes=["64x64"],
+    ),
+]
 # Network binding configuration
 HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
 DEFAULT_HOST = "127.0.0.1"
@@ -52,6 +78,9 @@ mcp = FastMCP(
     "Things",
     host=get_binding_host(),
     port=8009,
+    instructions=INSTRUCTIONS_TEXT,
+    website_url=WEBSITE_URL,
+    icons=ICONS,
 )
 
 # LIST VIEWS
