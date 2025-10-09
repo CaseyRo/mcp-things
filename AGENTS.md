@@ -8,6 +8,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-10
+- Added FastMCP constructor introspection for icon support and guarded icon metadata so older runtimes still launch cleanly.
+
 ### 2025-10-09
 - Added compatibility helper so FastMCP icon metadata works whether or not `mcp.types.Icon` is available in the runtime.
 - Guarded FastMCP server construction so `website_url` metadata is only passed when supported by the installed MCP version.
