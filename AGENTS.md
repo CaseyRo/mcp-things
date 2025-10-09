@@ -10,6 +10,7 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 ## Log
 ### 2025-10-09
 - Added compatibility helper so FastMCP icon metadata works whether or not `mcp.types.Icon` is available in the runtime.
+- Guarded FastMCP server construction so `website_url` metadata is only passed when supported by the installed MCP version.
 
 ### 2025-10-07
 - Implemented logging redaction across handlers and the AppleScript bridge so user task content stays out of logs.
