@@ -51,7 +51,7 @@ Before installing dependencies or launching the server, confirm you have read th
    ```bash
    ./run_things_fastmcp.sh
    ```
-   The FastMCP server listens on `http://127.0.0.1:8009` by default and uses [Rich](https://github.com/Textualize/rich) for colorful terminal output. To expose it beyond the local machine, export `THINGS_FASTMCP_HOST=0.0.0.0` before launching.
+   The FastMCP server listens on `http://127.0.0.1:8009` by default and uses [Rich](https://github.com/Textualize/rich) for colorful terminal output. To expose it beyond the local machine, either export `THINGS_FASTMCP_HOST=0.0.0.0` or run `./run_things_fastmcp.sh --host 0.0.0.0`. You can also change the port by setting `THINGS_FASTMCP_PORT=9000` (for example) or passing `--port 9000` to the helper script.
    Alternatively, use:
    ```bash
    mcp dev things_fast_server.py
