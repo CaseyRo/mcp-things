@@ -52,8 +52,29 @@ INSTRUCTIONS_TEXT = (
 
 WEBSITE_URL = "https://github.com/CaseyRo/things-fastmcp"
 
-ICONS: List[types.Icon] = [
-    types.Icon(
+# Type alias supporting both newer FastMCP installs (with mcp.types.Icon)
+# and older releases that still expect simple dictionaries for icon metadata.
+IconLike = Union[Any, Dict[str, Any]]
+
+
+def _build_icon(src: str, *, sizes: Optional[List[str]] = None, mime_type: Optional[str] = None) -> IconLike:
+    """Create an icon instance compatible with the available MCP types module."""
+    icon_cls = getattr(types, "Icon", None)
+    if icon_cls is not None:
+        return icon_cls(src=src, sizes=sizes, mimeType=mime_type)
+
+    # Fall back to a plain dictionary for environments running an older MCP build
+    # that predates the Icon model.
+    icon_data: Dict[str, Any] = {"src": src}
+    if sizes:
+        icon_data["sizes"] = sizes
+    if mime_type:
+        icon_data["mimeType"] = mime_type
+    return icon_data
+
+
+ICONS: List[IconLike] = [
+    _build_icon(
         src="https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/72x72/1F4DD.png",
         sizes=["64x64"],
     ),
