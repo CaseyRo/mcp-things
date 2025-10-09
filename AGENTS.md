@@ -8,6 +8,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-09
+- Added compatibility helper so FastMCP icon metadata works whether or not `mcp.types.Icon` is available in the runtime.
+
 ### 2025-10-07
 - Implemented logging redaction across handlers and the AppleScript bridge so user task content stays out of logs.
 - Removed duplicate binding announcements from the CLI entrypoint so runtime logging only happens once and cached the binding helper for reuse.
