@@ -8,6 +8,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-11
+- Added CLI flags and env var validation to the run script so operators can easily bind to alternate hosts and ports without manual exports.
+- Extended FastMCP server binding logic and README guidance to document the new port override support.
 ### 2025-10-10
 - Added FastMCP constructor introspection for icon support and guarded icon metadata so older runtimes still launch cleanly.
 
