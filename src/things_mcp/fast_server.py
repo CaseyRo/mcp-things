@@ -96,11 +96,12 @@ def get_binding_host() -> str:
     return value or DEFAULT_HOST
 
 # Determine supported FastMCP constructor arguments at import time so the
-# server remains compatible with runtimes that predate the `website_url`
-# parameter.
+# server remains compatible with runtimes that predate newer metadata
+# parameters like `website_url` and `icons`.
 _fastmcp_init_params = inspect.signature(FastMCP.__init__).parameters
 
 _FASTMCP_SUPPORTS_WEBSITE_URL = "website_url" in _fastmcp_init_params
+_FASTMCP_SUPPORTS_ICONS = "icons" in _fastmcp_init_params
 
 
 def _create_fastmcp_instance() -> FastMCP:
@@ -108,13 +109,17 @@ def _create_fastmcp_instance() -> FastMCP:
         "host": get_binding_host(),
         "port": 8009,
         "instructions": INSTRUCTIONS_TEXT,
-        "icons": ICONS,
     }
 
     if _FASTMCP_SUPPORTS_WEBSITE_URL:
         kwargs["website_url"] = WEBSITE_URL
     else:
         logger.debug("FastMCP runtime does not support website_url; skipping metadata field")
+
+    if _FASTMCP_SUPPORTS_ICONS:
+        kwargs["icons"] = ICONS
+    else:
+        logger.debug("FastMCP runtime does not support icons; skipping metadata field")
 
     return FastMCP("Things", **kwargs)
 
