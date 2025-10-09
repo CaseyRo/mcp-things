@@ -9,6 +9,7 @@ import asyncio
 import traceback
 from functools import lru_cache
 from typing import Dict, Any, Optional, List, Union
+import inspect
 import things
 
 from mcp.server.fastmcp import FastMCP
@@ -94,15 +95,32 @@ def get_binding_host() -> str:
     value = value.strip()
     return value or DEFAULT_HOST
 
+# Determine supported FastMCP constructor arguments at import time so the
+# server remains compatible with runtimes that predate the `website_url`
+# parameter.
+_fastmcp_init_params = inspect.signature(FastMCP.__init__).parameters
+
+_FASTMCP_SUPPORTS_WEBSITE_URL = "website_url" in _fastmcp_init_params
+
+
+def _create_fastmcp_instance() -> FastMCP:
+    kwargs: Dict[str, Any] = {
+        "host": get_binding_host(),
+        "port": 8009,
+        "instructions": INSTRUCTIONS_TEXT,
+        "icons": ICONS,
+    }
+
+    if _FASTMCP_SUPPORTS_WEBSITE_URL:
+        kwargs["website_url"] = WEBSITE_URL
+    else:
+        logger.debug("FastMCP runtime does not support website_url; skipping metadata field")
+
+    return FastMCP("Things", **kwargs)
+
+
 # Create the FastMCP server
-mcp = FastMCP(
-    "Things",
-    host=get_binding_host(),
-    port=8009,
-    instructions=INSTRUCTIONS_TEXT,
-    website_url=WEBSITE_URL,
-    icons=ICONS,
-)
+mcp = _create_fastmcp_instance()
 
 # LIST VIEWS
 
