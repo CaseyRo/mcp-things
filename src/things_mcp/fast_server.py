@@ -82,7 +82,9 @@ ICONS: List[IconLike] = [
 ]
 # Network binding configuration
 HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
+PORT_ENV_VAR = "THINGS_FASTMCP_PORT"
 DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8009
 
 
 @lru_cache(maxsize=1)
@@ -94,6 +96,38 @@ def get_binding_host() -> str:
 
     value = value.strip()
     return value or DEFAULT_HOST
+
+
+@lru_cache(maxsize=1)
+def get_binding_port() -> int:
+    """Return the port for the FastMCP server, honoring the override env var."""
+    value = os.getenv(PORT_ENV_VAR)
+    if value is None or not value.strip():
+        return DEFAULT_PORT
+
+    stripped = value.strip()
+
+    try:
+        port = int(stripped)
+    except ValueError:
+        logger.warning(
+            "Invalid %s value '%s'; falling back to default port %s",
+            PORT_ENV_VAR,
+            value,
+            DEFAULT_PORT,
+        )
+        return DEFAULT_PORT
+
+    if not 0 < port < 65536:
+        logger.warning(
+            "%s value %s out of valid TCP port range; using default %s",
+            PORT_ENV_VAR,
+            port,
+            DEFAULT_PORT,
+        )
+        return DEFAULT_PORT
+
+    return port
 
 # Determine supported FastMCP constructor arguments at import time so the
 # server remains compatible with runtimes that predate newer metadata
@@ -107,7 +141,7 @@ _FASTMCP_SUPPORTS_ICONS = "icons" in _fastmcp_init_params
 def _create_fastmcp_instance() -> FastMCP:
     kwargs: Dict[str, Any] = {
         "host": get_binding_host(),
-        "port": 8009,
+        "port": get_binding_port(),
         "instructions": INSTRUCTIONS_TEXT,
     }
 
