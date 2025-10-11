@@ -4,7 +4,53 @@ MCP tools configuration for Things integration with Windsurf.
 This ensures proper tool registration and naming for seamless integration.
 """
 import mcp.types as types
-from typing import List
+from typing import List, Dict
+
+
+READ_ONLY_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=True,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+
+ADD_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
+)
+
+UPDATE_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+
+
+ANNOTATIONS_MAP: Dict[str, types.ToolAnnotations] = {
+    "get-todos": READ_ONLY_ANNOTATIONS,
+    "get-projects": READ_ONLY_ANNOTATIONS,
+    "get-areas": READ_ONLY_ANNOTATIONS,
+    "get-inbox": READ_ONLY_ANNOTATIONS,
+    "get-today": READ_ONLY_ANNOTATIONS,
+    "get-upcoming": READ_ONLY_ANNOTATIONS,
+    "get-anytime": READ_ONLY_ANNOTATIONS,
+    "get-someday": READ_ONLY_ANNOTATIONS,
+    "get-logbook": READ_ONLY_ANNOTATIONS,
+    "get-trash": READ_ONLY_ANNOTATIONS,
+    "get-tags": READ_ONLY_ANNOTATIONS,
+    "get-tagged-items": READ_ONLY_ANNOTATIONS,
+    "search-todos": READ_ONLY_ANNOTATIONS,
+    "search-advanced": READ_ONLY_ANNOTATIONS,
+    "search-items": READ_ONLY_ANNOTATIONS,
+    "show-item": READ_ONLY_ANNOTATIONS,
+    "get-recent": READ_ONLY_ANNOTATIONS,
+    "add-todo": ADD_ANNOTATIONS,
+    "add-project": ADD_ANNOTATIONS,
+    "update-todo": UPDATE_ANNOTATIONS,
+    "update-project": UPDATE_ANNOTATIONS,
+}
 
 def get_mcp_tools_list() -> List[types.Tool]:
     """
@@ -17,6 +63,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-todos",
             description="Get todos from Things, optionally filtered by project",
+            annotations=ANNOTATIONS_MAP["get-todos"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -36,6 +83,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-projects",
             description="Get all projects from Things",
+            annotations=ANNOTATIONS_MAP["get-projects"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -51,6 +99,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-areas",
             description="Get all areas from Things",
+            annotations=ANNOTATIONS_MAP["get-areas"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -68,6 +117,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-inbox",
             description="Get todos from Inbox",
+            annotations=ANNOTATIONS_MAP["get-inbox"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -77,6 +127,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-today",
             description="Get todos due today",
+            annotations=ANNOTATIONS_MAP["get-today"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -86,6 +137,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-upcoming",
             description="Get upcoming todos",
+            annotations=ANNOTATIONS_MAP["get-upcoming"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -95,6 +147,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-anytime",
             description="Get todos from Anytime list",
+            annotations=ANNOTATIONS_MAP["get-anytime"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -104,6 +157,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-someday",
             description="Get todos from Someday list",
+            annotations=ANNOTATIONS_MAP["get-someday"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -113,6 +167,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-logbook",
             description="Get completed todos from Logbook, defaults to last 7 days",
+            annotations=ANNOTATIONS_MAP["get-logbook"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -134,6 +189,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-trash",
             description="Get trashed todos",
+            annotations=ANNOTATIONS_MAP["get-trash"],
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -145,6 +201,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-tags",
             description="Get all tags",
+            annotations=ANNOTATIONS_MAP["get-tags"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -160,6 +217,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-tagged-items",
             description="Get items with a specific tag",
+            annotations=ANNOTATIONS_MAP["get-tagged-items"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -176,6 +234,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="search-todos",
             description="Search todos by title or notes",
+            annotations=ANNOTATIONS_MAP["search-todos"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -190,6 +249,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="search-advanced",
             description="Advanced todo search with multiple filters",
+            annotations=ANNOTATIONS_MAP["search-advanced"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -228,6 +288,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="get-recent",
             description="Get recently created items",
+            annotations=ANNOTATIONS_MAP["get-recent"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -245,6 +306,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="add-todo",
             description="Create a new todo in Things",
+            annotations=ANNOTATIONS_MAP["add-todo"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -294,6 +356,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="add-project",
             description="Create a new project in Things",
+            annotations=ANNOTATIONS_MAP["add-project"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -339,6 +402,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="update-todo",
             description="Update an existing todo in Things",
+            annotations=ANNOTATIONS_MAP["update-todo"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -383,6 +447,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="update-project",
             description="Update an existing project in Things",
+            annotations=ANNOTATIONS_MAP["update-project"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -427,6 +492,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="search-items",
             description="Search for items in Things",
+            annotations=ANNOTATIONS_MAP["search-items"],
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -442,6 +508,7 @@ def get_mcp_tools_list() -> List[types.Tool]:
         types.Tool(
             name="show-item",
             description="Show a specific item or list in Things",
+            annotations=ANNOTATIONS_MAP["show-item"],
             inputSchema={
                 "type": "object",
                 "properties": {
