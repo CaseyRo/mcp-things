@@ -29,6 +29,52 @@ from .logging_config import setup_logging, get_logger, log_operation_start, log_
 from .cache import cached, invalidate_caches_for, get_cache_stats, CACHE_TTL
 from .tag_handler import ensure_tags_exist
 
+
+READ_ONLY_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=True,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+
+ADD_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
+)
+
+UPDATE_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+
+TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
+    "get-inbox": READ_ONLY_ANNOTATIONS,
+    "get-today": READ_ONLY_ANNOTATIONS,
+    "get-upcoming": READ_ONLY_ANNOTATIONS,
+    "get-anytime": READ_ONLY_ANNOTATIONS,
+    "get-someday": READ_ONLY_ANNOTATIONS,
+    "get-logbook": READ_ONLY_ANNOTATIONS,
+    "get-trash": READ_ONLY_ANNOTATIONS,
+    "get-todos": READ_ONLY_ANNOTATIONS,
+    "get-projects": READ_ONLY_ANNOTATIONS,
+    "get-areas": READ_ONLY_ANNOTATIONS,
+    "get-tags": READ_ONLY_ANNOTATIONS,
+    "get-tagged-items": READ_ONLY_ANNOTATIONS,
+    "search-todos": READ_ONLY_ANNOTATIONS,
+    "search-advanced": READ_ONLY_ANNOTATIONS,
+    "add-todo": ADD_ANNOTATIONS,
+    "add-project": ADD_ANNOTATIONS,
+    "update-todo": UPDATE_ANNOTATIONS,
+    "update-project": UPDATE_ANNOTATIONS,
+    "show-item": READ_ONLY_ANNOTATIONS,
+    "search-items": READ_ONLY_ANNOTATIONS,
+    "get-recent": READ_ONLY_ANNOTATIONS,
+    "get-cache-stats": READ_ONLY_ANNOTATIONS,
+}
+
 # Configure enhanced logging
 setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
@@ -163,7 +209,7 @@ mcp = _create_fastmcp_instance()
 
 # LIST VIEWS
 
-@mcp.tool(name="get-inbox")
+@mcp.tool(name="get-inbox", annotations=TOOL_ANNOTATIONS["get-inbox"])
 def get_inbox() -> str:
     """Get todos from Inbox"""
     import time
@@ -184,7 +230,7 @@ def get_inbox() -> str:
         log_operation_end("get-inbox", False, time.time() - start_time, error=str(e))
         raise
 
-@mcp.tool(name="get-today")
+@mcp.tool(name="get-today", annotations=TOOL_ANNOTATIONS["get-today"])
 @cached(ttl=CACHE_TTL.get("today", 30))
 def get_today() -> str:
     """Get todos due today"""
@@ -206,7 +252,7 @@ def get_today() -> str:
         log_operation_end("get-today", False, time.time() - start_time, error=str(e))
         raise
 
-@mcp.tool(name="get-upcoming")
+@mcp.tool(name="get-upcoming", annotations=TOOL_ANNOTATIONS["get-upcoming"])
 def get_upcoming() -> str:
     """Get upcoming todos"""
     todos = things.upcoming()
@@ -217,7 +263,7 @@ def get_upcoming() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-anytime")
+@mcp.tool(name="get-anytime", annotations=TOOL_ANNOTATIONS["get-anytime"])
 def get_anytime() -> str:
     """Get todos from Anytime list"""
     todos = things.anytime()
@@ -228,7 +274,7 @@ def get_anytime() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-someday")
+@mcp.tool(name="get-someday", annotations=TOOL_ANNOTATIONS["get-someday"])
 def get_someday() -> str:
     """Get todos from Someday list"""
     todos = things.someday()
@@ -239,7 +285,7 @@ def get_someday() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-logbook")
+@mcp.tool(name="get-logbook", annotations=TOOL_ANNOTATIONS["get-logbook"])
 def get_logbook(period: str = "7d", limit: int = 50) -> str:
     """
     Get completed todos from Logbook, defaults to last 7 days
@@ -259,7 +305,7 @@ def get_logbook(period: str = "7d", limit: int = 50) -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-trash")
+@mcp.tool(name="get-trash", annotations=TOOL_ANNOTATIONS["get-trash"])
 def get_trash() -> str:
     """Get trashed todos"""
     todos = things.trash()
@@ -272,7 +318,7 @@ def get_trash() -> str:
 
 # BASIC TODO OPERATIONS
 
-@mcp.tool(name="get-todos")
+@mcp.tool(name="get-todos", annotations=TOOL_ANNOTATIONS["get-todos"])
 def get_todos(project_uuid: Optional[str] = None, include_items: bool = True) -> str:
     """
     Get todos from Things, optionally filtered by project
@@ -294,7 +340,7 @@ def get_todos(project_uuid: Optional[str] = None, include_items: bool = True) ->
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-projects")
+@mcp.tool(name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"])
 def get_projects(include_items: bool = False) -> str:
     """
     Get all projects from Things
@@ -310,7 +356,7 @@ def get_projects(include_items: bool = False) -> str:
     formatted_projects = [format_project(project, include_items) for project in projects]
     return "\n\n---\n\n".join(formatted_projects)
 
-@mcp.tool(name="get-areas")
+@mcp.tool(name="get-areas", annotations=TOOL_ANNOTATIONS["get-areas"])
 def get_areas(include_items: bool = False) -> str:
     """
     Get all areas from Things
@@ -328,7 +374,7 @@ def get_areas(include_items: bool = False) -> str:
 
 # TAG OPERATIONS
 
-@mcp.tool(name="get-tags")
+@mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"])
 def get_tags(include_items: bool = False) -> str:
     """
     Get all tags
@@ -344,7 +390,7 @@ def get_tags(include_items: bool = False) -> str:
     formatted_tags = [format_tag(tag, include_items) for tag in tags]
     return "\n\n---\n\n".join(formatted_tags)
 
-@mcp.tool(name="get-tagged-items")
+@mcp.tool(name="get-tagged-items", annotations=TOOL_ANNOTATIONS["get-tagged-items"])
 def get_tagged_items(tag: str) -> str:
     """
     Get items with a specific tag
@@ -362,7 +408,7 @@ def get_tagged_items(tag: str) -> str:
 
 # SEARCH OPERATIONS
 
-@mcp.tool(name="search-todos")
+@mcp.tool(name="search-todos", annotations=TOOL_ANNOTATIONS["search-todos"])
 def search_todos(query: str) -> str:
     """
     Search todos by title or notes
@@ -378,7 +424,7 @@ def search_todos(query: str) -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="search-advanced")
+@mcp.tool(name="search-advanced", annotations=TOOL_ANNOTATIONS["search-advanced"])
 def search_advanced(
     status: Optional[str] = None,
     start_date: Optional[str] = None,
@@ -429,7 +475,7 @@ def search_advanced(
 
 # MODIFICATION OPERATIONS
 
-@mcp.tool(name="add-todo")
+@mcp.tool(name="add-todo", annotations=TOOL_ANNOTATIONS["add-todo"])
 def add_task(
     title: str,
     notes: Optional[str] = None,
@@ -494,7 +540,7 @@ def add_task(
         logger.error(f"Error creating todo: {str(e)}")
         return f"Error creating todo: {str(e)}"
 
-@mcp.tool(name="add-project")
+@mcp.tool(name="add-project", annotations=TOOL_ANNOTATIONS["add-project"])
 def add_new_project(
     title: str,
     notes: Optional[str] = None,
@@ -549,7 +595,7 @@ def add_new_project(
         logger.error(f"Error creating project: {str(e)}")
         return f"Error creating project: {str(e)}"
 
-@mcp.tool(name="update-todo")
+@mcp.tool(name="update-todo", annotations=TOOL_ANNOTATIONS["update-todo"])
 def update_task(
     id: str,
     title: Optional[str] = None,
@@ -608,7 +654,7 @@ def update_task(
         logger.error(f"Error updating todo: {str(e)}")
         return f"Error updating todo: {str(e)}"
 
-@mcp.tool(name="update-project")
+@mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"])
 def update_existing_project(
     id: str,
     title: Optional[str] = None,
@@ -663,7 +709,7 @@ def update_existing_project(
         logger.error(f"Error updating project: {str(e)}")
         return f"Error updating project: {str(e)}"
 
-@mcp.tool(name="show-item")
+@mcp.tool(name="show-item", annotations=TOOL_ANNOTATIONS["show-item"])
 def show_item(
     id: str,
     query: Optional[str] = None,
@@ -698,7 +744,7 @@ def show_item(
         logger.error(f"Error showing item: {str(e)}")
         return f"Error showing item: {str(e)}"
 
-@mcp.tool(name="search-items")
+@mcp.tool(name="search-items", annotations=TOOL_ANNOTATIONS["search-items"])
 def search_all_items(query: str) -> str:
     """
     Search for items in Things
@@ -723,7 +769,7 @@ def search_all_items(query: str) -> str:
         logger.error(f"Error searching: {str(e)}")
         return f"Error searching: {str(e)}"
 
-@mcp.tool(name="get-recent")
+@mcp.tool(name="get-recent", annotations=TOOL_ANNOTATIONS["get-recent"])
 def get_recent(period: str) -> str:
     """
     Get recently created items
@@ -754,7 +800,7 @@ def get_recent(period: str) -> str:
         logger.error(f"Error getting recent items: {str(e)}")
         return f"Error getting recent items: {str(e)}"
 
-@mcp.tool(name="get-cache-stats")
+@mcp.tool(name="get-cache-stats", annotations=TOOL_ANNOTATIONS["get-cache-stats"])
 def get_cache_statistics() -> str:
     """Get cache performance statistics"""
     stats = get_cache_stats()
