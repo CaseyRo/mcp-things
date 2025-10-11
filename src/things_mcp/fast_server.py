@@ -126,6 +126,15 @@ ICONS: List[IconLike] = [
         sizes=["64x64"],
     ),
 ]
+
+
+def _error_result(message: str) -> types.CallToolResult:
+    """Return a standardized error result for MCP tools."""
+
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=message)],
+        isError=True,
+    )
 # Network binding configuration
 HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
 PORT_ENV_VAR = "THINGS_FASTMCP_PORT"
@@ -319,7 +328,9 @@ def get_trash() -> str:
 # BASIC TODO OPERATIONS
 
 @mcp.tool(name="get-todos", annotations=TOOL_ANNOTATIONS["get-todos"])
-def get_todos(project_uuid: Optional[str] = None, include_items: bool = True) -> str:
+def get_todos(
+    project_uuid: Optional[str] = None, include_items: bool = True
+) -> Union[str, types.CallToolResult]:
     """
     Get todos from Things, optionally filtered by project
     
@@ -330,7 +341,7 @@ def get_todos(project_uuid: Optional[str] = None, include_items: bool = True) ->
     if project_uuid:
         project = things.get(project_uuid)
         if not project or project.get('type') != 'project':
-            return f"Error: Invalid project UUID '{project_uuid}'"
+            return _error_result(f"Error: Invalid project UUID '{project_uuid}'")
 
     todos = things.todos(project=project_uuid, start=None)
     
@@ -432,7 +443,7 @@ def search_advanced(
     tag: Optional[str] = None,
     area: Optional[str] = None,
     type: Optional[str] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Advanced todo search with multiple filters
     
@@ -471,7 +482,7 @@ def search_advanced(
         formatted_todos = [format_todo(todo) for todo in todos]
         return "\n\n---\n\n".join(formatted_todos)
     except Exception as e:
-        return f"Error in advanced search: {str(e)}"
+        return _error_result(f"Error in advanced search: {str(e)}")
 
 # MODIFICATION OPERATIONS
 
@@ -486,7 +497,7 @@ def add_task(
     list_id: Optional[str] = None,
     list_title: Optional[str] = None,
     heading: Optional[str] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Create a new todo in Things.
 
@@ -505,7 +516,7 @@ def add_task(
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
 
         # Ensure tags exist before using them
         if tags:
@@ -530,7 +541,7 @@ def add_task(
         success = execute_url(url)
 
         if not success:
-            return "Error: Failed to create todo"
+            return _error_result("Error: Failed to create todo")
         
         # Invalidate relevant caches after creating a todo
         invalidate_caches_for(["get-inbox", "get-today", "get-upcoming", "get-todos"])
@@ -538,7 +549,7 @@ def add_task(
         return f"Successfully created todo: {title}"
     except Exception as e:
         logger.error(f"Error creating todo: {str(e)}")
-        return f"Error creating todo: {str(e)}"
+        return _error_result(f"Error creating todo: {str(e)}")
 
 @mcp.tool(name="add-project", annotations=TOOL_ANNOTATIONS["add-project"])
 def add_new_project(
@@ -550,7 +561,7 @@ def add_new_project(
     area_id: Optional[str] = None,
     area_title: Optional[str] = None,
     todos: Optional[List[str]] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Create a new project in Things
     
@@ -568,7 +579,7 @@ def add_new_project(
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
                 
         # Build the add_project URL command and execute it
         url = add_project(
@@ -588,12 +599,12 @@ def add_new_project(
         success = execute_url(url)
 
         if not success:
-            return "Error: Failed to create project"
+            return _error_result("Error: Failed to create project")
             
         return f"Successfully created project: {title}"
     except Exception as e:
         logger.error(f"Error creating project: {str(e)}")
-        return f"Error creating project: {str(e)}"
+        return _error_result(f"Error creating project: {str(e)}")
 
 @mcp.tool(name="update-todo", annotations=TOOL_ANNOTATIONS["update-todo"])
 def update_task(
@@ -605,7 +616,7 @@ def update_task(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Update an existing todo in Things.
 
@@ -623,7 +634,7 @@ def update_task(
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
 
         # Ensure tags exist before using them
         if tags:
@@ -647,12 +658,12 @@ def update_task(
         success = execute_url(url)
 
         if not success:
-            return "Error: Failed to update todo"
+            return _error_result("Error: Failed to update todo")
             
         return f"Successfully updated todo with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
-        return f"Error updating todo: {str(e)}"
+        return _error_result(f"Error updating todo: {str(e)}")
 
 @mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"])
 def update_existing_project(
@@ -664,7 +675,7 @@ def update_existing_project(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Update an existing project in Things
     
@@ -682,7 +693,7 @@ def update_existing_project(
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
                 
         # Build the update_project URL command and execute it
         url = update_project(
@@ -702,19 +713,19 @@ def update_existing_project(
         success = execute_url(url)
 
         if not success:
-            return "Error: Failed to update project"
+            return _error_result("Error: Failed to update project")
             
         return f"Successfully updated project with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating project: {str(e)}")
-        return f"Error updating project: {str(e)}"
+        return _error_result(f"Error updating project: {str(e)}")
 
 @mcp.tool(name="show-item", annotations=TOOL_ANNOTATIONS["show-item"])
 def show_item(
     id: str,
     query: Optional[str] = None,
     filter_tags: Optional[List[str]] = None
-) -> str:
+) -> Union[str, types.CallToolResult]:
     """
     Show a specific item or list in Things
     
@@ -727,7 +738,7 @@ def show_item(
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
                 
         # Execute the show URL command
         result = show(
@@ -737,15 +748,15 @@ def show_item(
         )
         
         if not result:
-            return f"Error: Failed to show item/list '{id}'"
+            return _error_result(f"Error: Failed to show item/list '{id}'")
             
         return f"Successfully opened '{id}' in Things"
     except Exception as e:
         logger.error(f"Error showing item: {str(e)}")
-        return f"Error showing item: {str(e)}"
+        return _error_result(f"Error showing item: {str(e)}")
 
 @mcp.tool(name="search-items", annotations=TOOL_ANNOTATIONS["search-items"])
-def search_all_items(query: str) -> str:
+def search_all_items(query: str) -> Union[str, types.CallToolResult]:
     """
     Search for items in Things
     
@@ -756,21 +767,21 @@ def search_all_items(query: str) -> str:
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return "Error: Unable to launch Things app"
+                return _error_result("Error: Unable to launch Things app")
                 
         # Execute the search URL command
         result = search(query=query)
         
         if not result:
-            return f"Error: Failed to search for '{query}'"
+            return _error_result(f"Error: Failed to search for '{query}'")
             
         return f"Successfully searched for '{query}' in Things"
     except Exception as e:
         logger.error(f"Error searching: {str(e)}")
-        return f"Error searching: {str(e)}"
+        return _error_result(f"Error searching: {str(e)}")
 
 @mcp.tool(name="get-recent", annotations=TOOL_ANNOTATIONS["get-recent"])
-def get_recent(period: str) -> str:
+def get_recent(period: str) -> Union[str, types.CallToolResult]:
     """
     Get recently created items
     
@@ -780,7 +791,7 @@ def get_recent(period: str) -> str:
     try:
         # Check if period format is valid
         if not period or not any(period.endswith(unit) for unit in ['d', 'w', 'm', 'y']):
-            return "Error: Period must be in format '3d', '1w', '2m', '1y'"
+            return _error_result("Error: Period must be in format '3d', '1w', '2m', '1y'")
             
         # Get recent items
         items = things.last(period)
@@ -798,7 +809,7 @@ def get_recent(period: str) -> str:
         return "\n\n---\n\n".join(formatted_items)
     except Exception as e:
         logger.error(f"Error getting recent items: {str(e)}")
-        return f"Error getting recent items: {str(e)}"
+        return _error_result(f"Error getting recent items: {str(e)}")
 
 @mcp.tool(name="get-cache-stats", annotations=TOOL_ANNOTATIONS["get-cache-stats"])
 def get_cache_statistics() -> str:

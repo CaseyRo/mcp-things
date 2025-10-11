@@ -9,6 +9,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 
 ## Log
 ### 2025-10-11
+- Added shared MCP error helper returning `CallToolResult` and updated tool handlers to use it for failure cases.
+
+### 2025-10-11
 - Added MCP tool annotations across registration and Fast/Simple server implementations to align with MCP metadata expectations.
 
 ### 2025-10-11
