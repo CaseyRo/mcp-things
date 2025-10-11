@@ -9,6 +9,9 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 
 ## Log
 ### 2025-10-11
+- Added MCP tool annotations across registration and Fast/Simple server implementations to align with MCP metadata expectations.
+
+### 2025-10-11
 - Added CLI flags and env var validation to the run script so operators can easily bind to alternate hosts and ports without manual exports.
 - Extended FastMCP server binding logic and README guidance to document the new port override support.
 ### 2025-10-10
