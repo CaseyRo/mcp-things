@@ -28,13 +28,14 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 
 ## Log
 ### 2025-10-16
-- **Completed OpenSpec change `remove-legacy-mcp` - Consolidated to FastMCP-only implementation (v2.0.0)**
+- **Completed and archived OpenSpec change `remove-legacy-mcp` - Consolidated to FastMCP-only implementation (v2.0.0)**
   - Deleted 5 legacy files: things_server.py, simple_server.py, simple_url_scheme.py, mcp_tools.py, and src/things_mcp/things_server.py
   - Updated pyproject.toml, smithery.yaml, and __init__.py to version 2.0.0
   - Updated README.md: removed Migration & Deprecation section, added concise Version 2.0 Changes section
   - Created comprehensive CHANGELOG.md entry for 2.0.0 with breaking changes and migration guide
   - Maintained all 19 MCP tool APIs - full backward compatibility at tool level
   - Removed ~714 lines of duplicate code, simplified maintenance
+  - Archived to openspec/changes/archive/2025-10-16-remove-legacy-mcp/
 - Created OpenSpec change proposal `remove-legacy-mcp` for consolidating to FastMCP-only implementation
   - Comprehensive proposal.md documenting why (dual-implementation burden), what (remove 5 legacy files), and impact (breaking change → v2.0.0)
   - Detailed tasks.md with 8 implementation phases: pre-flight checks, code removal, import cleanup, config updates, documentation, testing, versioning, validation
