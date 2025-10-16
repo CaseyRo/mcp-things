@@ -294,20 +294,16 @@ See [openspec/project.md](openspec/project.md) for:
 
 Docker containers on macOS run in a lightweight VM that lacks access to host-level AppleScript and URL scheme handlers. The server requires direct macOS execution to interact with Things 3. Use `./run_things_fastmcp.sh` directly on your Mac instead.
 
-## Migration & Deprecation
+## Version 2.0 Changes
 
-### ⚠️ Legacy Server Deprecation
+**Breaking Change:** Removed legacy MCP implementation.
 
-The legacy MCP implementation (`things_server.py`) **will be removed by December 31, 2025**.
+If you're upgrading from 1.x:
+- Update MCP client configs: `things_server.py` → `things_fast_server.py`
+- All tool names and signatures remain unchanged
+- You now get all reliability features automatically (caching, circuit breaker, retry logic)
 
-**Migration Steps:**
-
-1. Update any automation/scripts to use `things_fast_server.py`
-2. Update MCP client configs to reference the new entry point
-3. Test with `mcp dev things_fast_server.py`
-4. Remove references to `things_server.py`
-
-**Breaking Changes:** None - the FastMCP implementation provides full backward compatibility with the same tool signatures.
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
 
 ## Contributing
 

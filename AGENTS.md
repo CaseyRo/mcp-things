@@ -27,6 +27,37 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-16
+- **Completed OpenSpec change `remove-legacy-mcp` - Consolidated to FastMCP-only implementation (v2.0.0)**
+  - Deleted 5 legacy files: things_server.py, simple_server.py, simple_url_scheme.py, mcp_tools.py, and src/things_mcp/things_server.py
+  - Updated pyproject.toml, smithery.yaml, and __init__.py to version 2.0.0
+  - Updated README.md: removed Migration & Deprecation section, added concise Version 2.0 Changes section
+  - Created comprehensive CHANGELOG.md entry for 2.0.0 with breaking changes and migration guide
+  - Maintained all 19 MCP tool APIs - full backward compatibility at tool level
+  - Removed ~714 lines of duplicate code, simplified maintenance
+- Created OpenSpec change proposal `remove-legacy-mcp` for consolidating to FastMCP-only implementation
+  - Comprehensive proposal.md documenting why (dual-implementation burden), what (remove 5 legacy files), and impact (breaking change → v2.0.0)
+  - Detailed tasks.md with 8 implementation phases: pre-flight checks, code removal, import cleanup, config updates, documentation, testing, versioning, validation
+  - Design.md with technical decisions, migration plan, risks/mitigations, rollback strategy
+  - No spec deltas needed (implementation consolidation maintains all 19 tool APIs)
+- Created comprehensive openspec/project.md with full project context (purpose, tech stack, conventions, domain knowledge, constraints, dependencies)
+- Cleaned up and improved README.md based on openspec structure:
+  - Enhanced overview and key benefits section
+  - Added prerequisites section upfront
+  - Better organized features by category (Things 3 Integration, Reliability, MCP)
+  - Complete inventory of all 19 MCP tools with descriptions
+  - Added architecture diagram and data flow
+  - New sections: Usage with AI Assistants, Code Quality, Troubleshooting, Migration & Deprecation
+  - Fixed all 44 markdown linting errors
+- Removed redundant documentation files:
+  - Deleted RELEASE_NOTES.md (redundant with CHANGELOG.md)
+  - Deleted IMPLEMENTATION_SUMMARY.md (covered by openspec/project.md, README.md, and AGENTS.md)
+- Updated smithery.yaml to align with improved documentation:
+  - Refreshed descriptions to match new README
+  - Added all 19 tools (was only 10)
+  - Added THINGS_FASTMCP_HOST and THINGS_FASTMCP_PORT config options
+  - Updated tags for better discoverability
+
 ### 2025-10-11
 - Added shared MCP error helper returning `CallToolResult` and updated tool handlers to use it for failure cases.
 

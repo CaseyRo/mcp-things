@@ -1,100 +1,149 @@
+# @format
+
 name: things3-enhanced-mcp
-version: 1.0.0
-description: "Enhanced FastMCP server for Things 3 app integration with Claude Desktop and Windsurf - featuring reliability improvements, caching, and AppleScript bridge"
+version: 2.0.0
+description: "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 
 # Smithery configuration
 registry:
-  displayName: "Things 3 Enhanced MCP"
-  shortDescription: "Advanced Things 3 integration with enterprise reliability features"
-  longDescription: |
-    Enhanced Model Context Protocol server for seamless Things 3 app integration with AI assistants. 
-    Features production-ready reliability with circuit breaker patterns, intelligent caching, AppleScript 
-    bridge, and comprehensive error handling. Perfect for macOS users wanting robust task management 
-    automation with Claude Desktop or Windsurf.
-  
-  tags:
-    - task-management
-    - productivity
-    - things3
-    - macos
-    - apple
-    - fastmcp
-    - reliability
-    - gtd
-  
-  category: "Task Management"
-  
-  # Requirements
-  requirements:
-    os: ["macos"]
-    platform: ["local"]
-    
-  # Documentation
-  homepage: "https://github.com/CaseyRo/things-fastmcp"
-  repository: "https://github.com/CaseyRo/things-fastmcp"
-  documentation: "https://github.com/CaseyRo/things-fastmcp#readme"
-  
-  # Installation
-  installation:
-    type: "pip"
-    package: "things3-enhanced-mcp"
-  # Configuration requirements
-  configuration:
-    required:
-      - name: "THINGS_AUTH_TOKEN"
-        description: "Authentication token from Things 3 Preferences → General"
-        type: "string"
-        secret: true
-    optional:
-      - name: "THINGS_MCP_LOG_LEVEL"
-        description: "Logging level (DEBUG, INFO, WARNING, ERROR)"
-        type: "string"
-        default: "INFO"
+    displayName: "Things 3 Enhanced MCP Server"
+    shortDescription: "Production-ready Things 3 integration with intelligent caching, circuit breakers, and comprehensive error handling"
+    longDescription: |
+        A production-ready Model Context Protocol (MCP) server for Things 3 on macOS, enabling AI assistants
+        like Claude Desktop to manage tasks, projects, and areas through natural language. Built with the
+        modern FastMCP framework, it includes enterprise-grade reliability features: intelligent caching with
+        TTL management, circuit breaker patterns for failure recovery, exponential backoff retry logic, dead
+        letter queue for debugging, and privacy-aware structured logging. All operations are local-only for
+        complete data privacy. Perfect for GTD workflows and productivity automation on macOS.
 
-# Build configuration  
+    tags:
+        - task-management
+        - productivity
+        - things3
+        - macos
+        - fastmcp
+        - gtd
+        - reliability
+        - caching
+        - circuit-breaker
+        - privacy-first
+
+    category: "Task Management"
+
+    # Requirements
+    requirements:
+        os: ["macos"]
+        platform: ["local"]
+
+    # Documentation
+    homepage: "https://github.com/CaseyRo/things-fastmcp"
+    repository: "https://github.com/CaseyRo/things-fastmcp"
+    documentation: "https://github.com/CaseyRo/things-fastmcp#readme"
+
+    # Installation
+    installation:
+        type: "pip"
+        package: "things3-enhanced-mcp"
+    # Configuration requirements
+    configuration:
+        required:
+            - name: "THINGS_AUTH_TOKEN"
+              description: "Authentication token from Things 3 Preferences → General (configure via configure_token.py)"
+              type: "string"
+              secret: true
+        optional:
+            - name: "THINGS_FASTMCP_HOST"
+              description: "Server bind address (default: 127.0.0.1, use 0.0.0.0 to expose to network)"
+              type: "string"
+              default: "127.0.0.1"
+            - name: "THINGS_FASTMCP_PORT"
+              description: "Server port (default: 8009)"
+              type: "integer"
+              default: 8009
+            - name: "THINGS_MCP_LOG_LEVEL"
+              description: "Logging level (DEBUG, INFO, WARNING, ERROR)"
+              type: "string"
+              default: "INFO"
+
+# Build configuration
 build:
-  type: "python"
-  python_version: "3.12"
-  
-  # Entry point
-  entry_point: "src.things_mcp.fast_server:run_things_mcp_server"
-  
-  # Dependencies from pyproject.toml
-  dependencies:
-    - "httpx>=0.28.1"
-    - "mcp[cli]>=1.2.0" 
-    - "things-py>=0.0.15"
+    type: "python"
+    python_version: "3.12"
+
+    # Entry point
+    entry_point: "src.things_mcp.fast_server:run_things_mcp_server"
+
+    # Dependencies from pyproject.toml
+    dependencies:
+        - "httpx>=0.28.1"
+        - "mcp[cli]>=1.2.0"
+        - "things-py>=0.0.15"
 
 # Deployment settings
 deployment:
-  type: "local"  # This runs locally, not on Smithery's servers
-  
+    type: "local" # This runs locally, not on Smithery's servers
+
 # Health checks
 health:
-  startup_timeout: 30
-  readiness_probe:
-    path: "/health"
-    timeout: 5
-    
-# Features/Tools provided by this MCP
+    startup_timeout: 30
+    readiness_probe:
+        path: "/health"
+        timeout: 5
+
+# Features/Tools provided by this MCP (19 total)
 tools:
-  - name: "get-inbox"
-    description: "Get todos from Things 3 Inbox"
-  - name: "get-today" 
-    description: "Get todos due today"
-  - name: "get-upcoming"
-    description: "Get upcoming todos"
-  - name: "get-anytime"
-    description: "Get todos from Anytime list"
-  - name: "get-someday"
-    description: "Get todos from Someday list"
-  - name: "add-todo"
-    description: "Create a new todo with full parameter support"
-  - name: "add-project"
-    description: "Create a new project with tags and todos"
-  - name: "update-todo"
-    description: "Update an existing todo"
-  - name: "search-todos"
-    description: "Search for todos by title/notes"
-  - name: "get-tags"
-    description: "Get all available tags" 
+    # List Views
+    - name: "get-inbox"
+      description: "Retrieve items in Inbox"
+    - name: "get-today"
+      description: "Get tasks due today"
+    - name: "get-upcoming"
+      description: "View upcoming scheduled tasks"
+    - name: "get-anytime"
+      description: "List Anytime tasks"
+    - name: "get-someday"
+      description: "List Someday/Maybe items"
+    - name: "get-logbook"
+      description: "Access completed items (configurable period)"
+    - name: "get-trash"
+      description: "View deleted items"
+
+    # Task Operations
+    - name: "get-todos"
+      description: "List all todos (optionally filtered by project)"
+    - name: "add-todo"
+      description: "Create new tasks with full metadata (title, notes, dates, tags, checklists)"
+    - name: "update-todo"
+      description: "Modify existing tasks"
+
+    # Project & Area Management
+    - name: "get-projects"
+      description: "List all projects"
+    - name: "get-areas"
+      description: "List all areas"
+    - name: "add-project"
+      description: "Create new projects with initial todos"
+    - name: "update-project"
+      description: "Modify existing projects"
+
+    # Tag Operations
+    - name: "get-tags"
+      description: "List all tags"
+    - name: "get-tagged-items"
+      description: "Filter items by tag"
+
+    # Search & Discovery
+    - name: "search-todos"
+      description: "Search by title or notes"
+    - name: "search-advanced"
+      description: "Multi-criteria filtering (status, dates, tags, areas)"
+    - name: "search-items"
+      description: "Open search in Things app"
+    - name: "show-item"
+      description: "Display specific item or list in Things"
+
+    # Diagnostics
+    - name: "get-recent"
+      description: "Recently created items"
+    - name: "get-cache-stats"
+      description: "Cache performance metrics"
