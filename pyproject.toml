@@ -1,15 +1,26 @@
 [project]
 name = "things3-enhanced-mcp"
-version = "1.0.0"
-description = "Enhanced FastMCP server for Things 3 app integration with Claude Desktop and Windsurf - featuring reliability improvements, caching, and AppleScript bridge"
+version = "2.0.0"
+description = "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "MIT License"}
+license = { text = "MIT License" }
 authors = [
-    {name = "Yaroslav Krempovych", email = "51231325+excelsior@users.noreply.github.com"},
-    {name = "Harald Lindstrøm", email = "hald@users.noreply.github.com"}
+    { name = "Yaroslav Krempovych", email = "51231325+excelsior@users.noreply.github.com" },
+    { name = "Harald Lindstrøm", email = "hald@users.noreply.github.com" },
 ]
-keywords = ["mcp", "anthropic", "claude", "things3", "things", "task-management", "productivity", "fastmcp", "macos", "apple"]
+keywords = [
+    "mcp",
+    "anthropic",
+    "claude",
+    "things3",
+    "things",
+    "task-management",
+    "productivity",
+    "fastmcp",
+    "macos",
+    "apple",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -18,7 +29,7 @@ classifiers = [
     "Topic :: Utilities",
     "Topic :: Office/Business :: Scheduling",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Operating System :: MacOS"
+    "Operating System :: MacOS",
 ]
 dependencies = [
     "httpx>=0.28.1",
@@ -46,17 +57,10 @@ include = [
     "LICENSE",
     "pyproject.toml",
     "things_fast_server.py",
-    "things_server.py"
 ]
 
 [tool.hatch.envs.default]
-dependencies = [
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "build",
-    "twine"
-]
+dependencies = ["pytest", "pytest-cov", "ruff", "build", "twine"]
 
 [project.optional-dependencies]
 dev = [
@@ -64,7 +68,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
     "build>=0.10.0",
-    "twine>=4.0.0"
+    "twine>=4.0.0",
 ]
 
 [tool.hatch.envs.default.scripts]

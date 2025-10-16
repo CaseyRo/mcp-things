@@ -62,7 +62,6 @@ This project provides a **Model Context Protocol (MCP) server** for the [Things 
 ```
 src/things_mcp/
 ├── fast_server.py       # FastMCP implementation (primary)
-├── simple_server.py     # Legacy MCP (deprecated, EOY 2025)
 ├── handlers.py          # Tool handler functions with reliability features
 ├── url_scheme.py        # Things URL scheme builders
 ├── applescript_bridge.py # AppleScript execution layer
@@ -204,9 +203,9 @@ things:///show?id=today&query=search
 3. **Log Redaction** - Sensitive content (titles, notes) must not appear in logs
 4. **Token-Based Auth** - Things authentication token must be configured via `configure_token.py`
 
-### Deprecation Timeline
-- **Legacy MCP (`things_server.py`)** - Deprecated, will be removed by EOY 2025
-- Users must migrate to FastMCP implementation (`things_fast_server.py`)
+### Version History
+- **v2.0.0 (2025-10-16)** - Removed legacy MCP implementation, consolidated to FastMCP-only
+- **v1.0.0 (2025-05-30)** - Initial FastMCP implementation with reliability features
 
 ## External Dependencies
 

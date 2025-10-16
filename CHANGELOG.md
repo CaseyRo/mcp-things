@@ -7,8 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-10-16
+
+### BREAKING CHANGES
+
+- **Removed legacy MCP implementation** - Consolidated to FastMCP-only implementation
+  - Deleted `/things_server.py` - Legacy entry point
+  - Deleted `/src/things_mcp/things_server.py` - Legacy MCP server
+  - Deleted `/src/things_mcp/simple_server.py` - Simple server variant
+  - Deleted `/src/things_mcp/simple_url_scheme.py` - Legacy URL scheme
+  - Deleted `/src/things_mcp/mcp_tools.py` - Legacy tool registration
+
+### Migration Guide
+
+If upgrading from 1.x:
+
+1. **Update MCP client configuration:**
+   - Old: `"command": "things_server.py"`
+   - New: `"command": "things_fast_server.py"`
+
+2. **Update any scripts or automation:**
+   - Old: `mcp dev things_server.py`
+   - New: `mcp dev things_fast_server.py`
+
+3. **No tool changes required** - All 19 MCP tools remain with identical signatures
+
+### Benefits of 2.0
+
+- ✅ **Simpler codebase** - Removed ~714 lines of duplicate code
+- ✅ **Better reliability** - All users now get circuit breaker, caching, and retry logic automatically
+- ✅ **Easier maintenance** - Single implementation to test and update
+- ✅ **Clearer documentation** - No more confusion about which implementation to use
+
 ### Changed
-- Default the FastMCP server binding to `127.0.0.1` with an opt-in `THINGS_FASTMCP_HOST` override for remote exposure.
+
+- Updated project description to emphasize production-ready nature
+- Bumped version to 2.0.0 across all configuration files
+- Streamlined documentation with consolidated migration guide
 
 ## [1.0.0] - 2025-05-30
 
@@ -47,4 +82,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Attribution
 Based on the original [things-mcp](https://github.com/hald/things-mcp) by Harald Lindstrøm
 
-[1.0.0]: https://github.com/CaseyRo/things-fastmcp/releases/tag/v1.0.0 
+[1.0.0]: https://github.com/CaseyRo/things-fastmcp/releases/tag/v1.0.0
