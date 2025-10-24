@@ -89,17 +89,25 @@ This MCP server provides seamless integration between Things 3 and AI assistants
 **Option 1: Production Mode** (recommended)
 
 ```bash
-./run_things_fastmcp.sh
+uv run server
 ```
 
 - Binds to `http://127.0.0.1:8009` by default (localhost-only)
 - Uses [Rich](https://github.com/Textualize/rich) for colorful terminal output
-- Auto-manages virtual environment
+- Auto-manages virtual environment and dependencies
 
-**Option 2: Development Mode** (with auto-reload)
+**Option 2: Development Mode**
 
 ```bash
-mcp dev things_fast_server.py
+uv run dev
+```
+
+Same as production mode but with development-friendly settings.
+
+**Option 3: Manual Development Mode** (with auto-reload)
+
+```bash
+mcp dev src/things_mcp/things_fast_server.py
 ```
 
 Uses the [MCP development helper](https://github.com/anthropics/mcp-cli#development-helper) for automatic reloading on file changes.
@@ -116,10 +124,24 @@ export THINGS_FASTMCP_HOST=0.0.0.0
 export THINGS_FASTMCP_PORT=9000
 ```
 
-**Command-Line Flags:**
+**Using .env File:**
+
+Create a `.env` file in the project root for easy configuration:
 
 ```bash
-./run_things_fastmcp.sh --host 0.0.0.0 --port 9000
+# Copy the example file
+cp .env.example .env
+
+# Edit .env with your preferred settings
+THINGS_FASTMCP_HOST=127.0.0.1
+THINGS_FASTMCP_PORT=8009
+```
+
+**Environment Variable Override:**
+
+```bash
+# Override configuration when running
+THINGS_FASTMCP_HOST=0.0.0.0 THINGS_FASTMCP_PORT=9000 uv run server
 ```
 
 ## Available MCP Tools
@@ -201,7 +223,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 {
   "mcpServers": {
     "things": {
-      "command": "/path/to/things-fastmcp/run_things_fastmcp.sh"
+      "command": "uv run server"
     }
   }
 }
@@ -292,7 +314,7 @@ See [openspec/project.md](openspec/project.md) for:
 
 ### Why No Docker Support?
 
-Docker containers on macOS run in a lightweight VM that lacks access to host-level AppleScript and URL scheme handlers. The server requires direct macOS execution to interact with Things 3. Use `./run_things_fastmcp.sh` directly on your Mac instead.
+Docker containers on macOS run in a lightweight VM that lacks access to host-level AppleScript and URL scheme handlers. The server requires direct macOS execution to interact with Things 3. Use `uv run server` directly on your Mac instead.
 
 ## Version 2.0 Changes
 
@@ -315,6 +337,28 @@ Contributions are welcome! This project uses the [OpenSpec](openspec/AGENTS.md) 
 2. Check existing [issues](https://github.com/CaseyRo/things-fastmcp/issues) and specs
 3. Follow the change proposal workflow for new features
 4. Run `ruff check .` and `pytest` before submitting PRs
+
+## Migration from Bash Script
+
+If you were previously using the bash script (`./run_things_fastmcp.sh`), here's how to migrate:
+
+**Old way:**
+```bash
+./run_things_fastmcp.sh
+./run_things_fastmcp.sh --host 0.0.0.0 --port 9000
+```
+
+**New way:**
+```bash
+uv run server
+THINGS_FASTMCP_HOST=0.0.0.0 THINGS_FASTMCP_PORT=9000 uv run server
+```
+
+**Benefits of the new approach:**
+- ✅ Simpler command syntax
+- ✅ Better dependency management with UV
+- ✅ Configuration via `.env` files
+- ✅ No bash script maintenance overhead
 
 ## License
 
