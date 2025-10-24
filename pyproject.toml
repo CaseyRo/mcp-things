@@ -34,6 +34,7 @@ classifiers = [
 dependencies = [
     "httpx>=0.28.1",
     "mcp[cli]>=1.2.0",
+    "python-dotenv>=1.0.0",
     "things-py>=0.0.15",
     "rich>=13.7.0",
 ]
@@ -70,6 +71,10 @@ dev = [
     "build>=0.10.0",
     "twine>=4.0.0",
 ]
+
+[project.scripts]
+server = "things_mcp.things_fast_server:main"
+dev = "things_mcp.things_fast_server:main"
 
 [tool.hatch.envs.default.scripts]
 test = "pytest {args:tests}"

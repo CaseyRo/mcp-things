@@ -7,8 +7,8 @@ import logging
 import sys
 from rich.console import Console
 from rich.logging import RichHandler
-from src.things_mcp.fast_server import run_things_mcp_server
-from src.things_mcp.shutdown import setup_interrupt_handler
+from .fast_server import run_things_mcp_server
+from .shutdown import setup_interrupt_handler
 
 # Configure rich logging
 console = Console()

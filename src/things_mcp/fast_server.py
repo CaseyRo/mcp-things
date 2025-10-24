@@ -11,6 +11,7 @@ from functools import lru_cache
 from typing import Dict, Any, Optional, List, Union
 import inspect
 import things
+from dotenv import load_dotenv
 
 from mcp.server.fastmcp import FastMCP
 import mcp.types as types
@@ -19,7 +20,7 @@ import mcp.types as types
 from .formatters import format_todo, format_project, format_area, format_tag
 from .utils import app_state, circuit_breaker, dead_letter_queue, rate_limiter
 from .url_scheme import (
-    add_todo, add_project, update_todo, update_project, show, 
+    add_todo, add_project, update_todo, update_project, show,
     search, launch_things, execute_url
 )
 
@@ -29,6 +30,8 @@ from .logging_config import setup_logging, get_logger, log_operation_start, log_
 from .cache import cached, invalidate_caches_for, get_cache_stats, CACHE_TTL
 from .tag_handler import ensure_tags_exist
 
+# Load environment variables from .env file
+load_dotenv()
 
 READ_ONLY_ANNOTATIONS = types.ToolAnnotations(
     readOnlyHint=True,
@@ -224,14 +227,14 @@ def get_inbox() -> str:
     import time
     start_time = time.time()
     log_operation_start("get-inbox")
-    
+
     try:
         todos = things.inbox()
-        
+
         if not todos:
             log_operation_end("get-inbox", True, time.time() - start_time, count=0)
             return "No items found in Inbox"
-        
+
         formatted_todos = [format_todo(todo) for todo in todos]
         log_operation_end("get-inbox", True, time.time() - start_time, count=len(todos))
         return "\n\n---\n\n".join(formatted_todos)
@@ -246,14 +249,14 @@ def get_today() -> str:
     import time
     start_time = time.time()
     log_operation_start("get-today")
-    
+
     try:
         todos = things.today()
-        
+
         if not todos:
             log_operation_end("get-today", True, time.time() - start_time, count=0)
             return "No items due today"
-        
+
         formatted_todos = [format_todo(todo) for todo in todos]
         log_operation_end("get-today", True, time.time() - start_time, count=len(todos))
         return "\n\n---\n\n".join(formatted_todos)
@@ -265,10 +268,10 @@ def get_today() -> str:
 def get_upcoming() -> str:
     """Get upcoming todos"""
     todos = things.upcoming()
-    
+
     if not todos:
         return "No upcoming items"
-    
+
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
@@ -276,10 +279,10 @@ def get_upcoming() -> str:
 def get_anytime() -> str:
     """Get todos from Anytime list"""
     todos = things.anytime()
-    
+
     if not todos:
         return "No items in Anytime list"
-    
+
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
@@ -287,10 +290,10 @@ def get_anytime() -> str:
 def get_someday() -> str:
     """Get todos from Someday list"""
     todos = things.someday()
-    
+
     if not todos:
         return "No items in Someday list"
-    
+
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
@@ -298,19 +301,19 @@ def get_someday() -> str:
 def get_logbook(period: str = "7d", limit: int = 50) -> str:
     """
     Get completed todos from Logbook, defaults to last 7 days
-    
+
     Args:
         period: Time period to look back (e.g., '3d', '1w', '2m', '1y'). Defaults to '7d'
         limit: Maximum number of entries to return. Defaults to 50
     """
     todos = things.last(period, status='completed')
-    
+
     if not todos:
         return "No completed items found"
-    
+
     if todos and len(todos) > limit:
         todos = todos[:limit]
-        
+
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
@@ -318,10 +321,10 @@ def get_logbook(period: str = "7d", limit: int = 50) -> str:
 def get_trash() -> str:
     """Get trashed todos"""
     todos = things.trash()
-    
+
     if not todos:
         return "No items in trash"
-    
+
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
@@ -330,10 +333,10 @@ def get_trash() -> str:
 @mcp.tool(name="get-todos", annotations=TOOL_ANNOTATIONS["get-todos"])
 def get_todos(
     project_uuid: Optional[str] = None, include_items: bool = True
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Get todos from Things, optionally filtered by project
-    
+
     Args:
         project_uuid: Optional UUID of a specific project to get todos from
         include_items: Include checklist items
@@ -344,7 +347,7 @@ def get_todos(
             return _error_result(f"Error: Invalid project UUID '{project_uuid}'")
 
     todos = things.todos(project=project_uuid, start=None)
-    
+
     if not todos:
         return "No todos found"
 
@@ -355,7 +358,7 @@ def get_todos(
 def get_projects(include_items: bool = False) -> str:
     """
     Get all projects from Things
-    
+
     Args:
         include_items: Include tasks within projects
     """
@@ -371,7 +374,7 @@ def get_projects(include_items: bool = False) -> str:
 def get_areas(include_items: bool = False) -> str:
     """
     Get all areas from Things
-    
+
     Args:
         include_items: Include projects and tasks within areas
     """
@@ -389,7 +392,7 @@ def get_areas(include_items: bool = False) -> str:
 def get_tags(include_items: bool = False) -> str:
     """
     Get all tags
-    
+
     Args:
         include_items: Include items tagged with each tag
     """
@@ -405,7 +408,7 @@ def get_tags(include_items: bool = False) -> str:
 def get_tagged_items(tag: str) -> str:
     """
     Get items with a specific tag
-    
+
     Args:
         tag: Tag title to filter by
     """
@@ -423,7 +426,7 @@ def get_tagged_items(tag: str) -> str:
 def search_todos(query: str) -> str:
     """
     Search todos by title or notes
-    
+
     Args:
         query: Search term to look for in todo titles and notes
     """
@@ -443,10 +446,10 @@ def search_advanced(
     tag: Optional[str] = None,
     area: Optional[str] = None,
     type: Optional[str] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Advanced todo search with multiple filters
-    
+
     Args:
         status: Filter by todo status (incomplete/completed/canceled)
         start_date: Filter by start date (YYYY-MM-DD)
@@ -457,7 +460,7 @@ def search_advanced(
     """
     # Build filter parameters
     kwargs = {}
-    
+
     # Add filters that are provided
     if status:
         kwargs['status'] = status
@@ -471,14 +474,14 @@ def search_advanced(
         kwargs['area'] = area
     if type:
         kwargs['type'] = type
-        
+
     # Execute search with applicable filters
     try:
         todos = things.todos(**kwargs)
-        
+
         if not todos:
             return "No items found matching your search criteria"
-            
+
         formatted_todos = [format_todo(todo) for todo in todos]
         return "\n\n---\n\n".join(formatted_todos)
     except Exception as e:
@@ -497,7 +500,7 @@ def add_task(
     list_id: Optional[str] = None,
     list_title: Optional[str] = None,
     heading: Optional[str] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Create a new todo in Things.
 
@@ -542,10 +545,10 @@ def add_task(
 
         if not success:
             return _error_result("Error: Failed to create todo")
-        
+
         # Invalidate relevant caches after creating a todo
         invalidate_caches_for(["get-inbox", "get-today", "get-upcoming", "get-todos"])
-            
+
         return f"Successfully created todo: {title}"
     except Exception as e:
         logger.error(f"Error creating todo: {str(e)}")
@@ -561,10 +564,10 @@ def add_new_project(
     area_id: Optional[str] = None,
     area_title: Optional[str] = None,
     todos: Optional[List[str]] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Create a new project in Things
-    
+
     Args:
         title: Title of the project
         notes: Notes for the project
@@ -580,7 +583,7 @@ def add_new_project(
         if not app_state.update_app_state():
             if not launch_things():
                 return _error_result("Error: Unable to launch Things app")
-                
+
         # Build the add_project URL command and execute it
         url = add_project(
             title=title,
@@ -600,7 +603,7 @@ def add_new_project(
 
         if not success:
             return _error_result("Error: Failed to create project")
-            
+
         return f"Successfully created project: {title}"
     except Exception as e:
         logger.error(f"Error creating project: {str(e)}")
@@ -616,7 +619,7 @@ def update_task(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Update an existing todo in Things.
 
@@ -659,7 +662,7 @@ def update_task(
 
         if not success:
             return _error_result("Error: Failed to update todo")
-            
+
         return f"Successfully updated todo with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
@@ -675,10 +678,10 @@ def update_existing_project(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Update an existing project in Things
-    
+
     Args:
         id: ID of the project to update
         title: New title
@@ -694,7 +697,7 @@ def update_existing_project(
         if not app_state.update_app_state():
             if not launch_things():
                 return _error_result("Error: Unable to launch Things app")
-                
+
         # Build the update_project URL command and execute it
         url = update_project(
             id=id,
@@ -714,7 +717,7 @@ def update_existing_project(
 
         if not success:
             return _error_result("Error: Failed to update project")
-            
+
         return f"Successfully updated project with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating project: {str(e)}")
@@ -725,10 +728,10 @@ def show_item(
     id: str,
     query: Optional[str] = None,
     filter_tags: Optional[List[str]] = None
-) -> Union[str, types.CallToolResult]:
+) -> str:
     """
     Show a specific item or list in Things
-    
+
     Args:
         id: ID of item to show, or one of: inbox, today, upcoming, anytime, someday, logbook
         query: Optional query to filter by
@@ -739,27 +742,27 @@ def show_item(
         if not app_state.update_app_state():
             if not launch_things():
                 return _error_result("Error: Unable to launch Things app")
-                
+
         # Execute the show URL command
         result = show(
             id=id,
             query=query,
             filter_tags=filter_tags
         )
-        
+
         if not result:
             return _error_result(f"Error: Failed to show item/list '{id}'")
-            
+
         return f"Successfully opened '{id}' in Things"
     except Exception as e:
         logger.error(f"Error showing item: {str(e)}")
         return _error_result(f"Error showing item: {str(e)}")
 
 @mcp.tool(name="search-items", annotations=TOOL_ANNOTATIONS["search-items"])
-def search_all_items(query: str) -> Union[str, types.CallToolResult]:
+def search_all_items(query: str) -> str:
     """
     Search for items in Things
-    
+
     Args:
         query: Search query
     """
@@ -768,23 +771,23 @@ def search_all_items(query: str) -> Union[str, types.CallToolResult]:
         if not app_state.update_app_state():
             if not launch_things():
                 return _error_result("Error: Unable to launch Things app")
-                
+
         # Execute the search URL command
         result = search(query=query)
-        
+
         if not result:
             return _error_result(f"Error: Failed to search for '{query}'")
-            
+
         return f"Successfully searched for '{query}' in Things"
     except Exception as e:
         logger.error(f"Error searching: {str(e)}")
         return _error_result(f"Error searching: {str(e)}")
 
 @mcp.tool(name="get-recent", annotations=TOOL_ANNOTATIONS["get-recent"])
-def get_recent(period: str) -> Union[str, types.CallToolResult]:
+def get_recent(period: str) -> str:
     """
     Get recently created items
-    
+
     Args:
         period: Time period (e.g., '3d', '1w', '2m', '1y')
     """
@@ -792,20 +795,20 @@ def get_recent(period: str) -> Union[str, types.CallToolResult]:
         # Check if period format is valid
         if not period or not any(period.endswith(unit) for unit in ['d', 'w', 'm', 'y']):
             return _error_result("Error: Period must be in format '3d', '1w', '2m', '1y'")
-            
+
         # Get recent items
         items = things.last(period)
-        
+
         if not items:
             return f"No items found in the last {period}"
-            
+
         formatted_items = []
         for item in items:
             if item.get('type') == 'to-do':
                 formatted_items.append(format_todo(item))
             elif item.get('type') == 'project':
                 formatted_items.append(format_project(item, include_items=False))
-                
+
         return "\n\n---\n\n".join(formatted_items)
     except Exception as e:
         logger.error(f"Error getting recent items: {str(e)}")
@@ -815,7 +818,7 @@ def get_recent(period: str) -> Union[str, types.CallToolResult]:
 def get_cache_statistics() -> str:
     """Get cache performance statistics"""
     stats = get_cache_stats()
-    
+
     return f"""Cache Statistics:
 - Total entries: {stats['entries']}
 - Cache hits: {stats['hits']}
@@ -853,7 +856,7 @@ def run_things_mcp_server():
             logger.error(f"Error launching Things app: {str(e)}")
     else:
         logger.info("Things app is running and ready for operations")
-        
+
     # Run the MCP server with HTTP transport
     mcp.run(transport="streamable-http")
 
