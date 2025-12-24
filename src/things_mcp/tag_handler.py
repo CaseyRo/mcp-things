@@ -3,9 +3,9 @@
 Tag handler for Things MCP.
 Ensures tags exist before applying them.
 """
-import subprocess
 import logging
 from typing import List, Optional
+from .applescript_bridge import run_applescript
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +13,24 @@ def ensure_tags_exist(tags: List[str]) -> bool:
     """
     Ensure all tags exist in Things before using them.
     Creates missing tags using AppleScript.
-    
+
     Args:
         tags: List of tag names to ensure exist
-        
+
     Returns:
         bool: True if all tags exist or were created successfully
     """
     if not tags:
         return True
-        
+
     try:
         # Build AppleScript to check and create tags
         script_lines = ['tell application "Things3"']
-        
+
         for tag in tags:
             # Escape quotes in tag name
             escaped_tag = tag.replace('"', '\\"')
-            
+
             # Check if tag exists, create if not
             script_lines.extend([
                 f'  set tagName to "{escaped_tag}"',
@@ -50,28 +50,21 @@ def ensure_tags_exist(tags: List[str]) -> bool:
                 '    end try',
                 '  end if'
             ])
-        
+
         script_lines.append('end tell')
         script = '\n'.join(script_lines)
-        
-        # Execute the AppleScript
-        result = subprocess.run(
-            ['osascript', '-e', script],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        
-        if result.returncode != 0:
-            logger.error(f"Failed to ensure tags exist: {result.stderr}")
+
+        # Execute the AppleScript using run_applescript for background execution support
+        # Note: 'without activating' will be automatically added by run_applescript()
+        result = run_applescript(script)
+
+        if not result:
+            logger.error("Failed to ensure tags exist")
             return False
-            
+
         logger.info(f"Ensured tags exist: {', '.join(tags)}")
         return True
-        
-    except subprocess.TimeoutExpired:
-        logger.error("Timeout while ensuring tags exist")
-        return False
+
     except Exception as e:
         logger.error(f"Error ensuring tags exist: {str(e)}")
         return False
@@ -79,7 +72,7 @@ def ensure_tags_exist(tags: List[str]) -> bool:
 def get_existing_tags() -> List[str]:
     """
     Get list of all existing tags in Things.
-    
+
     Returns:
         List[str]: List of tag names
     """
@@ -91,21 +84,19 @@ def get_existing_tags() -> List[str]:
             end repeat
             return tagList
         end tell'''
-        
-        result = subprocess.run(
-            ['osascript', '-e', script],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        if result.returncode == 0 and result.stdout:
+
+        # Execute the AppleScript using run_applescript for background execution support
+        # Note: 'without activating' will be automatically added by run_applescript()
+        result = run_applescript(script)
+
+        if result:
             # Parse the output (comma-separated list)
-            tags = [tag.strip() for tag in result.stdout.strip().split(',')]
+            # result is already a string from run_applescript
+            tags = [tag.strip() for tag in str(result).strip().split(',')]
             return tags
-        
+
         return []
-        
+
     except Exception as e:
         logger.error(f"Error getting existing tags: {str(e)}")
         return []
