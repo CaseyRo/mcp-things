@@ -122,6 +122,10 @@ export THINGS_FASTMCP_HOST=0.0.0.0
 
 # Use custom port
 export THINGS_FASTMCP_PORT=9000
+
+# Disable background execution for AppleScript (useful for debugging)
+# When set, Things 3 will appear in foreground during operations
+export THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1
 ```
 
 **Using .env File:**
@@ -135,6 +139,7 @@ cp .env.example .env
 # Edit .env with your preferred settings
 THINGS_FASTMCP_HOST=127.0.0.1
 THINGS_FASTMCP_PORT=8009
+# THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Uncomment to disable background execution
 ```
 
 **Environment Variable Override:**

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 import subprocess
+import os
 import logging
 from typing import Optional, List, Dict, Any, Union
 
 logger = logging.getLogger(__name__)
+
+# Environment variable to disable background execution for debugging
+DISABLE_BACKGROUND_ENV_VAR = "THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT"
 
 def _script_metadata(command: str, script: str) -> Dict[str, Any]:
     """Return metadata about an AppleScript command without exposing content."""
@@ -13,17 +17,61 @@ def _script_metadata(command: str, script: str) -> Dict[str, Any]:
         'char_count': len(script),
     }
 
+def _wrap_script_for_background(script: str) -> str:
+    """Wrap AppleScript commands targeting Things3 with 'without activating' to prevent foreground activation.
+
+    Args:
+        script: The AppleScript code to potentially wrap
+
+    Returns:
+        The wrapped script if targeting Things3, otherwise the original script
+    """
+    # Check if background execution is disabled via environment variable
+    if os.getenv(DISABLE_BACKGROUND_ENV_VAR, "").strip():
+        logger.debug("Background execution disabled via %s", DISABLE_BACKGROUND_ENV_VAR)
+        return script
+
+    # Check if script targets Things3
+    if 'tell application "Things3"' in script or 'tell application "Things"' in script:
+        # Wrap with 'without activating' to prevent Things from appearing in foreground
+        # We need to handle both single-line and multi-line scripts
+
+        # For scripts that already have 'without activating', don't double-wrap
+        if 'without activating' in script:
+            return script
+
+        # Replace 'tell application "Things3"' with 'tell application "Things3" without activating'
+        wrapped_script = script.replace(
+            'tell application "Things3"',
+            'tell application "Things3" without activating'
+        ).replace(
+            'tell application "Things"',
+            'tell application "Things" without activating'
+        )
+
+        logger.debug("Wrapped AppleScript with 'without activating' for background execution")
+        return wrapped_script
+
+    return script
+
 def run_applescript(script: str) -> Union[str, bool]:
     """Run an AppleScript command and return the result.
-    
+
+    Automatically wraps commands targeting Things3 with 'without activating' to prevent
+    the application from appearing in the foreground, unless disabled via the
+    THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT environment variable.
+
     Args:
         script: The AppleScript code to execute
-        
+
     Returns:
         The result of the AppleScript execution, or False if it failed
     """
     try:
-        result = subprocess.run(['osascript', '-e', script],
+        # Wrap script for background execution if targeting Things3
+        wrapped_script = _wrap_script_for_background(script)
+
+        result = subprocess.run(['osascript', '-e', wrapped_script],
                               capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -45,32 +93,33 @@ def run_applescript(script: str) -> Union[str, bool]:
 def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str] = None,
                    tags: Optional[List[str]] = None, list_title: Optional[str] = None) -> str:
     """Add a todo to Things directly using AppleScript.
-    
+
     This bypasses URL schemes entirely to avoid encoding issues.
-    
+
     Args:
         title: Title of the todo
         notes: Notes for the todo
         when: When to schedule the todo (today, tomorrow, evening, anytime, someday)
         tags: Tags to apply to the todo
         list_title: Name of project/area to add to
-        
+
     Returns:
         ID of the created todo if successful, False otherwise
     """
     # Build the AppleScript command
+    # Note: 'without activating' will be automatically added by run_applescript()
     script_parts = ['tell application "Things3"']
-    
+
     # Create the todo with properties
     properties = []
     properties.append(f'name:"{escape_applescript_string(title)}"')
-    
+
     if notes:
         properties.append(f'notes:"{escape_applescript_string(notes)}"')
-    
+
     # Create with properties in the right way
     script_parts.append(f'set newTodo to make new to do with properties {{{", ".join(properties)}}}')
-    
+
     # Add scheduling
     if when:
         when_mapping = {
@@ -80,7 +129,7 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
             'anytime': '',  # Default
             'someday': 'set status of newTodo to someday'
         }
-        
+
         if when in when_mapping:
             if when_mapping[when]:
                 script_parts.append(when_mapping[when])
@@ -91,12 +140,12 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
                 "Custom date format not supported, defaulting to today",
                 extra={'format_length': len(when) if when else 0}
             )
-    
+
     # Add tags if provided
     if tags and len(tags) > 0:
         for tag in tags:
             script_parts.append(f'tell newTodo to make new tag with properties {{name:"{escape_applescript_string(tag)}"}}')
-    
+
     # Add to a specific project/area if specified
     if list_title:
         script_parts.append(f'set project_name to "{escape_applescript_string(list_title)}"')
@@ -112,20 +161,20 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
         script_parts.append('    -- Neither project nor area found, todo will remain in inbox')
         script_parts.append('  end try')
         script_parts.append('end try')
-    
+
     # Get the ID of the created todo
     script_parts.append('return id of newTodo')
-    
+
     # Close the tell block
     script_parts.append('end tell')
-    
+
     # Execute the script
     script = '\n'.join(script_parts)
     logger.debug(
         "Executing AppleScript command",
         extra=_script_metadata('add_todo_direct', script)
     )
-    
+
     result = run_applescript(script)
     if result:
         logger.info(f"Successfully created todo with ID: {result}")
@@ -136,31 +185,31 @@ def add_todo_direct(title: str, notes: Optional[str] = None, when: Optional[str]
 
 def escape_applescript_string(text: str) -> str:
     """Escape special characters in an AppleScript string.
-    
+
     Args:
         text: The string to escape
-        
+
     Returns:
         The escaped string
     """
     if not text:
         return ""
-    
+
     # Replace any "+" with spaces first
     text = text.replace("+", " ")
-    
+
     # Escape quotes by doubling them (AppleScript style)
     return text.replace('"', '""')
 
 def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str] = None,
                      when: Optional[str] = None, deadline: Optional[str] = None,
                      tags: Optional[Union[List[str], str]] = None, add_tags: Optional[Union[List[str], str]] = None,
-                     checklist_items: Optional[List[str]] = None, completed: Optional[bool] = None, 
+                     checklist_items: Optional[List[str]] = None, completed: Optional[bool] = None,
                      canceled: Optional[bool] = None) -> bool:
     """Update a todo directly using AppleScript.
-    
+
     This bypasses URL schemes entirely to avoid authentication issues.
-    
+
     Args:
         id: The ID of the todo to update
         title: New title for the todo
@@ -172,29 +221,30 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
         checklist_items: Checklist items to set for the todo (replaces existing items)
         completed: Mark as completed
         canceled: Mark as canceled
-    
+
     Returns:
         True if successful, False otherwise
     """
     import re
-    
+
     # Build the AppleScript command to find and update the todo
+    # Note: 'without activating' will be automatically added by run_applescript()
     script_parts = ['tell application "Things3"']
     script_parts.append('try')
     script_parts.append(f'    set theTodo to to do id "{id}"')
-    
+
     # Update properties one at a time
     if title:
         script_parts.append(f'    set name of theTodo to "{escape_applescript_string(title)}"')
-    
+
     if notes:
         script_parts.append(f'    set notes of theTodo to "{escape_applescript_string(notes)}"')
-    
+
     # Handle date-related properties
     if when:
         # Check if when is a date in YYYY-MM-DD format
         is_date_format = re.match(r'^\d{4}-\d{2}-\d{2}$', when)
-        
+
         # Simple mapping of common 'when' values to AppleScript commands
         if when == 'today':
             script_parts.append('    move theTodo to list "Today"')
@@ -224,7 +274,7 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
                 "Schedule format not directly supported",
                 extra={'format_length': len(when) if when else 0}
             )
-    
+
     if deadline:
         # Check if deadline is in YYYY-MM-DD format
         if re.match(r'^\d{4}-\d{2}-\d{2}$', deadline):
@@ -240,18 +290,18 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
                 "Invalid deadline format",
                 extra={'format_length': len(deadline) if deadline else 0}
             )
-    
+
     # Handle tags (clearing and adding new ones)
     if tags is not None:
         # Convert string tags to list if needed
         if isinstance(tags, str):
             tags = [tags]
-            
+
         if tags:
             # Clear existing tags first
             script_parts.append('    -- Clear existing tags')
             script_parts.append('    set tag_names of theTodo to {}')
-            
+
             # Simplified tag handling
             import json
             tags_json = json.dumps(tags)
@@ -276,13 +326,13 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
             # Clear all tags if empty list provided
             script_parts.append('    -- Clear all tags')
             script_parts.append('    set tag_names of theTodo to {}')
-    
+
     # Handle adding tags without replacing existing ones
     if add_tags is not None:
         # Convert string to list if needed
         if isinstance(add_tags, str):
             add_tags = [add_tags]
-            
+
         for tag in add_tags:
             tag_name = escape_applescript_string(tag)
             script_parts.append(f'''
@@ -298,13 +348,13 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
                 tell theTodo to make new tag with properties {{name:"{tag_name}"}}
             end if
             ''')
-            
+
     # Handle checklist items - simplified approach
     if checklist_items is not None:
         # Convert string to list if needed
         if isinstance(checklist_items, str):
             checklist_items = checklist_items.split('\n')
-            
+
         if checklist_items:
             # For simplicity, we'll use JSON to pass checklist items
             import json
@@ -315,7 +365,7 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
     repeat with i from (count of oldItems) to 1 by -1
         delete item i of oldItems
     end repeat
-    
+
     set itemList to {items_json}
     repeat with i from 1 to (count of itemList)
         set itemText to item i of itemList
@@ -325,21 +375,21 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
         end tell
     end repeat
 ''')
-    
+
     # Handle completion status - use completion date approach
     if completed is not None:
         if completed:
             script_parts.append('    set status of theTodo to completed')
         else:
             script_parts.append('    set status of theTodo to open')
-    
+
     # Handle canceled status
     if canceled is not None:
         if canceled:
             script_parts.append('    set status of theTodo to canceled')
         else:
             script_parts.append('    set status of theTodo to open')
-    
+
     # Return true on success
     script_parts.append('    return true')
     script_parts.append('on error errMsg')
@@ -347,16 +397,16 @@ def update_todo_direct(id: str, title: Optional[str] = None, notes: Optional[str
     script_parts.append('    return false')
     script_parts.append('end try')
     script_parts.append('end tell')
-    
+
     # Execute the script
     script = '\n'.join(script_parts)
     logger.info(
         "Executing AppleScript for update_todo_direct",
         extra=_script_metadata('update_todo_direct', script)
     )
-    
+
     result = run_applescript(script)
-    
+
     if result == "true":
         logger.info(f"Successfully updated todo with ID: {id}")
         return True

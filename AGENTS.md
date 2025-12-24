@@ -27,6 +27,16 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Run `ruff check .` and `pytest` after modifications.
 
 ## Log
+### 2025-10-16 (continued)
+- Implemented OpenSpec change `modernize-osascript-fastmcp` - Background execution for AppleScript operations
+  - Modified `run_applescript()` in `applescript_bridge.py` to automatically wrap Things3 commands with `without activating` clause
+  - Added `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` environment variable to allow disabling background execution for debugging
+  - Updated `tag_handler.py` to use `run_applescript()` instead of direct subprocess calls for consistency
+  - Updated `utils.py` to use `run_applescript()` for Things3 operations (version detection, app state checks)
+  - Reviewed FastMCP integration - confirmed it already uses modern best practices (introspection for backward compatibility, metadata usage, proper annotations)
+  - Updated README.md to document new environment variable in Configuration section
+  - All AppleScript operations now run in background by default, preventing Things from appearing in foreground and interrupting user workflow
+
 ### 2025-10-16
 - **Completed and archived OpenSpec change `remove-legacy-mcp` - Consolidated to FastMCP-only implementation (v2.0.0)**
   - Deleted 5 legacy files: things_server.py, simple_server.py, simple_url_scheme.py, mcp_tools.py, and src/things_mcp/things_server.py
