@@ -20,37 +20,29 @@ def _script_metadata(command: str, script: str) -> Dict[str, Any]:
 def _wrap_script_for_background(script: str) -> str:
     """Wrap AppleScript commands targeting Things3 with 'without activating' to prevent foreground activation.
 
+    Note: 'without activating' is not valid AppleScript syntax in tell blocks, so this function
+    currently returns the script unchanged. Background execution prevention would need to be
+    handled at the osascript level or through other means.
+
     Args:
         script: The AppleScript code to potentially wrap
 
     Returns:
-        The wrapped script if targeting Things3, otherwise the original script
+        The original script (wrapping disabled due to syntax limitations)
     """
     # Check if background execution is disabled via environment variable
     if os.getenv(DISABLE_BACKGROUND_ENV_VAR, "").strip():
         logger.debug("Background execution disabled via %s", DISABLE_BACKGROUND_ENV_VAR)
         return script
 
-    # Check if script targets Things3
+    # NOTE: 'without activating' is not valid AppleScript syntax in tell blocks
+    # The syntax causes errors: "Expected end of line but found 'without'"
+    # For now, return the script unchanged. Background execution would need
+    # to be handled differently (e.g., using osascript flags or other methods)
+
+    # Check if script targets Things3 - log for debugging but don't modify
     if 'tell application "Things3"' in script or 'tell application "Things"' in script:
-        # Wrap with 'without activating' to prevent Things from appearing in foreground
-        # We need to handle both single-line and multi-line scripts
-
-        # For scripts that already have 'without activating', don't double-wrap
-        if 'without activating' in script:
-            return script
-
-        # Replace 'tell application "Things3"' with 'tell application "Things3" without activating'
-        wrapped_script = script.replace(
-            'tell application "Things3"',
-            'tell application "Things3" without activating'
-        ).replace(
-            'tell application "Things"',
-            'tell application "Things" without activating'
-        )
-
-        logger.debug("Wrapped AppleScript with 'without activating' for background execution")
-        return wrapped_script
+        logger.debug("Script targets Things3 (background execution wrapping disabled due to syntax limitations)")
 
     return script
 
@@ -71,8 +63,15 @@ def run_applescript(script: str) -> Union[str, bool]:
         # Wrap script for background execution if targeting Things3
         wrapped_script = _wrap_script_for_background(script)
 
-        result = subprocess.run(['osascript', '-e', wrapped_script],
-                              capture_output=True, text=True)
+        # Use stdin for multi-line scripts (osascript -e only works for single-line)
+        # Check if script has newlines
+        if '\n' in wrapped_script:
+            result = subprocess.run(['osascript'],
+                                  input=wrapped_script,
+                                  capture_output=True, text=True)
+        else:
+            result = subprocess.run(['osascript', '-e', wrapped_script],
+                                  capture_output=True, text=True)
 
         if result.returncode != 0:
             stderr_output = result.stderr or ""

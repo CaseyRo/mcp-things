@@ -35,14 +35,14 @@ def _summarize_parameters(params: Dict[str, Any]) -> Dict[str, Any]:
 
 def retry_operation(func, max_retries=3, delay=1, operation_name=None, params=None):
     """Retry a function call with exponential backoff and jitter.
-    
+
     Args:
         func: The function to call
         max_retries: Maximum number of retry attempts
         delay: Initial delay between retries in seconds
         operation_name: Name of the operation for logging and DLQ (optional)
         params: Parameters for the operation (optional)
-        
+
     Returns:
         The result of the function call if successful, False if all retries fail
     """
@@ -50,12 +50,12 @@ def retry_operation(func, max_retries=3, delay=1, operation_name=None, params=No
     if not app_state.wait_for_app_availability(timeout=5):
         logger.error("Things app is not available for operation")
         return False
-        
+
     # Check circuit breaker
     if not circuit_breaker.allow_operation():
         logger.warning("Circuit breaker is open, blocking operation")
         return False
-    
+
     last_exception = None
     for attempt in range(max_retries):
         try:
@@ -100,7 +100,7 @@ def retry_operation(func, max_retries=3, delay=1, operation_name=None, params=No
             str(last_exception),
             attempts=max_retries
         )
-        
+
     return False
 
 
@@ -109,12 +109,12 @@ async def handle_tool_call(
     arguments: dict | None
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """Handle tool execution requests.
-    
+
     Attempts to execute the requested Things action with enhanced reliability.
     Uses circuit breaker, app state management, and retry logic for resilience.
     """
     # Import url_scheme inside the function to avoid scope issues
-    import url_scheme
+    from . import url_scheme
     try:
         # List view handlers
         if name in ["get-inbox", "get-today", "get-upcoming", "get-anytime",
@@ -289,24 +289,24 @@ async def handle_tool_call(
 
             # We need to ensure any encoded characters are converted to actual spaces
             # This handles both '+' and '%20' that might be in the input
-            
+
             # Clean up title and notes
             title = arguments["title"]
             if isinstance(title, str):
                 title = title.replace("+", " ").replace("%20", " ")
-            
+
             notes = arguments.get("notes")
             if isinstance(notes, str):
                 notes = notes.replace("+", " ").replace("%20", " ")
-            
+
             # Get other parameters
             when = arguments.get("when")
             tags = arguments.get("tags")
             list_title = arguments.get("list_title")
-            
+
             # Import the AppleScript bridge
             from . import applescript_bridge
-            
+
             # Prepare simplified parameters for the direct AppleScript approach
             # Only include parameters that our AppleScript bridge implementation supports
             simple_params = {
@@ -315,10 +315,10 @@ async def handle_tool_call(
                 "when": when,
                 "tags": tags
             }
-            
+
             # Remove None values
             simple_params = {k: v for k, v in simple_params.items() if v is not None}
-            
+
             logger.info(
                 "Using direct AppleScript implementation to add todo",
                 extra=_summarize_parameters(simple_params)
@@ -327,7 +327,7 @@ async def handle_tool_call(
                 "Prepared direct AppleScript parameters",
                 extra={'parameter_summary': _summarize_parameters(simple_params)}
             )
-            
+
             # Try direct call without retry to capture actual errors
             try:
                 logger.info("Calling add_todo_direct directly")
@@ -339,7 +339,7 @@ async def handle_tool_call(
             except Exception as e:
                 logger.exception("Exception in direct AppleScript call")
                 return [types.TextContent(type="text", text=f"⚠️ Error: {str(e)}")]
-            
+
             # If direct call didn't raise but returned falsy value, try with retry
             if not task_id:
                 logger.info("Direct call failed, trying with retry")
@@ -356,7 +356,7 @@ async def handle_tool_call(
             if not task_id:
                 logger.error("Direct AppleScript creation failed for todo")
                 return [types.TextContent(type="text", text=f"⚠️ Error: Failed to create todo: {title}")]
-                
+
             return [types.TextContent(type="text", text=f"✅ Created new todo: {title} (ID: {task_id})")]
 
         elif name == "search-items":
@@ -365,7 +365,7 @@ async def handle_tool_call(
 
             query = arguments["query"]
             params = {"query": query}
-            
+
             url = url_scheme.search(query)
             success = retry_operation(
                 lambda: url_scheme.execute_url(url),
@@ -391,7 +391,7 @@ async def handle_tool_call(
                 "area_title": arguments.get("area_title"),
                 "todos": arguments.get("todos")
             }
-            
+
             # Try X-Callback URL first
             try:
                 success = retry_operation(
@@ -403,7 +403,7 @@ async def handle_tool_call(
                     return [types.TextContent(type="text", text=f"✅ Created new project: {arguments['title']}")]
             except Exception as e:
                 logger.warning(f"X-Callback add-project failed: {str(e)}, falling back to URL scheme")
-            
+
             # Fall back to regular URL scheme
             url = url_scheme.add_project(**params)
             success = retry_operation(
@@ -411,7 +411,7 @@ async def handle_tool_call(
                 operation_name="add-project",
                 params=params
             )
-            
+
             if not success:
                 raise RuntimeError(f"Failed to create project: {arguments['title']}")
             return [types.TextContent(type="text", text=f"Created new project: {arguments['title']}")]
@@ -431,15 +431,15 @@ async def handle_tool_call(
                 "completed": arguments.get("completed"),
                 "canceled": arguments.get("canceled")
             }
-            
+
             from . import applescript_bridge
-            import url_scheme
-            
+            from . import url_scheme
+
             # Special tag handling
             tag_update_needed = "tags" in arguments and arguments["tags"] is not None
-            tag_only_update = tag_update_needed and all(v is None for k, v in params.items() 
+            tag_only_update = tag_update_needed and all(v is None for k, v in params.items()
                                                        if k not in ["id", "tags"])
-            
+
             # Log the tag update details
             if tag_update_needed:
                 tags_argument = arguments.get('tags')
@@ -451,18 +451,18 @@ async def handle_tool_call(
                         'tag_count': tag_count,
                     }
                 )
-                
+
             success = False
-            
+
             # If this is a tag-only update, use hybrid approach that's proven to be most reliable
             if tag_only_update:
                 logger.info(f"Using hybrid tag management approach for todo: {arguments['id']}")
-                
+
                 try:
                     # Get the tags from the parameters
                     todo_id = arguments['id']
                     tags = arguments['tags']
-                    
+
                     if not isinstance(tags, list) or not tags:
                         logger.warning(
                             "Invalid tags format or empty tags list",
@@ -486,14 +486,14 @@ async def handle_tool_call(
                         extra={'todo_id': todo_id}
                     )
                     clear_success = url_scheme.execute_url(clear_url)
-                    
+
                     if not clear_success:
                         logger.warning("Failed to clear existing tags")
                         # Try to continue anyway
-                    
+
                     # Wait for the clear operation to complete
                     time.sleep(1)
-                    
+
                     # Step 2: Add each tag using hybrid approach
                     all_tags_added = True
                     for tag in tags:
@@ -501,7 +501,7 @@ async def handle_tool_call(
                         tag_str = str(tag).strip()
                         if not tag_str:
                             continue
-                        
+
                         # Use AppleScript to ensure the tag exists first
                         logger.info(
                             "Ensuring tag exists",
@@ -510,14 +510,14 @@ async def handle_tool_call(
                         script = f'''
                         tell application "Things3"
                             set tagExists to false
-                            
+
                             repeat with t in tags
                                 if name of t is "{tag_str}" then
                                     set tagExists to true
                                     exit repeat
                                 end if
                             end repeat
-                            
+
                             if not tagExists then
                                 make new tag with properties {{name:"{tag_str}"}}
                                 return "Created tag: {tag_str}"
@@ -526,7 +526,7 @@ async def handle_tool_call(
                             end if
                         end tell
                         '''
-                        
+
                         # Run AppleScript to create tag if needed
                         result = run_applescript(script)
                         if result:
@@ -539,10 +539,10 @@ async def handle_tool_call(
                                 "Failed to ensure tag exists",
                                 extra={'todo_id': todo_id}
                             )
-                        
+
                         # Short delay after tag creation
                         time.sleep(0.5)
-                        
+
                         # Use add-tags parameter to apply the tag
                         add_tag_url = url_scheme.update_todo(id=todo_id, add_tags=tag_str)
                         logger.info(
@@ -557,10 +557,10 @@ async def handle_tool_call(
                                 extra={'todo_id': todo_id}
                             )
                             all_tags_added = False
-                        
+
                         # Add a small delay between tag operations
                         time.sleep(1)
-                    
+
                     if all_tags_added:
                         logger.info(f"All tags successfully added to todo ID: {todo_id}")
                         success = True
@@ -568,10 +568,10 @@ async def handle_tool_call(
                         logger.warning(f"Some tags failed to be added to todo ID: {todo_id}")
                         # Consider it a partial success if we added at least some tags
                         success = True
-                        
+
                 except Exception:
                     logger.exception("Hybrid tag update error")
-                    
+
                 # Approach 2: If URL scheme failed, try direct AppleScript
                 if not success:
                     logger.info(f"Falling back to AppleScript for tag update")
@@ -588,7 +588,7 @@ async def handle_tool_call(
                     operation_name="update-todo-direct",
                     params=params
                 )
-                
+
                 # If the AppleScript update failed and there are tags to update, try URL scheme
                 if not success and tag_update_needed:
                     logger.info(f"AppleScript failed, trying URL scheme for tag update")
@@ -598,11 +598,11 @@ async def handle_tool_call(
                         operation_name="update-todo-fallback",
                         params=params
                     )
-                
+
             if not success:
                 logger.error(f"All update methods failed for todo with ID: {arguments['id']}")
                 raise RuntimeError(f"Failed to update todo with ID: {arguments['id']}")
-                
+
             return [types.TextContent(type="text", text=f"✅ Successfully updated todo with ID: {arguments['id']}")]
 
         elif name == "update-project":
@@ -620,7 +620,7 @@ async def handle_tool_call(
                 "completed": arguments.get("completed"),
                 "canceled": arguments.get("canceled")
             }
-            
+
             # Try X-Callback URL first for better reliability
             try:
                 success = retry_operation(
@@ -632,7 +632,7 @@ async def handle_tool_call(
                     return [types.TextContent(type="text", text=f"✅ Successfully updated project with ID: {arguments['id']}")]
             except Exception as e:
                 logger.warning(f"X-Callback update-project failed: {str(e)}, falling back to URL scheme")
-            
+
             # Fall back to regular URL scheme
             url = url_scheme.update_project(**params)
             success = retry_operation(
@@ -640,7 +640,7 @@ async def handle_tool_call(
                 operation_name="update-project",
                 params=params
             )
-            
+
             if not success:
                 raise RuntimeError(f"Failed to update project with ID: {arguments['id']}")
             return [types.TextContent(type="text", text=f"Successfully updated project with ID: {arguments['id']}")]
@@ -666,7 +666,7 @@ async def handle_tool_call(
         logger.error(f"Error handling tool {name}: {str(e)}", exc_info=True)
         # Log full traceback for better debugging
         logger.debug(traceback.format_exc())
-        
+
         # Add to dead letter queue if appropriate
         if arguments:
             dead_letter_queue.add_failed_operation(
@@ -674,5 +674,5 @@ async def handle_tool_call(
                 arguments,
                 str(e)
             )
-            
+
         return [types.TextContent(type="text", text=f"⚠️ Error: {str(e)}")]

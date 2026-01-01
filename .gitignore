@@ -179,4 +179,9 @@ set_token_directly.py
 
 # MCP development
 *.log
-logs/ 
+logs/
+
+# Test results (keep directory structure, ignore generated files)
+test-results/*.md
+test-results/*.json
+!test-results/.gitkeep
