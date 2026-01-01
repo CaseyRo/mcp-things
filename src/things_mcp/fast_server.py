@@ -619,7 +619,7 @@ def update_task(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> str:
+) -> types.CallToolResult:
     """
     Update an existing todo in Things.
 
@@ -663,7 +663,10 @@ def update_task(
         if not success:
             return _error_result("Error: Failed to update todo")
 
-        return f"Successfully updated todo with ID: {id}"
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=f"Successfully updated todo with ID: {id}")],
+            isError=False,
+        )
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
         return _error_result(f"Error updating todo: {str(e)}")

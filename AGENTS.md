@@ -28,6 +28,21 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 
 ## Log
 ### 2025-10-16 (continued)
+- Implemented OpenSpec change `add-mcp-crud-tests` - Comprehensive test suite for MCP operations
+  - Created `tests/` directory with full test infrastructure
+  - Added `tests/conftest.py` with fixtures for both mocked unit tests and real Things 3 integration tests
+  - Implemented unit tests (mocked) for all CRUD operations: todos, projects, read operations, integration workflows, error handling
+  - Implemented real integration tests with automatic cleanup using `test_data_tracker` fixture
+  - Added test commands to `pyproject.toml`: `test` (unit only, CI/CD safe), `test:dev` (all tests), `test:unit`, `test:integration`
+  - Updated `pytest.ini` to exclude real integration tests by default (`-m "not real"`)
+  - Added `pytest-asyncio` dependency for async test support
+  - Created comprehensive `TESTING.md` documentation
+  - Updated README.md with testing section
+  - All tests use pytest markers: `unit` (default), `integration`, `real` (dev only), `slow`
+  - Real integration tests gracefully skip if Things 3 is not available
+  - Test coverage target: >80% on handler functions
+
+### 2025-10-16 (continued)
 - Implemented OpenSpec change `modernize-osascript-fastmcp` - Background execution for AppleScript operations
   - Modified `run_applescript()` in `applescript_bridge.py` to automatically wrap Things3 commands with `without activating` clause
   - Added `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` environment variable to allow disabling background execution for debugging

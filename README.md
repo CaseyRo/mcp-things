@@ -261,12 +261,45 @@ Before committing changes:
 ruff check .
 ruff format .
 
-# Run tests
-pytest
+# Run all tests including real Things 3 integration (requires Things 3)
+# Note: 'uv run test' may suppress output; use direct command for visible output
+uv run python -m pytest tests
+
+# Run only unit tests (CI/CD safe, excludes real integration tests)
+uv run python -m pytest tests -m "not real"
 
 # Check test coverage
-pytest --cov=src/things_mcp
+uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing
 ```
+
+### Testing
+
+The project includes a comprehensive test suite with both unit tests (mocked, CI/CD safe) and real integration tests (requires Things 3).
+
+**Quick Start:**
+
+```bash
+# Run all tests including real Things 3 integration (requires Things 3)
+uv run python -m pytest tests
+
+# Run only unit tests (CI/CD safe, excludes real integration tests)
+uv run python -m pytest tests -m "not real"
+
+# Real integration tests only
+uv run python -m pytest tests -m real
+```
+
+**Test Structure:**
+- `tests/test_crud_todos.py` - Todo CRUD operations
+- `tests/test_crud_projects.py` - Project CRUD operations
+- `tests/test_read_operations.py` - Read/list/search operations
+- `tests/test_integration.py` - End-to-end workflows
+- `tests/test_error_handling.py` - Error handling and edge cases
+
+**Test Results:**
+Test results are automatically saved to `test-results/test-results.md` after each run, maintaining a history of the last 3 runs with summaries, failed tests, and breakdowns by marker.
+
+Real integration tests automatically clean up test data after completion. See [TESTING.md](TESTING.md) for complete testing documentation.
 
 ### Project Conventions
 
@@ -341,7 +374,7 @@ Contributions are welcome! This project uses the [OpenSpec](openspec/AGENTS.md) 
 1. Read [openspec/project.md](openspec/project.md) for project conventions
 2. Check existing [issues](https://github.com/CaseyRo/things-fastmcp/issues) and specs
 3. Follow the change proposal workflow for new features
-4. Run `ruff check .` and `pytest` before submitting PRs
+4. Run `ruff check .` and `uv run python -m pytest tests` before submitting PRs
 
 ## Migration from Bash Script
 
