@@ -131,13 +131,13 @@ ICONS: List[IconLike] = [
 ]
 
 
-def _error_result(message: str) -> types.CallToolResult:
-    """Return a standardized error result for MCP tools."""
+def _error_result(message: str) -> str:
+    """Return a standardized error result for MCP tools.
 
-    return types.CallToolResult(
-        content=[types.TextContent(type="text", text=message)],
-        isError=True,
-    )
+    FastMCP automatically wraps string returns in CallToolResult.
+    For errors, we prefix with a warning emoji to indicate error state.
+    """
+    return f"⚠️ {message}"
 # Network binding configuration
 HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
 PORT_ENV_VAR = "THINGS_FASTMCP_PORT"
@@ -619,7 +619,7 @@ def update_task(
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None
-) -> types.CallToolResult:
+) -> str:
     """
     Update an existing todo in Things.
 
@@ -663,10 +663,7 @@ def update_task(
         if not success:
             return _error_result("Error: Failed to update todo")
 
-        return types.CallToolResult(
-            content=[types.TextContent(type="text", text=f"Successfully updated todo with ID: {id}")],
-            isError=False,
-        )
+        return f"Successfully updated todo with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
         return _error_result(f"Error updating todo: {str(e)}")
