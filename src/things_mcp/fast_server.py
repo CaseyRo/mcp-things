@@ -632,6 +632,10 @@ def update_task(
         tags: New tags. Missing tags will be created automatically.
         completed: Mark as completed
         canceled: Mark as canceled
+
+    Returns:
+        str: Success message or error message (always a string, never None).
+        FastMCP requires string returns for Pydantic validation.
     """
     try:
         # Ensure Things app is running
