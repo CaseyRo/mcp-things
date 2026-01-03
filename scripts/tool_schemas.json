@@ -1,0 +1,3548 @@
+[
+  {
+    "name": "get-inbox",
+    "description": "Get todos from Inbox",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_inboxArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-inbox",
+      "title": null,
+      "description": "Get todos from Inbox",
+      "parameters": {
+        "properties": {},
+        "title": "get_inboxArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_inboxArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_inboxOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_inboxOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-today",
+    "description": "Get todos due today",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_todayArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-today",
+      "title": null,
+      "description": "Get todos due today",
+      "parameters": {
+        "properties": {},
+        "title": "get_todayArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_todayArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_todayOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_todayOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-upcoming",
+    "description": "Get upcoming todos",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_upcomingArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-upcoming",
+      "title": null,
+      "description": "Get upcoming todos",
+      "parameters": {
+        "properties": {},
+        "title": "get_upcomingArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_upcomingArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_upcomingOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_upcomingOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-anytime",
+    "description": "Get todos from Anytime list",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_anytimeArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-anytime",
+      "title": null,
+      "description": "Get todos from Anytime list",
+      "parameters": {
+        "properties": {},
+        "title": "get_anytimeArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_anytimeArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_anytimeOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_anytimeOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-someday",
+    "description": "Get todos from Someday list",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_somedayArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-someday",
+      "title": null,
+      "description": "Get todos from Someday list",
+      "parameters": {
+        "properties": {},
+        "title": "get_somedayArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_somedayArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_somedayOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_somedayOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-logbook",
+    "description": "\n    Get completed todos from Logbook, defaults to last 7 days\n\n    Args:\n        period: Time period to look back (e.g., '3d', '1w', '2m', '1y'). Defaults to '7d'\n        limit: Maximum number of entries to return. Defaults to 50\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "period": {
+          "default": "7d",
+          "title": "Period",
+          "type": "string"
+        },
+        "limit": {
+          "default": 50,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "title": "get_logbookArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-logbook",
+      "title": null,
+      "description": "\n    Get completed todos from Logbook, defaults to last 7 days\n\n    Args:\n        period: Time period to look back (e.g., '3d', '1w', '2m', '1y'). Defaults to '7d'\n        limit: Maximum number of entries to return. Defaults to 50\n    ",
+      "parameters": {
+        "properties": {
+          "period": {
+            "default": "7d",
+            "title": "Period",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "get_logbookArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_logbookArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_logbookOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_logbookOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-trash",
+    "description": "Get trashed todos",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_trashArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-trash",
+      "title": null,
+      "description": "Get trashed todos",
+      "parameters": {
+        "properties": {},
+        "title": "get_trashArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_trashArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_trashOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_trashOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-todos",
+    "description": "\n    Get todos from Things, optionally filtered by project\n\n    Args:\n        project_uuid: Optional UUID of a specific project to get todos from\n        include_items: Include checklist items\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "project_uuid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Uuid"
+        },
+        "include_items": {
+          "default": true,
+          "title": "Include Items",
+          "type": "boolean"
+        }
+      },
+      "title": "get_todosArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-todos",
+      "title": null,
+      "description": "\n    Get todos from Things, optionally filtered by project\n\n    Args:\n        project_uuid: Optional UUID of a specific project to get todos from\n        include_items: Include checklist items\n    ",
+      "parameters": {
+        "properties": {
+          "project_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Uuid"
+          },
+          "include_items": {
+            "default": true,
+            "title": "Include Items",
+            "type": "boolean"
+          }
+        },
+        "title": "get_todosArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_todosArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_todosOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_todosOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-projects",
+    "description": "\n    Get all projects from Things\n\n    Args:\n        include_items: Include tasks within projects\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "include_items": {
+          "default": false,
+          "title": "Include Items",
+          "type": "boolean"
+        }
+      },
+      "title": "get_projectsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-projects",
+      "title": null,
+      "description": "\n    Get all projects from Things\n\n    Args:\n        include_items: Include tasks within projects\n    ",
+      "parameters": {
+        "properties": {
+          "include_items": {
+            "default": false,
+            "title": "Include Items",
+            "type": "boolean"
+          }
+        },
+        "title": "get_projectsArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_projectsArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_projectsOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_projectsOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-areas",
+    "description": "\n    Get all areas from Things\n\n    Args:\n        include_items: Include projects and tasks within areas\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "include_items": {
+          "default": false,
+          "title": "Include Items",
+          "type": "boolean"
+        }
+      },
+      "title": "get_areasArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-areas",
+      "title": null,
+      "description": "\n    Get all areas from Things\n\n    Args:\n        include_items: Include projects and tasks within areas\n    ",
+      "parameters": {
+        "properties": {
+          "include_items": {
+            "default": false,
+            "title": "Include Items",
+            "type": "boolean"
+          }
+        },
+        "title": "get_areasArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_areasArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_areasOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_areasOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-tags",
+    "description": "\n    Get all tags\n\n    Args:\n        include_items: Include items tagged with each tag\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "include_items": {
+          "default": false,
+          "title": "Include Items",
+          "type": "boolean"
+        }
+      },
+      "title": "get_tagsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-tags",
+      "title": null,
+      "description": "\n    Get all tags\n\n    Args:\n        include_items: Include items tagged with each tag\n    ",
+      "parameters": {
+        "properties": {
+          "include_items": {
+            "default": false,
+            "title": "Include Items",
+            "type": "boolean"
+          }
+        },
+        "title": "get_tagsArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_tagsArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_tagsOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_tagsOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-tagged-items",
+    "description": "\n    Get items with a specific tag\n\n    Args:\n        tag: Tag title to filter by\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tag"
+      ],
+      "title": "get_tagged_itemsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-tagged-items",
+      "title": null,
+      "description": "\n    Get items with a specific tag\n\n    Args:\n        tag: Tag title to filter by\n    ",
+      "parameters": {
+        "properties": {
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "title": "get_tagged_itemsArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_tagged_itemsArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_tagged_itemsOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_tagged_itemsOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "search-todos",
+    "description": "\n    Search todos by title or notes\n\n    Args:\n        query: Search term to look for in todo titles and notes\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "query": {
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "search_todosArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "search-todos",
+      "title": null,
+      "description": "\n    Search todos by title or notes\n\n    Args:\n        query: Search term to look for in todo titles and notes\n    ",
+      "parameters": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "search_todosArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_todosArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "search_todosOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_todosOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "search-advanced",
+    "description": "\n    Advanced todo search with multiple filters\n\n    Args:\n        status: Filter by todo status (incomplete/completed/canceled)\n        start_date: Filter by start date (YYYY-MM-DD)\n        deadline: Filter by deadline (YYYY-MM-DD)\n        tag: Filter by tag\n        area: Filter by area UUID\n        type: Filter by item type (to-do/project/heading)\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tag"
+        },
+        "area": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        }
+      },
+      "title": "search_advancedArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "search-advanced",
+      "title": null,
+      "description": "\n    Advanced todo search with multiple filters\n\n    Args:\n        status: Filter by todo status (incomplete/completed/canceled)\n        start_date: Filter by start date (YYYY-MM-DD)\n        deadline: Filter by deadline (YYYY-MM-DD)\n        tag: Filter by tag\n        area: Filter by area UUID\n        type: Filter by item type (to-do/project/heading)\n    ",
+      "parameters": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Start Date"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tag"
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Area"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Type"
+          }
+        },
+        "title": "search_advancedArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_advancedArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "search_advancedOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_advancedOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "add-todo",
+    "description": "\n    Create a new todo in Things.\n\n    Args:\n        title: Title of the todo\n        notes: Notes for the todo\n        when: When to schedule the todo (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD)\n        deadline: Deadline for the todo (YYYY-MM-DD)\n        tags: Tags to apply to the todo. Missing tags will be created automatically.\n        checklist_items: Checklist items to add\n        list_id: ID of project/area to add to\n        list_title: Title of project/area to add to\n        heading: Heading to add under\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "checklist_items": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checklist Items"
+        },
+        "list_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "List Id"
+        },
+        "list_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "List Title"
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "add_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": false,
+      "destructiveHint": false
+    },
+    "raw_tool_dict": {
+      "name": "add-todo",
+      "title": null,
+      "description": "\n    Create a new todo in Things.\n\n    Args:\n        title: Title of the todo\n        notes: Notes for the todo\n        when: When to schedule the todo (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD)\n        deadline: Deadline for the todo (YYYY-MM-DD)\n        tags: Tags to apply to the todo. Missing tags will be created automatically.\n        checklist_items: Checklist items to add\n        list_id: ID of project/area to add to\n        list_title: Title of project/area to add to\n        heading: Heading to add under\n    ",
+      "parameters": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tags"
+          },
+          "checklist_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Checklist Items"
+          },
+          "list_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "List Id"
+          },
+          "list_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "List Title"
+          },
+          "heading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Heading"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "add_taskArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.add_taskArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "add_taskOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.add_taskOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "add-project",
+    "description": "\n    Create a new project in Things\n\n    Args:\n        title: Title of the project\n        notes: Notes for the project\n        when: When to schedule the project\n        deadline: Deadline for the project\n        tags: Tags to apply to the project\n        area_id: ID of area to add to\n        area_title: Title of area to add to\n        todos: Initial todos to create in the project\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "area_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area Id"
+        },
+        "area_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area Title"
+        },
+        "todos": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Todos"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "add_new_projectArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": false,
+      "destructiveHint": false
+    },
+    "raw_tool_dict": {
+      "name": "add-project",
+      "title": null,
+      "description": "\n    Create a new project in Things\n\n    Args:\n        title: Title of the project\n        notes: Notes for the project\n        when: When to schedule the project\n        deadline: Deadline for the project\n        tags: Tags to apply to the project\n        area_id: ID of area to add to\n        area_title: Title of area to add to\n        todos: Initial todos to create in the project\n    ",
+      "parameters": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tags"
+          },
+          "area_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Area Id"
+          },
+          "area_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Area Title"
+          },
+          "todos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Todos"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "add_new_projectArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.add_new_projectArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "add_new_projectOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.add_new_projectOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "update-todo",
+    "description": "\n    Update an existing todo in Things.\n\n    Args:\n        id: ID of the todo to update\n        title: New title\n        notes: New notes\n        when: New schedule\n        deadline: New deadline\n        tags: New tags. Missing tags will be created automatically.\n        completed: Mark as completed\n        canceled: Mark as canceled\n\n    Returns:\n        str: Success message or error message (always a string, never None).\n        FastMCP requires string returns for Pydantic validation.\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "completed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed"
+        },
+        "canceled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "update_taskArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false
+    },
+    "raw_tool_dict": {
+      "name": "update-todo",
+      "title": null,
+      "description": "\n    Update an existing todo in Things.\n\n    Args:\n        id: ID of the todo to update\n        title: New title\n        notes: New notes\n        when: New schedule\n        deadline: New deadline\n        tags: New tags. Missing tags will be created automatically.\n        completed: Mark as completed\n        canceled: Mark as canceled\n\n    Returns:\n        str: Success message or error message (always a string, never None).\n        FastMCP requires string returns for Pydantic validation.\n    ",
+      "parameters": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tags"
+          },
+          "completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Completed"
+          },
+          "canceled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canceled"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "update_taskArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.update_taskArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "update_taskOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.update_taskOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "update-project",
+    "description": "\n    Update an existing project in Things\n\n    Args:\n        id: ID of the project to update\n        title: New title\n        notes: New notes\n        when: New schedule\n        deadline: New deadline\n        tags: New tags\n        completed: Mark as completed\n        canceled: Mark as canceled\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline"
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tags"
+        },
+        "completed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed"
+        },
+        "canceled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canceled"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "update_existing_projectArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false
+    },
+    "raw_tool_dict": {
+      "name": "update-project",
+      "title": null,
+      "description": "\n    Update an existing project in Things\n\n    Args:\n        id: ID of the project to update\n        title: New title\n        notes: New notes\n        when: New schedule\n        deadline: New deadline\n        tags: New tags\n        completed: Mark as completed\n        canceled: Mark as canceled\n    ",
+      "parameters": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "When"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Deadline"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tags"
+          },
+          "completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Completed"
+          },
+          "canceled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Canceled"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "update_existing_projectArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.update_existing_projectArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "update_existing_projectOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.update_existing_projectOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "show-item",
+    "description": "\n    Show a specific item or list in Things\n\n    Args:\n        id: ID of item to show, or one of: inbox, today, upcoming, anytime, someday, logbook\n        query: Optional query to filter by\n        filter_tags: Optional tags to filter by\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "filter_tags": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filter Tags"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "show_itemArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "show-item",
+      "title": null,
+      "description": "\n    Show a specific item or list in Things\n\n    Args:\n        id: ID of item to show, or one of: inbox, today, upcoming, anytime, someday, logbook\n        query: Optional query to filter by\n        filter_tags: Optional tags to filter by\n    ",
+      "parameters": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query"
+          },
+          "filter_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Filter Tags"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "show_itemArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.show_itemArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "show_itemOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.show_itemOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "search-items",
+    "description": "\n    Search for items in Things\n\n    Args:\n        query: Search query\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "query": {
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "search_all_itemsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "search-items",
+      "title": null,
+      "description": "\n    Search for items in Things\n\n    Args:\n        query: Search query\n    ",
+      "parameters": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "search_all_itemsArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_all_itemsArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "search_all_itemsOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.search_all_itemsOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-recent",
+    "description": "\n    Get recently created items\n\n    Args:\n        period: Time period (e.g., '3d', '1w', '2m', '1y')\n    ",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {
+        "period": {
+          "title": "Period",
+          "type": "string"
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "title": "get_recentArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-recent",
+      "title": null,
+      "description": "\n    Get recently created items\n\n    Args:\n        period: Time period (e.g., '3d', '1w', '2m', '1y')\n    ",
+      "parameters": {
+        "properties": {
+          "period": {
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period"
+        ],
+        "title": "get_recentArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_recentArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_recentOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_recentOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  },
+  {
+    "name": "get-cache-stats",
+    "description": "Get cache performance statistics",
+    "has_inputSchema": false,
+    "tool_type": "Tool",
+    "tool_attributes": [
+      "_abc_impl",
+      "_calculate_keys",
+      "_copy_and_set_values",
+      "_get_value",
+      "_iter",
+      "_setattr_handler",
+      "annotations",
+      "construct",
+      "context_kwarg",
+      "copy",
+      "description",
+      "dict",
+      "fn",
+      "fn_metadata",
+      "from_function",
+      "from_orm",
+      "icons",
+      "is_async",
+      "json",
+      "meta",
+      "model_computed_fields",
+      "model_config",
+      "model_construct",
+      "model_copy",
+      "model_dump",
+      "model_dump_json",
+      "model_extra",
+      "model_fields",
+      "model_fields_set",
+      "model_json_schema",
+      "model_parametrized_name",
+      "model_post_init",
+      "model_rebuild",
+      "model_validate",
+      "model_validate_json",
+      "model_validate_strings",
+      "name",
+      "output_schema",
+      "parameters",
+      "parse_file",
+      "parse_obj",
+      "parse_raw",
+      "run",
+      "schema",
+      "schema_json",
+      "title",
+      "update_forward_refs",
+      "validate"
+    ],
+    "has_schema": true,
+    "schema": "<bound method BaseModel.schema of <class 'mcp.server.fastmcp.tools.base.Tool'>>",
+    "has_parameters": true,
+    "parameters": {
+      "properties": {},
+      "title": "get_cache_statisticsArguments",
+      "type": "object"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": null
+    },
+    "raw_tool_dict": {
+      "name": "get-cache-stats",
+      "title": null,
+      "description": "Get cache performance statistics",
+      "parameters": {
+        "properties": {},
+        "title": "get_cache_statisticsArguments",
+        "type": "object"
+      },
+      "fn_metadata": {
+        "arg_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_cache_statisticsArguments'>",
+        "output_schema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "get_cache_statisticsOutput",
+          "type": "object"
+        },
+        "output_model": "<class 'mcp.server.fastmcp.utilities.func_metadata.get_cache_statisticsOutput'>",
+        "wrap_output": true
+      },
+      "is_async": false,
+      "context_kwarg": null,
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "icons": null,
+      "meta": null
+    }
+  }
+]
