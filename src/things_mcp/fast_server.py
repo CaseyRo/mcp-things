@@ -637,11 +637,29 @@ def update_task(
         str: Success message or error message (always a string, never None).
         FastMCP requires string returns for Pydantic validation.
     """
+    # #region agent log
+    import json
+    import time
+    try:
+        with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+            f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"A","location":"fast_server.py:640","message":"update_task called","data":{"id":id,"has_title":title is not None,"has_notes":notes is not None,"has_tags":tags is not None},"timestamp":time.time()*1000}) + '\n')
+    except:
+        pass
+    # #endregion
+
     try:
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                result = _error_result("Error: Unable to launch Things app")
+                # #region agent log
+                try:
+                    with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"B","location":"fast_server.py:653","message":"update_task returning error (launch failed)","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
+                except:
+                    pass
+                # #endregion
+                return result
 
         # Ensure tags exist before using them
         if tags:
@@ -663,14 +681,45 @@ def update_task(
         logger.debug(f"Update todo URL: {url}")
 
         success = execute_url(url)
+        # #region agent log
+        try:
+            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"C","location":"fast_server.py:685","message":"execute_url result","data":{"success":success,"url":url[:100] if url else "None"},"timestamp":time.time()*1000}) + '\n')
+        except:
+            pass
+        # #endregion
 
         if not success:
-            return _error_result("Error: Failed to update todo")
+            result = _error_result("Error: Failed to update todo")
+            # #region agent log
+            try:
+                with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"D","location":"fast_server.py:690","message":"update_task returning error (execute failed)","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
+            except:
+                pass
+            # #endregion
+            return result
 
-        return f"Successfully updated todo with ID: {id}"
+        result = f"Successfully updated todo with ID: {id}"
+        # #region agent log
+        try:
+            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"E","location":"fast_server.py:700","message":"update_task returning success","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
+        except:
+            pass
+        # #endregion
+        return result
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
-        return _error_result(f"Error updating todo: {str(e)}")
+        result = _error_result(f"Error updating todo: {str(e)}")
+        # #region agent log
+        try:
+            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"F","location":"fast_server.py:710","message":"update_task exception caught","data":{"exception_type":type(e).__name__,"exception_msg":str(e)[:200],"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
+        except:
+            pass
+        # #endregion
+        return result
 
 @mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"])
 def update_existing_project(
@@ -830,6 +879,48 @@ def get_cache_statistics() -> str:
 - Hit rate: {stats['hit_rate']}
 - Total requests: {stats['total_requests']}"""
 
+def _patch_tool_serialization_for_n8n():
+    """Patch tool serialization to ensure inputSchema compatibility with n8n.
+
+    FastMCP uses 'parameters' internally, but the MCP protocol expects 'inputSchema'.
+    FastMCP should handle this conversion automatically when serializing tools,
+    but we patch the model_dump method to ensure inputSchema is always present
+    for n8n compatibility.
+    """
+    try:
+        # Access tools from the tool manager
+        if hasattr(mcp, "_tool_manager"):
+            tool_manager = mcp._tool_manager
+            if hasattr(tool_manager, "_tools"):
+                tools_dict = tool_manager._tools
+
+                # Patch each tool's model_dump to include inputSchema
+                for tool_name, tool in tools_dict.items():
+                    if hasattr(tool, "parameters") and hasattr(tool, "model_dump"):
+                        original_dump = tool.model_dump
+
+                        def make_patched_dump(original, tool_obj):
+                            def patched_dump(*args, **kwargs):
+                                result = original(*args, **kwargs)
+                                # Ensure inputSchema is present (FastMCP should do this, but ensure it)
+                                if "parameters" in result and "inputSchema" not in result:
+                                    result["inputSchema"] = result["parameters"]
+                                # Also ensure inputSchema has type property for n8n
+                                if "inputSchema" in result and isinstance(result["inputSchema"], dict):
+                                    if "type" not in result["inputSchema"]:
+                                        result["inputSchema"]["type"] = "object"
+                                return result
+                            return patched_dump
+
+                        tool.model_dump = make_patched_dump(original_dump, tool)
+                        logger.debug(f"Patched tool serialization for n8n compatibility: {tool_name}")
+
+        logger.debug("Tool serialization patching completed for n8n compatibility")
+    except Exception as e:
+        logger.debug(f"Could not patch tool serialization (this is usually fine): {e}")
+        # FastMCP should handle parameter->inputSchema conversion automatically
+
+
 # Main entry point
 def run_things_mcp_server():
     """Run the Things MCP server"""
@@ -846,6 +937,9 @@ def run_things_mcp_server():
             HOST_ENV_VAR,
             host,
         )
+
+    # Ensure tool schema compatibility for n8n and other clients
+    _patch_tool_serialization_for_n8n()
 
     # Check if Things app is available
     if not app_state.update_app_state():
