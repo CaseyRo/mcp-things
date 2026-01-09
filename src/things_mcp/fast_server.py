@@ -161,6 +161,7 @@ def _error_result(message: str) -> str:
 # Default values for documentation purposes
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8009
+HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
 
 
 def get_binding_host() -> str:
