@@ -839,49 +839,75 @@ def get_cache_statistics() -> str:
 - Hit rate: {stats['hit_rate']}
 - Total requests: {stats['total_requests']}"""
 
+def _flatten_anyof_for_n8n(schema: dict) -> dict:
+    """Flatten anyOf constructs in JSON Schema for n8n compatibility.
+
+    n8n's MCP client doesn't handle anyOf properly (causes 'Cannot read properties
+    of undefined' errors). This function transforms:
+      {"anyOf": [{"type": "array", "items": {...}}, {"type": "null"}]}
+    into:
+      {"type": "array", "items": {...}}
+
+    The null option is dropped since n8n handles missing/optional values differently.
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    result = {}
+    for key, value in schema.items():
+        if key == "anyOf" and isinstance(value, list):
+            # Find the non-null type in anyOf
+            non_null_types = [t for t in value if t.get("type") != "null"]
+            if len(non_null_types) == 1:
+                # Flatten: merge the non-null type into the parent
+                flattened = _flatten_anyof_for_n8n(non_null_types[0])
+                result.update(flattened)
+            else:
+                # Multiple non-null types, keep anyOf but recurse
+                result[key] = [_flatten_anyof_for_n8n(t) for t in value]
+        elif key == "properties" and isinstance(value, dict):
+            # Recurse into properties
+            result[key] = {k: _flatten_anyof_for_n8n(v) for k, v in value.items()}
+        elif isinstance(value, dict):
+            result[key] = _flatten_anyof_for_n8n(value)
+        elif isinstance(value, list):
+            result[key] = [_flatten_anyof_for_n8n(item) if isinstance(item, dict) else item for item in value]
+        else:
+            result[key] = value
+
+    return result
+
+
 def _patch_tool_serialization_for_n8n():
     """Patch tool serialization to ensure inputSchema compatibility with n8n.
 
-    NOTE: This is a FALLBACK for schema format issues. The main n8n compatibility
-    issue (extra parameters like toolCallId) is handled by N8NCompatibilityMiddleware
-    in _create_fastmcp_instance().
+    n8n's MCP client doesn't handle 'anyOf' constructs in JSON Schema properly,
+    causing "Cannot read properties of undefined (reading 'inputType')" errors.
 
-    FastMCP uses 'parameters' internally, but the MCP protocol expects 'inputSchema'.
-    FastMCP should handle this conversion automatically when serializing tools,
-    but we patch the model_dump method to ensure inputSchema is always present.
+    This patches the mcp.list_tools() method to flatten anyOf constructs
+    (used by Pydantic for Optional types) before returning tools to clients.
     """
     try:
-        # Access tools from the tool manager
-        if hasattr(mcp, "_tool_manager"):
-            tool_manager = mcp._tool_manager
-            if hasattr(tool_manager, "_tools"):
-                tools_dict = tool_manager._tools
+        original_list_tools = mcp.list_tools
 
-                # Patch each tool's model_dump to include inputSchema
-                for tool_name, tool in tools_dict.items():
-                    if hasattr(tool, "parameters") and hasattr(tool, "model_dump"):
-                        original_dump = tool.model_dump
+        async def patched_list_tools():
+            tools = await original_list_tools()
+            # Transform each tool's inputSchema to flatten anyOf
+            for tool in tools:
+                if hasattr(tool, "inputSchema") and tool.inputSchema:
+                    # inputSchema is a dict, flatten it
+                    flattened = _flatten_anyof_for_n8n(tool.inputSchema)
+                    # We can't directly assign to inputSchema on a Pydantic model,
+                    # but we can modify the dict in place if it's mutable
+                    if isinstance(tool.inputSchema, dict):
+                        tool.inputSchema.clear()
+                        tool.inputSchema.update(flattened)
+            return tools
 
-                        def make_patched_dump(original, tool_obj):
-                            def patched_dump(*args, **kwargs):
-                                result = original(*args, **kwargs)
-                                # Ensure inputSchema is present (FastMCP should do this, but ensure it)
-                                if "parameters" in result and "inputSchema" not in result:
-                                    result["inputSchema"] = result["parameters"]
-                                # Also ensure inputSchema has type property for n8n
-                                if "inputSchema" in result and isinstance(result["inputSchema"], dict):
-                                    if "type" not in result["inputSchema"]:
-                                        result["inputSchema"]["type"] = "object"
-                                return result
-                            return patched_dump
-
-                        tool.model_dump = make_patched_dump(original_dump, tool)
-                        logger.debug(f"Patched tool serialization for n8n compatibility: {tool_name}")
-
-        logger.debug("Tool serialization patching completed for n8n compatibility")
+        mcp.list_tools = patched_list_tools
+        logger.debug("Patched list_tools for n8n anyOf compatibility")
     except Exception as e:
-        logger.debug(f"Could not patch tool serialization (this is usually fine): {e}")
-        # FastMCP should handle parameter->inputSchema conversion automatically
+        logger.warning(f"Could not patch list_tools for n8n compatibility: {e}")
 
 
 # Main entry point
