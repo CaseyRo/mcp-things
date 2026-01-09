@@ -283,37 +283,18 @@ class RateLimiter:
 
 
 def get_auth_token() -> Optional[str]:
-    """Get the Things authentication token from various possible sources.
+    """Get the Things authentication token.
 
-    The function tries to get the token from:
-    1. Environment variable THINGS_AUTH_TOKEN
-    2. Local config file
-    3. Hardcoded fallback value
+    Delegates to config.get_things_auth_token() which checks:
+    1. Environment variable / .env (via pydantic-settings)
+    2. Legacy config file (~/.things-mcp/config.json)
 
     Returns:
         str: Authentication token if found, None otherwise
     """
-    # Try environment variable first
-    token = os.environ.get('THINGS_AUTH_TOKEN')
-    if token:
-        logger.info("Using Things authentication token from environment variable")
-        return token
-
-    # Try local config file
-    try:
-        config_path = os.path.expanduser("~/.things_config.json")
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-                if 'auth_token' in config and config['auth_token']:
-                    logger.info("Using Things authentication token from config file")
-                    return config['auth_token']
-    except Exception as e:
-        logger.warning(f"Failed to read auth token from config file: {str(e)}")
-
-    # No token found from dynamic sources
-    logger.warning("No Things authentication token found in environment or config")
-    return None
+    from .config import get_things_auth_token
+    token = get_things_auth_token()
+    return token if token else None
 
 
 def detect_things_version():

@@ -3,5 +3,5 @@
 # Force unbuffered output and ensure we're in the right directory
 cd "$(dirname "$0")" || exit 1
 export PYTHONUNBUFFERED=1
-exec python -u -m pytest tests "$@"
+exec python3 -u -m pytest tests "$@"
 

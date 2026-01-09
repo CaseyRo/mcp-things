@@ -4,21 +4,36 @@ Things MCP Server implementation using the FastMCP pattern.
 This provides a more modern and maintainable approach to the Things integration.
 """
 import logging
-import os
 import asyncio
 import traceback
-from functools import lru_cache
 from typing import Dict, Any, Optional, List, Union
 import inspect
 import things
-from dotenv import load_dotenv
 
 from mcp.server.fastmcp import FastMCP
 import mcp.types as types
 
+# Try to import Middleware from various possible locations
+# FastMCP 2.9+ introduced middleware support
+MIDDLEWARE_AVAILABLE = False
+Middleware = None
+try:
+    from mcp.server.fastmcp.server.middleware import Middleware
+    MIDDLEWARE_AVAILABLE = True
+except ImportError:
+    try:
+        from fastmcp.server.middleware import Middleware
+        MIDDLEWARE_AVAILABLE = True
+    except ImportError:
+        try:
+            from fastmcp import Middleware
+            MIDDLEWARE_AVAILABLE = True
+        except ImportError:
+            pass  # Middleware not available in this version
+
 # Import supporting modules
 from .formatters import format_todo, format_project, format_area, format_tag
-from .utils import app_state, circuit_breaker, dead_letter_queue, rate_limiter
+from .utils import app_state
 from .url_scheme import (
     add_todo, add_project, update_todo, update_project, show,
     search, launch_things, execute_url
@@ -29,9 +44,8 @@ from .logging_config import setup_logging, get_logger, log_operation_start, log_
 # Import caching
 from .cache import cached, invalidate_caches_for, get_cache_stats, CACHE_TTL
 from .tag_handler import ensure_tags_exist
-
-# Load environment variables from .env file
-load_dotenv()
+# Import settings (pydantic-settings loads .env automatically)
+from .settings import get_settings
 
 READ_ONLY_ANNOTATIONS = types.ToolAnnotations(
     readOnlyHint=True,
@@ -77,6 +91,10 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "get-recent": READ_ONLY_ANNOTATIONS,
     "get-cache-stats": READ_ONLY_ANNOTATIONS,
 }
+
+# n8n compatibility: Parameters that n8n's MCP Client Tool incorrectly sends
+# See: https://github.com/n8n-io/n8n/issues/21500
+N8N_EXTRA_PARAMS = {"toolCallId", "sessionId", "action", "chatInput"}
 
 # Configure enhanced logging
 setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
@@ -138,54 +156,21 @@ def _error_result(message: str) -> str:
     For errors, we prefix with a warning emoji to indicate error state.
     """
     return f"⚠️ {message}"
-# Network binding configuration
-HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
-PORT_ENV_VAR = "THINGS_FASTMCP_PORT"
+
+
+# Default values for documentation purposes
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8009
 
 
-@lru_cache(maxsize=1)
 def get_binding_host() -> str:
-    """Return the host for the FastMCP server, honoring the override env var."""
-    value = os.getenv(HOST_ENV_VAR)
-    if value is None:
-        return DEFAULT_HOST
-
-    value = value.strip()
-    return value or DEFAULT_HOST
+    """Return the host for the FastMCP server from settings."""
+    return get_settings().things_fastmcp_host
 
 
-@lru_cache(maxsize=1)
 def get_binding_port() -> int:
-    """Return the port for the FastMCP server, honoring the override env var."""
-    value = os.getenv(PORT_ENV_VAR)
-    if value is None or not value.strip():
-        return DEFAULT_PORT
-
-    stripped = value.strip()
-
-    try:
-        port = int(stripped)
-    except ValueError:
-        logger.warning(
-            "Invalid %s value '%s'; falling back to default port %s",
-            PORT_ENV_VAR,
-            value,
-            DEFAULT_PORT,
-        )
-        return DEFAULT_PORT
-
-    if not 0 < port < 65536:
-        logger.warning(
-            "%s value %s out of valid TCP port range; using default %s",
-            PORT_ENV_VAR,
-            port,
-            DEFAULT_PORT,
-        )
-        return DEFAULT_PORT
-
-    return port
+    """Return the port for the FastMCP server from settings."""
+    return get_settings().things_fastmcp_port
 
 # Determine supported FastMCP constructor arguments at import time so the
 # server remains compatible with runtimes that predate newer metadata
@@ -213,7 +198,35 @@ def _create_fastmcp_instance() -> FastMCP:
     else:
         logger.debug("FastMCP runtime does not support icons; skipping metadata field")
 
-    return FastMCP("Things", **kwargs)
+    server = FastMCP("Things", **kwargs)
+
+    # Add n8n compatibility middleware if available
+    # This strips extra parameters that n8n incorrectly sends (toolCallId, sessionId, etc.)
+    # See: https://github.com/n8n-io/n8n/issues/21500
+    if MIDDLEWARE_AVAILABLE and Middleware is not None:
+        try:
+            class N8NCompatibilityMiddleware(Middleware):
+                """Strip extra parameters that n8n's MCP Client Tool incorrectly sends."""
+
+                async def on_call_tool(self, context, call_next):
+                    if hasattr(context, 'message') and hasattr(context.message, 'arguments'):
+                        args = context.message.arguments
+                        if args:
+                            # Remove n8n-specific parameters that cause Pydantic validation errors
+                            for param in list(N8N_EXTRA_PARAMS):
+                                if param in args:
+                                    del args[param]
+                                    logger.debug(f"Stripped n8n parameter '{param}' from tool call")
+                    return await call_next(context)
+
+            server.add_middleware(N8NCompatibilityMiddleware())
+            logger.info("n8n compatibility middleware registered")
+        except Exception as e:
+            logger.warning(f"Could not register n8n middleware: {e}")
+    else:
+        logger.debug("Middleware not available in this FastMCP version")
+
+    return server
 
 
 # Create the FastMCP server
@@ -632,34 +645,12 @@ def update_task(
         tags: New tags. Missing tags will be created automatically.
         completed: Mark as completed
         canceled: Mark as canceled
-
-    Returns:
-        str: Success message or error message (always a string, never None).
-        FastMCP requires string returns for Pydantic validation.
     """
-    # #region agent log
-    import json
-    import time
-    try:
-        with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"A","location":"fast_server.py:640","message":"update_task called","data":{"id":id,"has_title":title is not None,"has_notes":notes is not None,"has_tags":tags is not None},"timestamp":time.time()*1000}) + '\n')
-    except:
-        pass
-    # #endregion
-
     try:
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                result = _error_result("Error: Unable to launch Things app")
-                # #region agent log
-                try:
-                    with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"B","location":"fast_server.py:653","message":"update_task returning error (launch failed)","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
-                except:
-                    pass
-                # #endregion
-                return result
+                return _error_result("Error: Unable to launch Things app")
 
         # Ensure tags exist before using them
         if tags:
@@ -677,49 +668,17 @@ def update_task(
             canceled=canceled
         )
 
-        # Log the generated URL before executing
         logger.debug(f"Update todo URL: {url}")
 
         success = execute_url(url)
-        # #region agent log
-        try:
-            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"C","location":"fast_server.py:685","message":"execute_url result","data":{"success":success,"url":url[:100] if url else "None"},"timestamp":time.time()*1000}) + '\n')
-        except:
-            pass
-        # #endregion
 
         if not success:
-            result = _error_result("Error: Failed to update todo")
-            # #region agent log
-            try:
-                with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"D","location":"fast_server.py:690","message":"update_task returning error (execute failed)","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
-            except:
-                pass
-            # #endregion
-            return result
+            return _error_result("Error: Failed to update todo")
 
-        result = f"Successfully updated todo with ID: {id}"
-        # #region agent log
-        try:
-            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"E","location":"fast_server.py:700","message":"update_task returning success","data":{"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
-        except:
-            pass
-        # #endregion
-        return result
+        return f"Successfully updated todo with ID: {id}"
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
-        result = _error_result(f"Error updating todo: {str(e)}")
-        # #region agent log
-        try:
-            with open('/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"pre-fix","hypothesisId":"F","location":"fast_server.py:710","message":"update_task exception caught","data":{"exception_type":type(e).__name__,"exception_msg":str(e)[:200],"result_type":type(result).__name__,"result_is_none":result is None,"result_length":len(result) if result else 0},"timestamp":time.time()*1000}) + '\n')
-        except:
-            pass
-        # #endregion
-        return result
+        return _error_result(f"Error updating todo: {str(e)}")
 
 @mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"])
 def update_existing_project(
@@ -882,10 +841,13 @@ def get_cache_statistics() -> str:
 def _patch_tool_serialization_for_n8n():
     """Patch tool serialization to ensure inputSchema compatibility with n8n.
 
+    NOTE: This is a FALLBACK for schema format issues. The main n8n compatibility
+    issue (extra parameters like toolCallId) is handled by N8NCompatibilityMiddleware
+    in _create_fastmcp_instance().
+
     FastMCP uses 'parameters' internally, but the MCP protocol expects 'inputSchema'.
     FastMCP should handle this conversion automatically when serializing tools,
-    but we patch the model_dump method to ensure inputSchema is always present
-    for n8n compatibility.
+    but we patch the model_dump method to ensure inputSchema is always present.
     """
     try:
         # Access tools from the tool manager

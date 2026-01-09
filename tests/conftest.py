@@ -11,11 +11,16 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# Import settings first - pydantic-settings automatically loads .env
+# This ensures THINGS_AUTH_TOKEN is available for all modules
+from things_mcp.settings import get_settings
+get_settings()  # Trigger settings load
+
 import things
 import mcp.types as types
-from things_mcp import handlers
 from things_mcp import url_scheme
 from things_mcp import applescript_bridge
+from things_mcp import fast_server
 
 
 # ============================================================================
@@ -143,7 +148,7 @@ def mock_things(monkeypatch):
     mock_things_module.search = mock.Mock(return_value=[])
 
     # Patch the things module
-    monkeypatch.setattr("things_mcp.handlers.things", mock_things_module)
+    monkeypatch.setattr("things_mcp.fast_server.things", mock_things_module)
     monkeypatch.setattr("things_mcp.formatters.things", mock_things_module)
 
     return mock_things_module
@@ -153,30 +158,13 @@ def mock_things(monkeypatch):
 def mock_applescript(monkeypatch):
     """Mock AppleScript execution for unit tests."""
     mock_run_applescript = mock.Mock(return_value="test-todo-id-123")
-    mock_add_todo_direct = mock.Mock(return_value="test-todo-id-123")
-    mock_update_todo_direct = mock.Mock(return_value=True)
 
     monkeypatch.setattr(
         "things_mcp.applescript_bridge.run_applescript",
         mock_run_applescript
     )
-    monkeypatch.setattr(
-        "things_mcp.applescript_bridge.add_todo_direct",
-        mock_add_todo_direct
-    )
-    monkeypatch.setattr(
-        "things_mcp.applescript_bridge.update_todo_direct",
-        mock_update_todo_direct
-    )
 
-    # Return the mocks so tests can assert on them
-    return {
-        "run_applescript": mock_run_applescript,
-        "add_todo_direct": mock_add_todo_direct,
-        "update_todo_direct": mock_update_todo_direct,
-    }
-
-    return mock_run_applescript
+    return {"run_applescript": mock_run_applescript}
 
 
 @pytest.fixture
@@ -203,35 +191,29 @@ def mock_url_scheme(monkeypatch):
 @pytest.fixture
 def mock_utils(monkeypatch):
     """Mock utility functions for unit tests."""
-    # Mock app_state
+    # Mock app_state (used by fast_server.py for checking Things availability)
     mock_app_state = mock.Mock()
+    mock_app_state.update_app_state = mock.Mock(return_value=True)
     mock_app_state.wait_for_app_availability = mock.Mock(return_value=True)
 
-    # Mock circuit_breaker
+    # Mock circuit_breaker (used by url_scheme.py)
     mock_circuit_breaker = mock.Mock()
     mock_circuit_breaker.allow_operation = mock.Mock(return_value=True)
     mock_circuit_breaker.record_success = mock.Mock()
     mock_circuit_breaker.record_failure = mock.Mock()
 
-    # Mock rate_limiter
+    # Mock rate_limiter (used by url_scheme.py)
     mock_rate_limiter = mock.Mock()
     mock_rate_limiter.wait_if_needed = mock.Mock()
-    mock_rate_limiter.check_rate_limit = mock.Mock(return_value=True)
 
-    # Mock dead_letter_queue
-    mock_dlq = mock.Mock()
-    mock_dlq.add_failed_operation = mock.Mock()
-
-    monkeypatch.setattr("things_mcp.handlers.app_state", mock_app_state)
-    monkeypatch.setattr("things_mcp.handlers.circuit_breaker", mock_circuit_breaker)
-    monkeypatch.setattr("things_mcp.handlers.rate_limiter", mock_rate_limiter)
-    monkeypatch.setattr("things_mcp.handlers.dead_letter_queue", mock_dlq)
+    monkeypatch.setattr("things_mcp.fast_server.app_state", mock_app_state)
+    monkeypatch.setattr("things_mcp.url_scheme.circuit_breaker", mock_circuit_breaker)
+    monkeypatch.setattr("things_mcp.url_scheme.rate_limiter", mock_rate_limiter)
 
     return {
         "app_state": mock_app_state,
         "circuit_breaker": mock_circuit_breaker,
         "rate_limiter": mock_rate_limiter,
-        "dead_letter_queue": mock_dlq,
     }
 
 
