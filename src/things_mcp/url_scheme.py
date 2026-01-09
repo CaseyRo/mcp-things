@@ -8,7 +8,7 @@ import time
 import logging
 import json
 from typing import Optional, Dict, Any, Union, Callable
-from .utils import app_state, circuit_breaker, dead_letter_queue, rate_limiter, is_things_running
+from .utils import circuit_breaker, rate_limiter, is_things_running
 
 logger = logging.getLogger(__name__)
 

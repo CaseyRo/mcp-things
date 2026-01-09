@@ -1,0 +1,116 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Things MCP is a Model Context Protocol server for Things 3 (macOS task management app). It enables AI assistants to interact with Things 3 through natural language via the FastMCP framework. **macOS only** - requires native AppleScript and URL scheme access.
+
+## Setup
+
+**Prerequisites:** macOS, Things 3 installed with scripting permissions, Python 3.12+, uv package manager
+
+```bash
+# Clone and install
+git clone https://github.com/CaseyRo/things-fastmcp.git
+cd things-fastmcp
+uv pip install -e .
+
+# Configure authentication token
+python configure_token.py
+```
+
+## Common Commands
+
+```bash
+# Run server
+uv run server                    # Production mode (binds to 127.0.0.1:8009)
+uv run dev                       # Development mode
+mcp dev src/things_mcp/things_fast_server.py  # Dev mode with auto-reload
+
+# Lint and format
+ruff check .
+ruff format .
+
+# Run tests
+uv run python -m pytest tests                    # All tests (requires Things 3)
+uv run python -m pytest tests -m "not real"      # Unit tests only (CI/CD safe)
+uv run python -m pytest tests -m real            # Real integration tests only
+uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing  # With coverage
+```
+
+## Architecture
+
+```
+src/things_mcp/
+├── fast_server.py           # FastMCP server with 19 MCP tool definitions
+├── url_scheme.py            # Things URL scheme builders + execution (things:///)
+├── applescript_bridge.py    # AppleScript execution (run_applescript())
+├── formatters.py            # Output formatting for todos/projects/areas
+├── cache.py                 # @cached(ttl=seconds) decorator
+├── utils.py                 # circuit_breaker, rate_limiter, app_state
+├── logging_config.py        # Structured logging with redaction
+├── tag_handler.py           # Auto-creates missing tags
+└── config.py                # Configuration management
+```
+
+**Data Flow:**
+1. Read operations: FastMCP → things-py (SQLite) → cache → format response
+2. Write operations: FastMCP → URL scheme builder → macOS `open -g` → Things app
+
+## Key Patterns
+
+- **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"])`
+- **Error handling**: Return `_error_result("message")` for failures (standardized MCP error)
+- **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
+- **Logging**: Use `get_logger(__name__)`, redact sensitive data (never log task titles/notes)
+- **Tags**: Call `ensure_tags_exist(tags)` before using tags in write operations
+
+## Environment Variables
+
+```bash
+THINGS_FASTMCP_HOST=127.0.0.1    # Server bind address (default: localhost)
+THINGS_FASTMCP_PORT=8009         # Server port
+THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
+THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
+```
+
+**Important:** The `THINGS_AUTH_TOKEN` is required for all write operations (create, update, delete). Without it, operations will fail silently. Configure via `.env` file or environment variable.
+
+## OpenSpec Workflow
+
+This project uses OpenSpec for spec-driven development. When planning features or breaking changes:
+
+1. Review `openspec/project.md` for conventions
+2. Run `openspec list` to see active changes
+3. Run `openspec list --specs` to see existing capabilities
+4. Create proposals in `openspec/changes/<change-id>/` with:
+   - `proposal.md` - Why and what changes
+   - `tasks.md` - Implementation checklist
+   - `design.md` - Technical decisions (if needed)
+   - `specs/<capability>/spec.md` - Requirement deltas
+5. Validate with `openspec validate <change-id> --strict`
+
+**Cursor commands available:**
+- `/openspec-proposal` - Create new change proposal
+- `/openspec-apply` - Implement approved change
+- `/openspec-archive` - Archive completed change
+
+## Testing Notes
+
+- Tests use pytest markers: `unit`, `integration`, `real`, `slow`
+- Real tests require Things 3 running + `THINGS_AUTH_TOKEN` in `.env`
+- Test data uses `MCP-TEST-` prefix and auto-cleans after tests
+- Results saved to `test-results/test-results.md`
+- Main branch is `source` (not `main`)
+
+## n8n Integration
+
+n8n's MCP Client Tool has a [known bug (#21500)](https://github.com/n8n-io/n8n/issues/21500) where it sends extra parameters (`toolCallId`, `sessionId`, `action`, `chatInput`) that cause Pydantic validation errors. The server includes `N8NCompatibilityMiddleware` that automatically strips these parameters (requires FastMCP 2.9+).
+
+## Important Constraints
+
+- **macOS required**: No Docker support due to AppleScript/URL scheme dependencies
+- **Python 3.12+**: Uses modern type hints and f-strings
+- **Log redaction**: Never log task titles, notes, or user content
+- **Things URL scheme**: Write operations have no direct response; assume success unless app fails

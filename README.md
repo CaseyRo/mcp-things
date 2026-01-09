@@ -276,30 +276,48 @@ uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing
 
 The project includes a comprehensive test suite with both unit tests (mocked, CI/CD safe) and real integration tests (requires Things 3).
 
+**Prerequisites for Real Integration Tests:**
+
+1. Things 3 must be running
+2. Authentication token must be configured in `.env`:
+   ```bash
+   # Copy .env.example and add your token
+   cp .env.example .env
+   # Edit .env and set THINGS_AUTH_TOKEN
+   # Get token from: Things → Settings → General → Enable Things URLs
+   ```
+
 **Quick Start:**
 
 ```bash
-# Run all tests including real Things 3 integration (requires Things 3)
-uv run python -m pytest tests
+# Run all tests (requires Things 3 + auth token)
+uv run python -m pytest tests -v
 
-# Run only unit tests (CI/CD safe, excludes real integration tests)
+# Run only unit tests (CI/CD safe, no Things 3 needed)
 uv run python -m pytest tests -m "not real"
 
-# Real integration tests only
-uv run python -m pytest tests -m real
+# Run only real integration tests
+uv run python -m pytest tests -m real -v
+
+# Run with coverage report
+uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing
 ```
 
 **Test Structure:**
-- `tests/test_crud_todos.py` - Todo CRUD operations
-- `tests/test_crud_projects.py` - Project CRUD operations
-- `tests/test_read_operations.py` - Read/list/search operations
-- `tests/test_integration.py` - End-to-end workflows
-- `tests/test_error_handling.py` - Error handling and edge cases
+- `tests/test_mcp_workflow.py` - Full MCP workflow tests (create, edit, move, delete)
+- `tests/conftest.py` - Fixtures, mock generators, and test utilities
+- `tests/pytest_test_results.py` - Test results plugin (saves to markdown)
+
+**Test Markers:**
+- `@pytest.mark.unit` - Unit tests with mocked dependencies
+- `@pytest.mark.integration` - Integration tests (may use mocks or real Things)
+- `@pytest.mark.real` - Real integration tests requiring Things 3
+- `@pytest.mark.slow` - Tests that may take longer to run
 
 **Test Results:**
 Test results are automatically saved to `test-results/test-results.md` after each run, maintaining a history of the last 3 runs with summaries, failed tests, and breakdowns by marker.
 
-Real integration tests automatically clean up test data after completion. See [TESTING.md](TESTING.md) for complete testing documentation.
+Real integration tests automatically clean up test data after completion (todos/projects prefixed with `MCP-TEST-`).
 
 ### Project Conventions
 

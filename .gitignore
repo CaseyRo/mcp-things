@@ -169,13 +169,13 @@ cython_debug/
 .AppleDouble
 .LSOverride
 
-# Test files and temporary development files
-test_*.py
-test_*.sh
-minimal_test.py
-quick_test.py
-run_simple_server.py
-set_token_directly.py
+# Temporary development/test files in root (not tests/ directory)
+/test_*.py
+/test_*.sh
+/minimal_test.py
+/quick_test.py
+/run_simple_server.py
+/set_token_directly.py
 
 # MCP development
 *.log
