@@ -886,15 +886,24 @@ def _patch_tool_serialization_for_n8n():
 
     This patches the mcp.list_tools() method to flatten anyOf constructs
     (used by Pydantic for Optional types) before returning tools to clients.
+
+    Set THINGS_MCP_DEBUG_SCHEMA=1 to log full tool schemas for debugging.
     """
+    import os
+    import json
+    debug_schema = os.environ.get("THINGS_MCP_DEBUG_SCHEMA", "").lower() in ("1", "true", "yes")
+
     try:
         original_list_tools = mcp.list_tools
 
         async def patched_list_tools():
+            logger.info("list_tools called - applying n8n schema compatibility patches")
             tools = await original_list_tools()
             # Transform each tool's inputSchema to flatten anyOf
             for tool in tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
+                    if debug_schema:
+                        logger.info(f"Tool '{tool.name}' BEFORE flattening: {json.dumps(tool.inputSchema, indent=2)}")
                     # inputSchema is a dict, flatten it
                     flattened = _flatten_anyof_for_n8n(tool.inputSchema)
                     # We can't directly assign to inputSchema on a Pydantic model,
@@ -902,10 +911,13 @@ def _patch_tool_serialization_for_n8n():
                     if isinstance(tool.inputSchema, dict):
                         tool.inputSchema.clear()
                         tool.inputSchema.update(flattened)
+                    if debug_schema:
+                        logger.info(f"Tool '{tool.name}' AFTER flattening: {json.dumps(tool.inputSchema, indent=2)}")
+            logger.info(f"Processed {len(tools)} tools with schema flattening")
             return tools
 
         mcp.list_tools = patched_list_tools
-        logger.debug("Patched list_tools for n8n anyOf compatibility")
+        logger.info("Patched list_tools for n8n anyOf compatibility")
     except Exception as e:
         logger.warning(f"Could not patch list_tools for n8n compatibility: {e}")
 
@@ -913,6 +925,18 @@ def _patch_tool_serialization_for_n8n():
 # Main entry point
 def run_things_mcp_server():
     """Run the Things MCP server"""
+    import signal
+    import sys
+
+    # Set up signal handlers for graceful shutdown
+    def signal_handler(signum, frame):
+        sig_name = signal.Signals(signum).name
+        logger.info(f"Received {sig_name}, shutting down...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     host = get_binding_host()
     if host == DEFAULT_HOST:
         logger.info(
@@ -943,6 +967,8 @@ def run_things_mcp_server():
             logger.error(f"Error launching Things app: {str(e)}")
     else:
         logger.info("Things app is running and ready for operations")
+
+    logger.info("Press Ctrl+C to stop the server")
 
     # Run the MCP server with HTTP transport
     mcp.run(transport="streamable-http")
