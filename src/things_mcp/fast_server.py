@@ -3,33 +3,13 @@
 Things MCP Server implementation using the FastMCP pattern.
 This provides a more modern and maintainable approach to the Things integration.
 """
-import logging
-import asyncio
-import traceback
 from typing import Dict, Any, Optional, List, Union
-import inspect
 import things
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+from fastmcp.exceptions import ToolError
+from fastmcp.server.middleware import Middleware
 import mcp.types as types
-
-# Try to import Middleware from various possible locations
-# FastMCP 2.9+ introduced middleware support
-MIDDLEWARE_AVAILABLE = False
-Middleware = None
-try:
-    from mcp.server.fastmcp.server.middleware import Middleware
-    MIDDLEWARE_AVAILABLE = True
-except ImportError:
-    try:
-        from fastmcp.server.middleware import Middleware
-        MIDDLEWARE_AVAILABLE = True
-    except ImportError:
-        try:
-            from fastmcp import Middleware
-            MIDDLEWARE_AVAILABLE = True
-        except ImportError:
-            pass  # Middleware not available in this version
 
 # Import supporting modules
 from .formatters import format_todo, format_project, format_area, format_tag
@@ -149,13 +129,12 @@ ICONS: List[IconLike] = [
 ]
 
 
-def _error_result(message: str) -> str:
-    """Return a standardized error result for MCP tools.
+def _error_result(message: str):
+    """Raise a ToolError for standardized MCP error handling.
 
-    FastMCP automatically wraps string returns in CallToolResult.
-    For errors, we prefix with a warning emoji to indicate error state.
+    FastMCP v3 uses ToolError for proper error propagation to clients.
     """
-    return f"⚠️ {message}"
+    raise ToolError(message)
 
 
 # Default values for documentation purposes
@@ -173,59 +152,37 @@ def get_binding_port() -> int:
     """Return the port for the FastMCP server from settings."""
     return get_settings().things_fastmcp_port
 
-# Determine supported FastMCP constructor arguments at import time so the
-# server remains compatible with runtimes that predate newer metadata
-# parameters like `website_url` and `icons`.
-_fastmcp_init_params = inspect.signature(FastMCP.__init__).parameters
-
-_FASTMCP_SUPPORTS_WEBSITE_URL = "website_url" in _fastmcp_init_params
-_FASTMCP_SUPPORTS_ICONS = "icons" in _fastmcp_init_params
-
-
 def _create_fastmcp_instance() -> FastMCP:
-    kwargs: Dict[str, Any] = {
-        "host": get_binding_host(),
-        "port": get_binding_port(),
-        "instructions": INSTRUCTIONS_TEXT,
-    }
+    """Create and configure the FastMCP server instance."""
+    server = FastMCP(
+        "Things",
+        instructions=INSTRUCTIONS_TEXT,
+        website_url=WEBSITE_URL,
+        icons=ICONS,
+    )
 
-    if _FASTMCP_SUPPORTS_WEBSITE_URL:
-        kwargs["website_url"] = WEBSITE_URL
-    else:
-        logger.debug("FastMCP runtime does not support website_url; skipping metadata field")
-
-    if _FASTMCP_SUPPORTS_ICONS:
-        kwargs["icons"] = ICONS
-    else:
-        logger.debug("FastMCP runtime does not support icons; skipping metadata field")
-
-    server = FastMCP("Things", **kwargs)
-
-    # Add n8n compatibility middleware if available
+    # Add n8n compatibility middleware
     # This strips extra parameters that n8n incorrectly sends (toolCallId, sessionId, etc.)
     # See: https://github.com/n8n-io/n8n/issues/21500
-    if MIDDLEWARE_AVAILABLE and Middleware is not None:
-        try:
-            class N8NCompatibilityMiddleware(Middleware):
-                """Strip extra parameters that n8n's MCP Client Tool incorrectly sends."""
+    class N8NCompatibilityMiddleware(Middleware):
+        """Strip extra parameters that n8n's MCP Client Tool incorrectly sends."""
 
-                async def on_call_tool(self, context, call_next):
-                    if hasattr(context, 'message') and hasattr(context.message, 'arguments'):
-                        args = context.message.arguments
-                        if args:
-                            # Remove n8n-specific parameters that cause Pydantic validation errors
-                            for param in list(N8N_EXTRA_PARAMS):
-                                if param in args:
-                                    del args[param]
-                                    logger.debug(f"Stripped n8n parameter '{param}' from tool call")
-                    return await call_next(context)
+        async def on_call_tool(self, context, call_next):
+            if hasattr(context, 'message') and hasattr(context.message, 'arguments'):
+                args = context.message.arguments
+                if args:
+                    # Remove n8n-specific parameters that cause Pydantic validation errors
+                    for param in list(N8N_EXTRA_PARAMS):
+                        if param in args:
+                            del args[param]
+                            logger.debug(f"Stripped n8n parameter '{param}' from tool call")
+            return await call_next(context)
 
-            server.add_middleware(N8NCompatibilityMiddleware())
-            logger.info("n8n compatibility middleware registered")
-        except Exception as e:
-            logger.warning(f"Could not register n8n middleware: {e}")
-    else:
-        logger.debug("Middleware not available in this FastMCP version")
+    try:
+        server.add_middleware(N8NCompatibilityMiddleware())
+        logger.info("n8n compatibility middleware registered")
+    except Exception as e:
+        logger.warning(f"Could not register n8n middleware: {e}")
 
     return server
 
@@ -235,12 +192,14 @@ mcp = _create_fastmcp_instance()
 
 # LIST VIEWS
 
-@mcp.tool(name="get-inbox", annotations=TOOL_ANNOTATIONS["get-inbox"])
-def get_inbox() -> str:
+@mcp.tool(name="get-inbox", annotations=TOOL_ANNOTATIONS["get-inbox"], timeout=5)
+async def get_inbox(ctx: Context = None) -> str:
     """Get todos from Inbox"""
     import time
     start_time = time.time()
     log_operation_start("get-inbox")
+    if ctx:
+        await ctx.info("Fetching inbox items...")
 
     try:
         todos = things.inbox()
@@ -256,13 +215,15 @@ def get_inbox() -> str:
         log_operation_end("get-inbox", False, time.time() - start_time, error=str(e))
         raise
 
-@mcp.tool(name="get-today", annotations=TOOL_ANNOTATIONS["get-today"])
+@mcp.tool(name="get-today", annotations=TOOL_ANNOTATIONS["get-today"], timeout=5)
 @cached(ttl=CACHE_TTL.get("today", 30))
-def get_today() -> str:
+async def get_today(ctx: Context = None) -> str:
     """Get todos due today"""
     import time
     start_time = time.time()
     log_operation_start("get-today")
+    if ctx:
+        await ctx.info("Fetching today's items...")
 
     try:
         todos = things.today()
@@ -278,9 +239,11 @@ def get_today() -> str:
         log_operation_end("get-today", False, time.time() - start_time, error=str(e))
         raise
 
-@mcp.tool(name="get-upcoming", annotations=TOOL_ANNOTATIONS["get-upcoming"])
-def get_upcoming() -> str:
+@mcp.tool(name="get-upcoming", annotations=TOOL_ANNOTATIONS["get-upcoming"], timeout=5)
+async def get_upcoming(ctx: Context = None) -> str:
     """Get upcoming todos"""
+    if ctx:
+        await ctx.info("Fetching upcoming items...")
     todos = things.upcoming()
 
     if not todos:
@@ -289,9 +252,11 @@ def get_upcoming() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-anytime", annotations=TOOL_ANNOTATIONS["get-anytime"])
-def get_anytime() -> str:
+@mcp.tool(name="get-anytime", annotations=TOOL_ANNOTATIONS["get-anytime"], timeout=5)
+async def get_anytime(ctx: Context = None) -> str:
     """Get todos from Anytime list"""
+    if ctx:
+        await ctx.info("Fetching Anytime items...")
     todos = things.anytime()
 
     if not todos:
@@ -300,9 +265,11 @@ def get_anytime() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-someday", annotations=TOOL_ANNOTATIONS["get-someday"])
-def get_someday() -> str:
+@mcp.tool(name="get-someday", annotations=TOOL_ANNOTATIONS["get-someday"], timeout=5)
+async def get_someday(ctx: Context = None) -> str:
     """Get todos from Someday list"""
+    if ctx:
+        await ctx.info("Fetching Someday items...")
     todos = things.someday()
 
     if not todos:
@@ -311,8 +278,8 @@ def get_someday() -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-logbook", annotations=TOOL_ANNOTATIONS["get-logbook"])
-def get_logbook(period: str = "7d", limit: int = 50) -> str:
+@mcp.tool(name="get-logbook", annotations=TOOL_ANNOTATIONS["get-logbook"], timeout=5)
+async def get_logbook(period: str = "7d", limit: int = 50, ctx: Context = None) -> str:
     """
     Get completed todos from Logbook, defaults to last 7 days
 
@@ -320,6 +287,8 @@ def get_logbook(period: str = "7d", limit: int = 50) -> str:
         period: Time period to look back (e.g., '3d', '1w', '2m', '1y'). Defaults to '7d'
         limit: Maximum number of entries to return. Defaults to 50
     """
+    if ctx:
+        await ctx.info(f"Fetching logbook items for last {period}...")
     todos = things.last(period, status='completed')
 
     if not todos:
@@ -331,9 +300,11 @@ def get_logbook(period: str = "7d", limit: int = 50) -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-trash", annotations=TOOL_ANNOTATIONS["get-trash"])
-def get_trash() -> str:
+@mcp.tool(name="get-trash", annotations=TOOL_ANNOTATIONS["get-trash"], timeout=5)
+async def get_trash(ctx: Context = None) -> str:
     """Get trashed todos"""
+    if ctx:
+        await ctx.info("Fetching trash items...")
     todos = things.trash()
 
     if not todos:
@@ -344,9 +315,9 @@ def get_trash() -> str:
 
 # BASIC TODO OPERATIONS
 
-@mcp.tool(name="get-todos", annotations=TOOL_ANNOTATIONS["get-todos"])
-def get_todos(
-    project_uuid: Optional[str] = None, include_items: bool = True
+@mcp.tool(name="get-todos", annotations=TOOL_ANNOTATIONS["get-todos"], timeout=5)
+async def get_todos(
+    project_uuid: Optional[str] = None, include_items: bool = True, ctx: Context = None
 ) -> str:
     """
     Get todos from Things, optionally filtered by project
@@ -355,10 +326,12 @@ def get_todos(
         project_uuid: Optional UUID of a specific project to get todos from
         include_items: Include checklist items
     """
+    if ctx:
+        await ctx.info("Fetching todos...")
     if project_uuid:
         project = things.get(project_uuid)
         if not project or project.get('type') != 'project':
-            return _error_result(f"Error: Invalid project UUID '{project_uuid}'")
+            _error_result(f"Invalid project UUID '{project_uuid}'")
 
     todos = things.todos(project=project_uuid, start=None)
 
@@ -368,14 +341,16 @@ def get_todos(
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"])
-def get_projects(include_items: bool = False) -> str:
+@mcp.tool(name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"], timeout=5)
+async def get_projects(include_items: bool = False, ctx: Context = None) -> str:
     """
     Get all projects from Things
 
     Args:
         include_items: Include tasks within projects
     """
+    if ctx:
+        await ctx.info("Fetching projects...")
     projects = things.projects()
 
     if not projects:
@@ -384,14 +359,16 @@ def get_projects(include_items: bool = False) -> str:
     formatted_projects = [format_project(project, include_items) for project in projects]
     return "\n\n---\n\n".join(formatted_projects)
 
-@mcp.tool(name="get-areas", annotations=TOOL_ANNOTATIONS["get-areas"])
-def get_areas(include_items: bool = False) -> str:
+@mcp.tool(name="get-areas", annotations=TOOL_ANNOTATIONS["get-areas"], timeout=5)
+async def get_areas(include_items: bool = False, ctx: Context = None) -> str:
     """
     Get all areas from Things
 
     Args:
         include_items: Include projects and tasks within areas
     """
+    if ctx:
+        await ctx.info("Fetching areas...")
     areas = things.areas()
 
     if not areas:
@@ -402,14 +379,16 @@ def get_areas(include_items: bool = False) -> str:
 
 # TAG OPERATIONS
 
-@mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"])
-def get_tags(include_items: bool = False) -> str:
+@mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"], timeout=5)
+async def get_tags(include_items: bool = False, ctx: Context = None) -> str:
     """
     Get all tags
 
     Args:
         include_items: Include items tagged with each tag
     """
+    if ctx:
+        await ctx.info("Fetching tags...")
     tags = things.tags()
 
     if not tags:
@@ -418,14 +397,16 @@ def get_tags(include_items: bool = False) -> str:
     formatted_tags = [format_tag(tag, include_items) for tag in tags]
     return "\n\n---\n\n".join(formatted_tags)
 
-@mcp.tool(name="get-tagged-items", annotations=TOOL_ANNOTATIONS["get-tagged-items"])
-def get_tagged_items(tag: str) -> str:
+@mcp.tool(name="get-tagged-items", annotations=TOOL_ANNOTATIONS["get-tagged-items"], timeout=5)
+async def get_tagged_items(tag: str, ctx: Context = None) -> str:
     """
     Get items with a specific tag
 
     Args:
         tag: Tag title to filter by
     """
+    if ctx:
+        await ctx.info(f"Fetching items with tag '{tag}'...")
     todos = things.todos(tag=tag)
 
     if not todos:
@@ -436,14 +417,16 @@ def get_tagged_items(tag: str) -> str:
 
 # SEARCH OPERATIONS
 
-@mcp.tool(name="search-todos", annotations=TOOL_ANNOTATIONS["search-todos"])
-def search_todos(query: str) -> str:
+@mcp.tool(name="search-todos", annotations=TOOL_ANNOTATIONS["search-todos"], timeout=5)
+async def search_todos(query: str, ctx: Context = None) -> str:
     """
     Search todos by title or notes
 
     Args:
         query: Search term to look for in todo titles and notes
     """
+    if ctx:
+        await ctx.info(f"Searching for '{query}'...")
     todos = things.search(query)
 
     if not todos:
@@ -452,14 +435,15 @@ def search_todos(query: str) -> str:
     formatted_todos = [format_todo(todo) for todo in todos]
     return "\n\n---\n\n".join(formatted_todos)
 
-@mcp.tool(name="search-advanced", annotations=TOOL_ANNOTATIONS["search-advanced"])
-def search_advanced(
+@mcp.tool(name="search-advanced", annotations=TOOL_ANNOTATIONS["search-advanced"], timeout=5)
+async def search_advanced(
     status: Optional[str] = None,
     start_date: Optional[str] = None,
     deadline: Optional[str] = None,
     tag: Optional[str] = None,
     area: Optional[str] = None,
-    type: Optional[str] = None
+    type: Optional[str] = None,
+    ctx: Context = None
 ) -> str:
     """
     Advanced todo search with multiple filters
@@ -472,6 +456,8 @@ def search_advanced(
         area: Filter by area UUID
         type: Filter by item type (to-do/project/heading)
     """
+    if ctx:
+        await ctx.info("Running advanced search...")
     # Build filter parameters
     kwargs = {}
 
@@ -499,12 +485,12 @@ def search_advanced(
         formatted_todos = [format_todo(todo) for todo in todos]
         return "\n\n---\n\n".join(formatted_todos)
     except Exception as e:
-        return _error_result(f"Error in advanced search: {str(e)}")
+        _error_result(f"Error in advanced search: {str(e)}")
 
 # MODIFICATION OPERATIONS
 
-@mcp.tool(name="add-todo", annotations=TOOL_ANNOTATIONS["add-todo"])
-def add_task(
+@mcp.tool(name="add-todo", annotations=TOOL_ANNOTATIONS["add-todo"], timeout=30)
+async def add_task(
     title: str,
     notes: Optional[str] = None,
     when: Optional[str] = None,
@@ -513,7 +499,8 @@ def add_task(
     checklist_items: Optional[List[str]] = None,
     list_id: Optional[str] = None,
     list_title: Optional[str] = None,
-    heading: Optional[str] = None
+    heading: Optional[str] = None,
+    ctx: Context = None
 ) -> str:
     """
     Create a new todo in Things.
@@ -530,10 +517,12 @@ def add_task(
         heading: Heading to add under
     """
     try:
+        if ctx:
+            await ctx.info("Creating todo...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Ensure tags exist before using them
         if tags:
@@ -558,18 +547,22 @@ def add_task(
         success = execute_url(url)
 
         if not success:
-            return _error_result("Error: Failed to create todo")
+            _error_result("Failed to create todo")
 
         # Invalidate relevant caches after creating a todo
         invalidate_caches_for(["get-inbox", "get-today", "get-upcoming", "get-todos"])
 
+        if ctx:
+            await ctx.info("Todo created successfully")
         return f"Successfully created todo: {title}"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error creating todo: {str(e)}")
-        return _error_result(f"Error creating todo: {str(e)}")
+        _error_result(f"Error creating todo: {str(e)}")
 
-@mcp.tool(name="add-project", annotations=TOOL_ANNOTATIONS["add-project"])
-def add_new_project(
+@mcp.tool(name="add-project", annotations=TOOL_ANNOTATIONS["add-project"], timeout=30)
+async def add_new_project(
     title: str,
     notes: Optional[str] = None,
     when: Optional[str] = None,
@@ -577,7 +570,8 @@ def add_new_project(
     tags: Optional[List[str]] = None,
     area_id: Optional[str] = None,
     area_title: Optional[str] = None,
-    todos: Optional[List[str]] = None
+    todos: Optional[List[str]] = None,
+    ctx: Context = None
 ) -> str:
     """
     Create a new project in Things
@@ -593,10 +587,12 @@ def add_new_project(
         todos: Initial todos to create in the project
     """
     try:
+        if ctx:
+            await ctx.info("Creating project...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Build the add_project URL command and execute it
         url = add_project(
@@ -616,15 +612,19 @@ def add_new_project(
         success = execute_url(url)
 
         if not success:
-            return _error_result("Error: Failed to create project")
+            _error_result("Failed to create project")
 
+        if ctx:
+            await ctx.info("Project created successfully")
         return f"Successfully created project: {title}"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error creating project: {str(e)}")
-        return _error_result(f"Error creating project: {str(e)}")
+        _error_result(f"Error creating project: {str(e)}")
 
-@mcp.tool(name="update-todo", annotations=TOOL_ANNOTATIONS["update-todo"])
-def update_task(
+@mcp.tool(name="update-todo", annotations=TOOL_ANNOTATIONS["update-todo"], timeout=30)
+async def update_task(
     id: str,
     title: Optional[str] = None,
     notes: Optional[str] = None,
@@ -632,7 +632,8 @@ def update_task(
     deadline: Optional[str] = None,
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
-    canceled: Optional[bool] = None
+    canceled: Optional[bool] = None,
+    ctx: Context = None
 ) -> str:
     """
     Update an existing todo in Things.
@@ -648,10 +649,12 @@ def update_task(
         canceled: Mark as canceled
     """
     try:
+        if ctx:
+            await ctx.info("Updating todo...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Ensure tags exist before using them
         if tags:
@@ -674,15 +677,19 @@ def update_task(
         success = execute_url(url)
 
         if not success:
-            return _error_result("Error: Failed to update todo")
+            _error_result("Failed to update todo")
 
+        if ctx:
+            await ctx.info("Todo updated successfully")
         return f"Successfully updated todo with ID: {id}"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error updating todo: {str(e)}")
-        return _error_result(f"Error updating todo: {str(e)}")
+        _error_result(f"Error updating todo: {str(e)}")
 
-@mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"])
-def update_existing_project(
+@mcp.tool(name="update-project", annotations=TOOL_ANNOTATIONS["update-project"], timeout=30)
+async def update_existing_project(
     id: str,
     title: Optional[str] = None,
     notes: Optional[str] = None,
@@ -690,7 +697,8 @@ def update_existing_project(
     deadline: Optional[str] = None,
     tags: Optional[List[str]] = None,
     completed: Optional[bool] = None,
-    canceled: Optional[bool] = None
+    canceled: Optional[bool] = None,
+    ctx: Context = None
 ) -> str:
     """
     Update an existing project in Things
@@ -706,10 +714,12 @@ def update_existing_project(
         canceled: Mark as canceled
     """
     try:
+        if ctx:
+            await ctx.info("Updating project...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Build the update_project URL command and execute it
         url = update_project(
@@ -729,18 +739,23 @@ def update_existing_project(
         success = execute_url(url)
 
         if not success:
-            return _error_result("Error: Failed to update project")
+            _error_result("Failed to update project")
 
+        if ctx:
+            await ctx.info("Project updated successfully")
         return f"Successfully updated project with ID: {id}"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error updating project: {str(e)}")
-        return _error_result(f"Error updating project: {str(e)}")
+        _error_result(f"Error updating project: {str(e)}")
 
-@mcp.tool(name="show-item", annotations=TOOL_ANNOTATIONS["show-item"])
-def show_item(
+@mcp.tool(name="show-item", annotations=TOOL_ANNOTATIONS["show-item"], timeout=10)
+async def show_item(
     id: str,
     query: Optional[str] = None,
-    filter_tags: Optional[List[str]] = None
+    filter_tags: Optional[List[str]] = None,
+    ctx: Context = None
 ) -> str:
     """
     Show a specific item or list in Things
@@ -751,10 +766,12 @@ def show_item(
         filter_tags: Optional tags to filter by
     """
     try:
+        if ctx:
+            await ctx.info(f"Opening '{id}' in Things...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Execute the show URL command
         result = show(
@@ -764,15 +781,17 @@ def show_item(
         )
 
         if not result:
-            return _error_result(f"Error: Failed to show item/list '{id}'")
+            _error_result(f"Failed to show item/list '{id}'")
 
         return f"Successfully opened '{id}' in Things"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error showing item: {str(e)}")
-        return _error_result(f"Error showing item: {str(e)}")
+        _error_result(f"Error showing item: {str(e)}")
 
-@mcp.tool(name="search-items", annotations=TOOL_ANNOTATIONS["search-items"])
-def search_all_items(query: str) -> str:
+@mcp.tool(name="search-items", annotations=TOOL_ANNOTATIONS["search-items"], timeout=10)
+async def search_all_items(query: str, ctx: Context = None) -> str:
     """
     Search for items in Things
 
@@ -780,24 +799,28 @@ def search_all_items(query: str) -> str:
         query: Search query
     """
     try:
+        if ctx:
+            await ctx.info(f"Searching for '{query}' in Things...")
         # Ensure Things app is running
         if not app_state.update_app_state():
             if not launch_things():
-                return _error_result("Error: Unable to launch Things app")
+                _error_result("Unable to launch Things app")
 
         # Execute the search URL command
         result = search(query=query)
 
         if not result:
-            return _error_result(f"Error: Failed to search for '{query}'")
+            _error_result(f"Failed to search for '{query}'")
 
         return f"Successfully searched for '{query}' in Things"
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error searching: {str(e)}")
-        return _error_result(f"Error searching: {str(e)}")
+        _error_result(f"Error searching: {str(e)}")
 
-@mcp.tool(name="get-recent", annotations=TOOL_ANNOTATIONS["get-recent"])
-def get_recent(period: str) -> str:
+@mcp.tool(name="get-recent", annotations=TOOL_ANNOTATIONS["get-recent"], timeout=5)
+async def get_recent(period: str, ctx: Context = None) -> str:
     """
     Get recently created items
 
@@ -805,9 +828,11 @@ def get_recent(period: str) -> str:
         period: Time period (e.g., '3d', '1w', '2m', '1y')
     """
     try:
+        if ctx:
+            await ctx.info(f"Fetching recent items from last {period}...")
         # Check if period format is valid
         if not period or not any(period.endswith(unit) for unit in ['d', 'w', 'm', 'y']):
-            return _error_result("Error: Period must be in format '3d', '1w', '2m', '1y'")
+            _error_result("Period must be in format '3d', '1w', '2m', '1y'")
 
         # Get recent items
         items = things.last(period)
@@ -823,13 +848,17 @@ def get_recent(period: str) -> str:
                 formatted_items.append(format_project(item, include_items=False))
 
         return "\n\n---\n\n".join(formatted_items)
+    except ToolError:
+        raise
     except Exception as e:
         logger.error(f"Error getting recent items: {str(e)}")
-        return _error_result(f"Error getting recent items: {str(e)}")
+        _error_result(f"Error getting recent items: {str(e)}")
 
-@mcp.tool(name="get-cache-stats", annotations=TOOL_ANNOTATIONS["get-cache-stats"])
-def get_cache_statistics() -> str:
+@mcp.tool(name="get-cache-stats", annotations=TOOL_ANNOTATIONS["get-cache-stats"], timeout=5)
+async def get_cache_statistics(ctx: Context = None) -> str:
     """Get cache performance statistics"""
+    if ctx:
+        await ctx.info("Fetching cache statistics...")
     stats = get_cache_stats()
 
     return f"""Cache Statistics:
@@ -971,7 +1000,11 @@ def run_things_mcp_server():
     logger.info("Press Ctrl+C to stop the server")
 
     # Run the MCP server with HTTP transport
-    mcp.run(transport="streamable-http")
+    mcp.run(
+        transport="streamable-http",
+        host=get_binding_host(),
+        port=get_binding_port(),
+    )
 
 if __name__ == "__main__":
     run_things_mcp_server()
