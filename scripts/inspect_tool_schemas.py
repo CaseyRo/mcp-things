@@ -12,7 +12,7 @@ from typing import Any, Dict
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from things_mcp.fast_server import mcp
-import mcp.types as types
+import mcp.types as mcp_types  # Renamed to avoid shadowing with the mcp server instance
 
 
 def inspect_tool_schema(tool):
