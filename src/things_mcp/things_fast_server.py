@@ -3,6 +3,7 @@
 Main entry point for running the Things MCP server.
 This version uses the modern FastMCP pattern for better maintainability.
 """
+
 import logging
 import sys
 from rich.console import Console
@@ -16,12 +17,13 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
     datefmt="[%X]",
-    handlers=[RichHandler(console=console, rich_tracebacks=True)]
+    handlers=[RichHandler(console=console, rich_tracebacks=True)],
 )
 logger = logging.getLogger("things_fast_server")
 
 # Exit immediately on Ctrl+C even if connections remain
 setup_interrupt_handler(logger)
+
 
 def main():
     """Main entry point for the Things FastMCP Server"""

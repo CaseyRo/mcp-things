@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Upgraded to FastMCP 3.0.0b1** - Major framework upgrade with new features:
+  - All tool functions converted to `async def` for better performance
+  - Added `Context` dependency injection for operation logging via `await ctx.info()`
+  - Implemented tool timeouts: write operations (30s), read operations (5s)
+  - New error handling pattern: `raise ToolError("message")` instead of returning error strings
+  - Fixed deprecation warning for `datetime.utcnow()` → `datetime.now(datetime.UTC)`
+
+### Fixed
+
+- Fixed 39 ruff linting errors including unused imports, bare except clauses, and duplicate function definitions
+- Applied consistent code formatting across 18 files
+- Updated async test suite to properly await tool function calls
+
 ## [2.0.0] - 2025-10-16
 
 ### BREAKING CHANGES

@@ -3,11 +3,13 @@
 Tag handler for Things MCP.
 Ensures tags exist before applying them.
 """
+
 import logging
-from typing import List, Optional
+from typing import List
 from .applescript_bridge import run_applescript
 
 logger = logging.getLogger(__name__)
+
 
 def ensure_tags_exist(tags: List[str]) -> bool:
     """
@@ -32,27 +34,29 @@ def ensure_tags_exist(tags: List[str]) -> bool:
             escaped_tag = tag.replace('"', '\\"')
 
             # Check if tag exists, create if not
-            script_lines.extend([
-                f'  set tagName to "{escaped_tag}"',
-                '  set tagExists to false',
-                '  repeat with t in tags',
-                '    if name of t is tagName then',
-                '      set tagExists to true',
-                '      exit repeat',
-                '    end if',
-                '  end repeat',
-                '  if not tagExists then',
-                '    try',
-                '      make new tag with properties {name:tagName}',
-                f'      log "Created tag: " & tagName',
-                '    on error',
-                f'      log "Failed to create tag: " & tagName',
-                '    end try',
-                '  end if'
-            ])
+            script_lines.extend(
+                [
+                    f'  set tagName to "{escaped_tag}"',
+                    "  set tagExists to false",
+                    "  repeat with t in tags",
+                    "    if name of t is tagName then",
+                    "      set tagExists to true",
+                    "      exit repeat",
+                    "    end if",
+                    "  end repeat",
+                    "  if not tagExists then",
+                    "    try",
+                    "      make new tag with properties {name:tagName}",
+                    '      log "Created tag: " & tagName',
+                    "    on error",
+                    '      log "Failed to create tag: " & tagName',
+                    "    end try",
+                    "  end if",
+                ]
+            )
 
-        script_lines.append('end tell')
-        script = '\n'.join(script_lines)
+        script_lines.append("end tell")
+        script = "\n".join(script_lines)
 
         # Execute the AppleScript using run_applescript for background execution support
         # Note: 'without activating' will be automatically added by run_applescript()
@@ -69,6 +73,7 @@ def ensure_tags_exist(tags: List[str]) -> bool:
         logger.error(f"Error ensuring tags exist: {str(e)}")
         return False
 
+
 def get_existing_tags() -> List[str]:
     """
     Get list of all existing tags in Things.
@@ -77,13 +82,13 @@ def get_existing_tags() -> List[str]:
         List[str]: List of tag names
     """
     try:
-        script = '''tell application "Things3"
+        script = """tell application "Things3"
             set tagList to {}
             repeat with t in tags
                 set end of tagList to name of t
             end repeat
             return tagList
-        end tell'''
+        end tell"""
 
         # Execute the AppleScript using run_applescript for background execution support
         # Note: 'without activating' will be automatically added by run_applescript()
@@ -92,7 +97,7 @@ def get_existing_tags() -> List[str]:
         if result:
             # Parse the output (comma-separated list)
             # result is already a string from run_applescript
-            tags = [tag.strip() for tag in str(result).strip().split(',')]
+            tags = [tag.strip() for tag in str(result).strip().split(",")]
             return tags
 
         return []

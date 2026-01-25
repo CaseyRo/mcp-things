@@ -1,23 +1,25 @@
 """
 Utility classes and functions for enhancing Things MCP reliability.
 """
+
 import json
 import time
 import logging
 import os
 import platform
 import subprocess
-import urllib.parse
 import mcp.types as types
-from typing import Dict, Any, Optional, Callable, List, Union
+from typing import Optional
 
 logger = logging.getLogger(__name__)
+
 
 # Import run_applescript for background execution support
 # Import at function level to avoid circular dependencies if needed
 def _get_run_applescript():
     """Lazy import of run_applescript to avoid potential circular dependencies."""
     from .applescript_bridge import run_applescript
+
     return run_applescript
 
 
@@ -28,17 +30,21 @@ def is_things_running() -> bool:
         bool: True if Things is running, False otherwise
     """
     try:
-        if platform.system() != 'Darwin':
+        if platform.system() != "Darwin":
             logger.warning("Things availability check only works on macOS")
             return True
 
         result = subprocess.run(
-            ['osascript', '-e', 'tell application "System Events" to (name of processes) contains "Things3"'],
+            [
+                "osascript",
+                "-e",
+                'tell application "System Events" to (name of processes) contains "Things3"',
+            ],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
         )
-        is_running = result.stdout.strip().lower() == 'true'
+        is_running = result.stdout.strip().lower() == "true"
 
         # If Things is running, also check if it's responsive
         if is_running:
@@ -60,6 +66,7 @@ def is_things_running() -> bool:
     except Exception as e:
         logger.error(f"Error checking if Things is running: {str(e)}")
         return False
+
 
 class ThingsAppState:
     """Track and manage Things app state"""
@@ -99,17 +106,35 @@ def validate_tool_registration(tools: list[types.Tool]) -> bool:
         bool: True if all required tools are registered, False otherwise
     """
     required_tool_names = [
-        "get-inbox", "get-today", "get-upcoming", "get-anytime",
-        "get-someday", "get-logbook", "get-trash", "get-todos",
-        "get-projects", "get-areas", "get-tags", "get-tagged-items",
-        "search-todos", "search-advanced", "get-recent", "add-todo",
-        "search-items", "add-project", "update-todo", "update-project", "show-item"
+        "get-inbox",
+        "get-today",
+        "get-upcoming",
+        "get-anytime",
+        "get-someday",
+        "get-logbook",
+        "get-trash",
+        "get-todos",
+        "get-projects",
+        "get-areas",
+        "get-tags",
+        "get-tagged-items",
+        "search-todos",
+        "search-advanced",
+        "get-recent",
+        "add-todo",
+        "search-items",
+        "add-project",
+        "update-todo",
+        "update-project",
+        "show-item",
     ]
 
     registered_tool_names = [tool.name for tool in tools]
 
     # Check if all required tools are registered
-    missing_tools = [name for name in required_tool_names if name not in registered_tool_names]
+    missing_tools = [
+        name for name in required_tool_names if name not in registered_tool_names
+    ]
 
     if missing_tools:
         logger.error(f"Missing required tool registrations: {missing_tools}")
@@ -131,7 +156,7 @@ class CircuitBreaker:
 
     # Circuit states
     CLOSED = "closed"  # Normal operation
-    OPEN = "open"      # Not allowing operations
+    OPEN = "open"  # Not allowing operations
     HALF_OPEN = "half-open"  # Testing if system has recovered
 
     def __init__(self, failure_threshold=5, recovery_timeout=60):
@@ -148,7 +173,9 @@ class CircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = self.OPEN
-            logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
+            logger.warning(
+                f"Circuit breaker opened after {self.failure_count} failures"
+            )
 
     def record_success(self):
         """Record a success and reset the circuit if in half-open state"""
@@ -187,7 +214,7 @@ class DeadLetterQueue:
         """Load persisted queue"""
         try:
             if os.path.exists(self.dlq_file):
-                with open(self.dlq_file, 'r') as f:
+                with open(self.dlq_file, "r") as f:
                     return json.load(f)
             return []
         except Exception as e:
@@ -197,7 +224,7 @@ class DeadLetterQueue:
     def _save_queue(self):
         """Persist queue to disk"""
         try:
-            with open(self.dlq_file, 'w') as f:
+            with open(self.dlq_file, "w") as f:
                 json.dump(self.queue, f)
         except Exception as e:
             logger.error(f"Error saving DLQ: {str(e)}")
@@ -210,7 +237,7 @@ class DeadLetterQueue:
             "error": str(error),
             "attempts": attempts,
             "timestamp": time.time(),
-            "added_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            "added_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         self.queue.append(entry)
@@ -231,7 +258,7 @@ class DeadLetterQueue:
         for entry in self.queue:
             try:
                 url = construct_url(entry["operation"], entry["params"])
-                result = retry_operation(lambda: execute_url(url))
+                result = execute_url(url)
 
                 if result:
                     success_count += 1
@@ -250,7 +277,7 @@ class DeadLetterQueue:
         return {
             "success": failure_count == 0,
             "retried": success_count + failure_count,
-            "failed": failure_count
+            "failed": failure_count,
         }
 
 
@@ -276,9 +303,11 @@ class RateLimiter:
 
     def __call__(self, func):
         """Decorator to rate limit a function"""
+
         def wrapper(*args, **kwargs):
             self.wait_if_needed()
             return func(*args, **kwargs)
+
         return wrapper
 
 
@@ -293,6 +322,7 @@ def get_auth_token() -> Optional[str]:
         str: Authentication token if found, None otherwise
     """
     from .config import get_things_auth_token
+
     token = get_things_auth_token()
     return token if token else None
 
@@ -313,27 +343,6 @@ def detect_things_version():
         logger.error(f"Error detecting Things version: {str(e)}")
 
     return None
-
-
-def validate_tool_registration(tool_list):
-    """Validate that all tools are properly registered"""
-    required_tools = [
-        "get-inbox", "get-today", "get-upcoming", "get-anytime",
-        "get-someday", "get-logbook", "get-trash", "get-todos",
-        "get-projects", "get-areas", "get-tags", "get-tagged-items",
-        "search-todos", "search-advanced", "get-recent", "add-todo",
-        "add-project", "update-todo", "update-project", "show-item"
-    ]
-
-    tool_names = [t.name for t in tool_list]
-    missing_tools = [tool for tool in required_tools if tool not in tool_names]
-
-    if missing_tools:
-        logger.error(f"Missing tool registrations: {missing_tools}")
-        return False
-
-    logger.info(f"All {len(tool_list)} tools are properly registered")
-    return True
 
 
 # Create global instances
