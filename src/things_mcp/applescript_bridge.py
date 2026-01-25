@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 def _script_metadata(command: str, script: str) -> Dict[str, Any]:
     """Return metadata about an AppleScript command without exposing content."""
     return {
-        'command': command,
-        'line_count': len(script.splitlines()),
-        'char_count': len(script),
+        "command": command,
+        "line_count": len(script.splitlines()),
+        "char_count": len(script),
     }
 
 
@@ -42,9 +42,12 @@ def _wrap_script_for_background(script: str) -> str:
 
     # Check if script targets Things3 - log for debugging but don't modify
     if 'tell application "Things3"' in script or 'tell application "Things"' in script:
-        logger.debug("Script targets Things3 (background execution wrapping disabled due to syntax limitations)")
+        logger.debug(
+            "Script targets Things3 (background execution wrapping disabled due to syntax limitations)"
+        )
 
     return script
+
 
 def run_applescript(script: str) -> Union[str, bool]:
     """Run an AppleScript command and return the result.
@@ -65,22 +68,23 @@ def run_applescript(script: str) -> Union[str, bool]:
 
         # Use stdin for multi-line scripts (osascript -e only works for single-line)
         # Check if script has newlines
-        if '\n' in wrapped_script:
-            result = subprocess.run(['osascript'],
-                                  input=wrapped_script,
-                                  capture_output=True, text=True)
+        if "\n" in wrapped_script:
+            result = subprocess.run(
+                ["osascript"], input=wrapped_script, capture_output=True, text=True
+            )
         else:
-            result = subprocess.run(['osascript', '-e', wrapped_script],
-                                  capture_output=True, text=True)
+            result = subprocess.run(
+                ["osascript", "-e", wrapped_script], capture_output=True, text=True
+            )
 
         if result.returncode != 0:
             stderr_output = result.stderr or ""
             logger.error(
                 "AppleScript process returned error",
                 extra={
-                    'returncode': result.returncode,
-                    'stderr_length': len(stderr_output),
-                }
+                    "returncode": result.returncode,
+                    "stderr_length": len(stderr_output),
+                },
             )
             return False
 
@@ -88,6 +92,7 @@ def run_applescript(script: str) -> Union[str, bool]:
     except Exception:
         logger.exception("Error running AppleScript")
         return False
+
 
 def escape_applescript_string(text: str) -> str:
     """Escape special characters in an AppleScript string.
@@ -106,4 +111,3 @@ def escape_applescript_string(text: str) -> str:
 
     # Escape quotes by doubling them (AppleScript style)
     return text.replace('"', '""')
-

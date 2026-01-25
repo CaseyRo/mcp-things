@@ -77,10 +77,13 @@ src/things_mcp/
 1. Read operations: FastMCP → things-py (SQLite) → cache → format response
 2. Write operations: FastMCP → URL scheme builder → macOS `open -g` → Things app
 
-## Key Patterns
+## Key Patterns (FastMCP 3.0)
 
 - **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"])`
-- **Error handling**: Return `_error_result("message")` for failures (standardized MCP error)
+- **Async tools**: All tool functions must be `async def` with `ctx: Context` parameter for logging
+- **Error handling**: Raise `ToolError("message")` for failures (FastMCP 3 pattern)
+- **Context logging**: Use `await ctx.info("message")` for operation logging within tools
+- **Tool timeouts**: Write tools use `timeout=30`, read tools use `timeout=5`
 - **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
 - **Logging**: Use `get_logger(__name__)`, redact sensitive data (never log task titles/notes)
 - **Tags**: Call `ensure_tags_exist(tags)` before using tags in write operations

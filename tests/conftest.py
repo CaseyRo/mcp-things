@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures for Things MCP tests."""
+
 import pytest
 import unittest.mock as mock
 from typing import List, Dict, Any, Optional
@@ -14,30 +15,33 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # Import settings first - pydantic-settings automatically loads .env
 # This ensures THINGS_AUTH_TOKEN is available for all modules
 from things_mcp.settings import get_settings
+
 get_settings()  # Trigger settings load
 
-import things
-import mcp.types as types
-from things_mcp import url_scheme
-from things_mcp import applescript_bridge
-from things_mcp import fast_server
+import mcp.types as types  # noqa: E402 - must load after settings
 
 
 # ============================================================================
 # Pytest Markers Configuration
 # ============================================================================
 
+
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "unit: Unit tests with mocked dependencies")
-    config.addinivalue_line("markers", "integration: Integration tests (may be mocked or real)")
-    config.addinivalue_line("markers", "real: Real integration tests requiring Things 3")
+    config.addinivalue_line(
+        "markers", "integration: Integration tests (may be mocked or real)"
+    )
+    config.addinivalue_line(
+        "markers", "real: Real integration tests requiring Things 3"
+    )
     config.addinivalue_line("markers", "slow: Tests that may take longer")
 
 
 # ============================================================================
 # Mock Data Generators
 # ============================================================================
+
 
 def create_mock_todo(
     uuid_str: Optional[str] = None,
@@ -127,6 +131,7 @@ def create_mock_tag(
 # Unit Test Fixtures (Mocked)
 # ============================================================================
 
+
 @pytest.fixture
 def mock_things(monkeypatch):
     """Mock the things-py library for unit tests."""
@@ -160,8 +165,7 @@ def mock_applescript(monkeypatch):
     mock_run_applescript = mock.Mock(return_value="test-todo-id-123")
 
     monkeypatch.setattr(
-        "things_mcp.applescript_bridge.run_applescript",
-        mock_run_applescript
+        "things_mcp.applescript_bridge.run_applescript", mock_run_applescript
     )
 
     return {"run_applescript": mock_run_applescript}
@@ -173,13 +177,9 @@ def mock_url_scheme(monkeypatch):
     mock_execute_url = mock.Mock(return_value=True)
     mock_execute_xcallback_url = mock.Mock(return_value=True)
 
+    monkeypatch.setattr("things_mcp.url_scheme.execute_url", mock_execute_url)
     monkeypatch.setattr(
-        "things_mcp.url_scheme.execute_url",
-        mock_execute_url
-    )
-    monkeypatch.setattr(
-        "things_mcp.url_scheme.execute_xcallback_url",
-        mock_execute_xcallback_url
+        "things_mcp.url_scheme.execute_xcallback_url", mock_execute_xcallback_url
     )
 
     return {
@@ -221,11 +221,16 @@ def mock_utils(monkeypatch):
 # Real Integration Test Fixtures
 # ============================================================================
 
+
 def is_things_available() -> bool:
     """Check if Things 3 is available for real integration tests."""
     try:
         result = subprocess.run(
-            ["osascript", "-e", 'tell application "System Events" to (name of processes) contains "Things3"'],
+            [
+                "osascript",
+                "-e",
+                'tell application "System Events" to (name of processes) contains "Things3"',
+            ],
             capture_output=True,
             text=True,
             timeout=5,
@@ -279,12 +284,12 @@ class TestDataTracker:
             try:
                 # Use AppleScript to delete the todo
                 # Note: run_applescript handles multi-line scripts via stdin
-                script = f'''tell application "Things3"
+                script = f"""tell application "Things3"
     try
         set theTodo to to do id "{todo_id}"
         delete theTodo
     end try
-end tell'''
+end tell"""
                 result = run_applescript(script)
                 if result is False:
                     # Log but don't fail - cleanup errors are non-critical
@@ -296,17 +301,19 @@ end tell'''
         # Delete projects
         for project_id in self.created_projects:
             try:
-                script = f'''tell application "Things3"
+                script = f"""tell application "Things3"
     try
         set theProject to project id "{project_id}"
         delete theProject
     end try
-end tell'''
+end tell"""
                 result = run_applescript(script)
                 if result is False:
                     print(f"Warning: Failed to delete project {project_id}")
             except Exception as e:
-                print(f"Warning: Exception during project cleanup for {project_id}: {e}")
+                print(
+                    f"Warning: Exception during project cleanup for {project_id}: {e}"
+                )
 
         # Clear tracked items
         self.created_todos.clear()
@@ -320,60 +327,73 @@ end tell'''
         """
         from things_mcp.applescript_bridge import run_applescript
 
-        # Test prefixes to match
-        test_prefixes = ["MCP-TEST-TODO", "MCP-TAG-TEST", "MCP-WORKFLOW-UPDATED",
-                         "MCP-TEST-TODO-FULL", "MCP-TEST-TODO-COMPLETE", "MCP-TEST-PROJECT"]
+        # Test prefixes to match (documented here, hardcoded in AppleScript below)
+        _test_prefixes = [
+            "MCP-TEST-TODO",
+            "MCP-TAG-TEST",
+            "MCP-WORKFLOW-UPDATED",
+            "MCP-TEST-TODO-FULL",
+            "MCP-TEST-TODO-COMPLETE",
+            "MCP-TEST-PROJECT",
+        ]
+        _ = _test_prefixes  # Silence unused variable warning (used for documentation)
 
         try:
             # Build AppleScript to find and delete all matching todos and projects
             # Important: Collect IDs first, then delete them (can't delete while iterating)
             script_parts = ['tell application "Things3"']
-            script_parts.append('    set testPrefixes to {"MCP-TEST-TODO", "MCP-TAG-TEST", "MCP-WORKFLOW-UPDATED", "MCP-TEST-TODO-FULL", "MCP-TEST-TODO-COMPLETE"}')
-            script_parts.append('    set todoIds to {}')
-            script_parts.append('    set projectIds to {}')
-            script_parts.append('    ')
-            script_parts.append('    -- Collect todo IDs (search ALL todos, not just specific lists)')
-            script_parts.append('    repeat with theTodo in (every to do)')
-            script_parts.append('        set todoName to name of theTodo')
-            script_parts.append('        repeat with prefix in testPrefixes')
-            script_parts.append('            if todoName starts with prefix then')
-            script_parts.append('                set end of todoIds to id of theTodo')
-            script_parts.append('                exit repeat')
-            script_parts.append('            end if')
-            script_parts.append('        end repeat')
-            script_parts.append('    end repeat')
-            script_parts.append('    ')
-            script_parts.append('    -- Collect project IDs')
-            script_parts.append('    repeat with theProject in (every project)')
-            script_parts.append('        set projectName to name of theProject')
-            script_parts.append('        if projectName starts with "MCP-TEST-PROJECT" then')
-            script_parts.append('            set end of projectIds to id of theProject')
-            script_parts.append('        end if')
-            script_parts.append('    end repeat')
-            script_parts.append('    ')
-            script_parts.append('    -- Delete todos by ID')
-            script_parts.append('    set deletedCount to 0')
-            script_parts.append('    repeat with todoId in todoIds')
-            script_parts.append('        try')
-            script_parts.append('            set theTodo to to do id todoId')
-            script_parts.append('            delete theTodo')
-            script_parts.append('            set deletedCount to deletedCount + 1')
-            script_parts.append('        end try')
-            script_parts.append('    end repeat')
-            script_parts.append('    ')
-            script_parts.append('    -- Delete projects by ID')
-            script_parts.append('    repeat with projectId in projectIds')
-            script_parts.append('        try')
-            script_parts.append('            set theProject to project id projectId')
-            script_parts.append('            delete theProject')
-            script_parts.append('            set deletedCount to deletedCount + 1')
-            script_parts.append('        end try')
-            script_parts.append('    end repeat')
-            script_parts.append('    ')
-            script_parts.append('    return deletedCount')
-            script_parts.append('end tell')
+            script_parts.append(
+                '    set testPrefixes to {"MCP-TEST-TODO", "MCP-TAG-TEST", "MCP-WORKFLOW-UPDATED", "MCP-TEST-TODO-FULL", "MCP-TEST-TODO-COMPLETE"}'
+            )
+            script_parts.append("    set todoIds to {}")
+            script_parts.append("    set projectIds to {}")
+            script_parts.append("    ")
+            script_parts.append(
+                "    -- Collect todo IDs (search ALL todos, not just specific lists)"
+            )
+            script_parts.append("    repeat with theTodo in (every to do)")
+            script_parts.append("        set todoName to name of theTodo")
+            script_parts.append("        repeat with prefix in testPrefixes")
+            script_parts.append("            if todoName starts with prefix then")
+            script_parts.append("                set end of todoIds to id of theTodo")
+            script_parts.append("                exit repeat")
+            script_parts.append("            end if")
+            script_parts.append("        end repeat")
+            script_parts.append("    end repeat")
+            script_parts.append("    ")
+            script_parts.append("    -- Collect project IDs")
+            script_parts.append("    repeat with theProject in (every project)")
+            script_parts.append("        set projectName to name of theProject")
+            script_parts.append(
+                '        if projectName starts with "MCP-TEST-PROJECT" then'
+            )
+            script_parts.append("            set end of projectIds to id of theProject")
+            script_parts.append("        end if")
+            script_parts.append("    end repeat")
+            script_parts.append("    ")
+            script_parts.append("    -- Delete todos by ID")
+            script_parts.append("    set deletedCount to 0")
+            script_parts.append("    repeat with todoId in todoIds")
+            script_parts.append("        try")
+            script_parts.append("            set theTodo to to do id todoId")
+            script_parts.append("            delete theTodo")
+            script_parts.append("            set deletedCount to deletedCount + 1")
+            script_parts.append("        end try")
+            script_parts.append("    end repeat")
+            script_parts.append("    ")
+            script_parts.append("    -- Delete projects by ID")
+            script_parts.append("    repeat with projectId in projectIds")
+            script_parts.append("        try")
+            script_parts.append("            set theProject to project id projectId")
+            script_parts.append("            delete theProject")
+            script_parts.append("            set deletedCount to deletedCount + 1")
+            script_parts.append("        end try")
+            script_parts.append("    end repeat")
+            script_parts.append("    ")
+            script_parts.append("    return deletedCount")
+            script_parts.append("end tell")
 
-            script = '\n'.join(script_parts)
+            script = "\n".join(script_parts)
             result = run_applescript(script)
 
             if result and result.isdigit():
@@ -418,7 +438,10 @@ def generate_test_title(prefix: str = "MCP-TEST") -> str:
 # Test Utilities
 # ============================================================================
 
-def assert_text_content(response: List[Any], expected_text_contains: Optional[str] = None):
+
+def assert_text_content(
+    response: List[Any], expected_text_contains: Optional[str] = None
+):
     """Assert that response is a list of TextContent with expected content."""
     assert isinstance(response, list)
     assert len(response) > 0
@@ -429,7 +452,9 @@ def assert_text_content(response: List[Any], expected_text_contains: Optional[st
         assert expected_text_contains in response[0].text
 
 
-def assert_error_response(response: List[Any], expected_error_contains: Optional[str] = None):
+def assert_error_response(
+    response: List[Any], expected_error_contains: Optional[str] = None
+):
     """Assert that response indicates an error."""
     assert isinstance(response, list)
     assert len(response) > 0
@@ -442,4 +467,3 @@ def assert_error_response(response: List[Any], expected_error_contains: Optional
 
     if expected_error_contains:
         assert expected_error_contains in response[0].text
-

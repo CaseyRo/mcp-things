@@ -1,4 +1,5 @@
 """Gracefully handle shutdown signals."""
+
 import asyncio
 import os
 import signal

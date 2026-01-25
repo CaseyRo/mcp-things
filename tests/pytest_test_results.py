@@ -1,10 +1,9 @@
 """Pytest plugin to capture and store test results in Markdown format."""
+
 import json
-import pytest
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
-import subprocess
 
 
 class TestResultsPlugin:
@@ -42,11 +41,17 @@ class TestResultsPlugin:
             }
 
             if report.outcome == "failed":
-                test_info["error"] = str(report.longrepr) if hasattr(report, "longrepr") else None
-                test_info["error_message"] = report.longreprtext if hasattr(report, "longreprtext") else None
+                test_info["error"] = (
+                    str(report.longrepr) if hasattr(report, "longrepr") else None
+                )
+                test_info["error_message"] = (
+                    report.longreprtext if hasattr(report, "longreprtext") else None
+                )
 
             if report.outcome == "skipped":
-                test_info["skip_reason"] = report.longreprtext if hasattr(report, "longreprtext") else None
+                test_info["skip_reason"] = (
+                    report.longreprtext if hasattr(report, "longreprtext") else None
+                )
 
             self.current_run["tests"].append(test_info)
 
@@ -54,11 +59,21 @@ class TestResultsPlugin:
         """Store test results when session finishes."""
         # Get summary from session
         self.current_run["summary"] = {
-            "total": session.testscollected if hasattr(session, "testscollected") else 0,
-            "passed": len([t for t in self.current_run["tests"] if t["outcome"] == "passed"]),
-            "failed": len([t for t in self.current_run["tests"] if t["outcome"] == "failed"]),
-            "skipped": len([t for t in self.current_run["tests"] if t["outcome"] == "skipped"]),
-            "errors": len([t for t in self.current_run["tests"] if t["outcome"] == "error"]),
+            "total": session.testscollected
+            if hasattr(session, "testscollected")
+            else 0,
+            "passed": len(
+                [t for t in self.current_run["tests"] if t["outcome"] == "passed"]
+            ),
+            "failed": len(
+                [t for t in self.current_run["tests"] if t["outcome"] == "failed"]
+            ),
+            "skipped": len(
+                [t for t in self.current_run["tests"] if t["outcome"] == "skipped"]
+            ),
+            "errors": len(
+                [t for t in self.current_run["tests"] if t["outcome"] == "error"]
+            ),
             "duration": sum(t["duration"] for t in self.current_run["tests"]),
             "exit_status": exitstatus,
         }
@@ -93,7 +108,11 @@ class TestResultsPlugin:
                 with open(json_file, "r") as f:
                     runs = json.load(f)
                     # Remove current run if it exists (in case of re-run)
-                    runs = [r for r in runs if r.get("timestamp") != self.current_run["timestamp"]]
+                    runs = [
+                        r
+                        for r in runs
+                        if r.get("timestamp") != self.current_run["timestamp"]
+                    ]
                     return runs
             except Exception:
                 pass
@@ -131,31 +150,35 @@ class TestResultsPlugin:
             else:
                 status_emoji = "⚠️"
 
-            md_lines.extend([
-                f"## Run #{idx} - {formatted_time} {status_emoji}",
-                "",
-                f"**Status:** {'PASSED' if exit_status == 0 else 'FAILED'}",
-                f"**Duration:** {duration:.2f}s",
-                "",
-                "### Summary",
-                "",
-                "| Metric | Count |",
-                "|--------|-------|",
-                f"| Total Tests | {total} |",
-                f"| ✅ Passed | {passed} |",
-                f"| ❌ Failed | {failed} |",
-                f"| ⏭️ Skipped | {skipped} |",
-                f"| ⚠️ Errors | {errors} |",
-                "",
-            ])
+            md_lines.extend(
+                [
+                    f"## Run #{idx} - {formatted_time} {status_emoji}",
+                    "",
+                    f"**Status:** {'PASSED' if exit_status == 0 else 'FAILED'}",
+                    f"**Duration:** {duration:.2f}s",
+                    "",
+                    "### Summary",
+                    "",
+                    "| Metric | Count |",
+                    "|--------|-------|",
+                    f"| Total Tests | {total} |",
+                    f"| ✅ Passed | {passed} |",
+                    f"| ❌ Failed | {failed} |",
+                    f"| ⏭️ Skipped | {skipped} |",
+                    f"| ⚠️ Errors | {errors} |",
+                    "",
+                ]
+            )
 
             # Failed tests
             failed_tests = [t for t in run["tests"] if t["outcome"] == "failed"]
             if failed_tests:
-                md_lines.extend([
-                    "### Failed Tests",
-                    "",
-                ])
+                md_lines.extend(
+                    [
+                        "### Failed Tests",
+                        "",
+                    ]
+                )
                 for test in failed_tests:
                     test_name = test["name"].split("::")[-1]
                     md_lines.append(f"- **{test_name}** (`{test['name']}`)")
@@ -170,10 +193,12 @@ class TestResultsPlugin:
             # Skipped tests
             skipped_tests = [t for t in run["tests"] if t["outcome"] == "skipped"]
             if skipped_tests:
-                md_lines.extend([
-                    "### Skipped Tests",
-                    "",
-                ])
+                md_lines.extend(
+                    [
+                        "### Skipped Tests",
+                        "",
+                    ]
+                )
                 for test in skipped_tests:
                     test_name = test["name"].split("::")[-1]
                     skip_reason = test.get("skip_reason", "No reason provided")
@@ -189,25 +214,31 @@ class TestResultsPlugin:
                     if marker not in ["parametrize"]:
                         if marker not in markers:
                             markers[marker] = {"passed": 0, "failed": 0, "skipped": 0}
-                        markers[marker][test["outcome"]] = markers[marker].get(test["outcome"], 0) + 1
+                        markers[marker][test["outcome"]] = (
+                            markers[marker].get(test["outcome"], 0) + 1
+                        )
 
             if markers:
-                md_lines.extend([
-                    "### Test Breakdown by Marker",
-                    "",
-                    "| Marker | Passed | Failed | Skipped |",
-                    "|--------|--------|--------|---------|",
-                ])
+                md_lines.extend(
+                    [
+                        "### Test Breakdown by Marker",
+                        "",
+                        "| Marker | Passed | Failed | Skipped |",
+                        "|--------|--------|--------|---------|",
+                    ]
+                )
                 for marker, counts in sorted(markers.items()):
                     md_lines.append(
                         f"| `{marker}` | {counts.get('passed', 0)} | {counts.get('failed', 0)} | {counts.get('skipped', 0)} |"
                     )
                 md_lines.append("")
 
-            md_lines.extend([
-                "---",
-                "",
-            ])
+            md_lines.extend(
+                [
+                    "---",
+                    "",
+                ]
+            )
 
         # Write to file
         with open(self.results_file, "w") as f:
@@ -222,4 +253,3 @@ def pytest_configure(config):
     if not hasattr(config, "_test_results_plugin_registered"):
         config.pluginmanager.register(TestResultsPlugin(config), "test_results_plugin")
         config._test_results_plugin_registered = True
-

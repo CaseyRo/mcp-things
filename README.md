@@ -47,7 +47,7 @@ This MCP server provides seamless integration between Things 3 and AI assistants
 
 ### 🔌 MCP Integration
 
-- **FastMCP Framework**: Modern, type-safe MCP implementation
+- **FastMCP 3.0 Framework**: Modern, async-first MCP implementation with Context DI
 - **Rich Metadata**: Assistants receive instructions, capabilities, and limitations
 - **HTTP Transport**: RESTful interface on `http://127.0.0.1:8009` (configurable)
 - **Tool Annotations**: Optimization hints for read-only, idempotent, and destructive operations
@@ -372,17 +372,6 @@ See [openspec/project.md](openspec/project.md) for:
 
 Docker containers on macOS run in a lightweight VM that lacks access to host-level AppleScript and URL scheme handlers. The server requires direct macOS execution to interact with Things 3. Use `uv run server` directly on your Mac instead.
 
-## Version 2.0 Changes
-
-**Breaking Change:** Removed legacy MCP implementation.
-
-If you're upgrading from 1.x:
-- Update MCP client configs: `things_server.py` → `things_fast_server.py`
-- All tool names and signatures remain unchanged
-- You now get all reliability features automatically (caching, circuit breaker, retry logic)
-
-See [CHANGELOG.md](CHANGELOG.md) for complete details.
-
 ## Contributing
 
 Contributions are welcome! This project uses the [OpenSpec](openspec/AGENTS.md) workflow for spec-driven development.
@@ -394,28 +383,6 @@ Contributions are welcome! This project uses the [OpenSpec](openspec/AGENTS.md) 
 3. Follow the change proposal workflow for new features
 4. Run `ruff check .` and `uv run python -m pytest tests` before submitting PRs
 
-## Migration from Bash Script
-
-If you were previously using the bash script (`./run_things_fastmcp.sh`), here's how to migrate:
-
-**Old way:**
-```bash
-./run_things_fastmcp.sh
-./run_things_fastmcp.sh --host 0.0.0.0 --port 9000
-```
-
-**New way:**
-```bash
-uv run server
-THINGS_FASTMCP_HOST=0.0.0.0 THINGS_FASTMCP_PORT=9000 uv run server
-```
-
-**Benefits of the new approach:**
-- ✅ Simpler command syntax
-- ✅ Better dependency management with UV
-- ✅ Configuration via `.env` files
-- ✅ No bash script maintenance overhead
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
@@ -426,14 +393,17 @@ This project builds on the excellent work of:
 
 - **[Harald Lindstrøm](https://github.com/hald)** - Original [things-mcp](https://github.com/hald/things-mcp) implementation
 - **[Yaroslav Krempovych](https://github.com/excelsier)** - FastMCP modernization
-- **[Cultured Code](https://culturedcode.com)** - Things 3 app and things-py library
-- **[Anthropic](https://anthropic.com)** - Model Context Protocol specification and FastMCP framework
+- **[Jonathan Lowin](https://github.com/jlowin)** - [FastMCP](https://github.com/jlowin/fastmcp) framework
+- **[Alexander Willner](https://github.com/thingsapi) & Michael Belfrage** - [things.py](https://github.com/thingsapi/things.py) library
+- **[Cultured Code](https://culturedcode.com)** - Things 3 app
+- **[Anthropic](https://anthropic.com)** - Model Context Protocol specification
 
 ## Links
 
-- **Documentation**: [README.md](README.md)
 - **Issues & Support**: [GitHub Issues](https://github.com/CaseyRo/things-fastmcp/issues)
+- **Migration Guide**: [MIGRATION.md](MIGRATION.md)
 - **Privacy Policy**: [PRIVACY.md](PRIVACY.md)
 - **Terms of Use**: [TERMS_OF_USE.md](TERMS_OF_USE.md)
+- **FastMCP Documentation**: [gofastmcp.com](https://gofastmcp.com)
 - **MCP Specification**: [Model Context Protocol](https://github.com/anthropics/mcp)
 - **Things 3 URL Scheme**: [Official Documentation](https://culturedcode.com/things/support/articles/2803573/)

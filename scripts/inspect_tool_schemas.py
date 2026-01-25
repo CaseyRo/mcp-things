@@ -3,16 +3,15 @@
 Diagnostic script to inspect FastMCP tool schema format.
 This helps identify schema compatibility issues with n8n.
 """
+
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from things_mcp.fast_server import mcp
-import mcp.types as mcp_types  # Renamed to avoid shadowing with the mcp server instance
 
 
 def inspect_tool_schema(tool):
@@ -20,7 +19,8 @@ def inspect_tool_schema(tool):
     schema_info = {
         "name": tool.name,
         "description": tool.description,
-        "has_inputSchema": hasattr(tool, "inputSchema") and tool.inputSchema is not None,
+        "has_inputSchema": hasattr(tool, "inputSchema")
+        and tool.inputSchema is not None,
         "tool_type": type(tool).__name__,
         "tool_attributes": [attr for attr in dir(tool) if not attr.startswith("__")],
     }
@@ -48,10 +48,14 @@ def inspect_tool_schema(tool):
         else:
             # If it's an object, try to get its dict representation
             try:
-                schema_dict = schema.model_dump() if hasattr(schema, "model_dump") else dict(schema)
+                schema_dict = (
+                    schema.model_dump()
+                    if hasattr(schema, "model_dump")
+                    else dict(schema)
+                )
                 schema_info["inputSchema"]["inputType"] = schema_dict.get("inputType")
                 schema_info["inputSchema"]["raw_schema"] = schema_dict
-            except:
+            except Exception:
                 schema_info["inputSchema"]["raw_schema"] = str(schema)
 
     # Check annotations
@@ -70,7 +74,7 @@ def inspect_tool_schema(tool):
             schema_info["raw_tool_dict"] = tool.dict()
         elif hasattr(tool, "__dict__"):
             schema_info["raw_tool_dict"] = tool.__dict__
-    except:
+    except Exception:
         pass
 
     return schema_info
@@ -87,26 +91,50 @@ def main():
     try:
         # Try different ways to access tools
         if hasattr(mcp, "_tools"):
-            tools = list(mcp._tools.values()) if isinstance(mcp._tools, dict) else list(mcp._tools)
+            tools = (
+                list(mcp._tools.values())
+                if isinstance(mcp._tools, dict)
+                else list(mcp._tools)
+            )
         elif hasattr(mcp, "tools"):
-            tools = list(mcp.tools.values()) if isinstance(mcp.tools, dict) else list(mcp.tools)
+            tools = (
+                list(mcp.tools.values())
+                if isinstance(mcp.tools, dict)
+                else list(mcp.tools)
+            )
         elif hasattr(mcp, "_server"):
             # FastMCP might store tools in the underlying server
             server = mcp._server
             if hasattr(server, "_tools"):
-                tools = list(server._tools.values()) if isinstance(server._tools, dict) else list(server._tools)
+                tools = (
+                    list(server._tools.values())
+                    if isinstance(server._tools, dict)
+                    else list(server._tools)
+                )
             elif hasattr(server, "tools"):
-                tools = list(server.tools.values()) if isinstance(server.tools, dict) else list(server.tools)
+                tools = (
+                    list(server.tools.values())
+                    if isinstance(server.tools, dict)
+                    else list(server.tools)
+                )
 
         # If still no tools, try _tool_manager
         if not tools and hasattr(mcp, "_tool_manager"):
             tool_manager = mcp._tool_manager
             if hasattr(tool_manager, "_tools"):
                 tools_dict = tool_manager._tools
-                tools = list(tools_dict.values()) if isinstance(tools_dict, dict) else list(tools_dict)
+                tools = (
+                    list(tools_dict.values())
+                    if isinstance(tools_dict, dict)
+                    else list(tools_dict)
+                )
             elif hasattr(tool_manager, "tools"):
                 tools_dict = tool_manager.tools
-                tools = list(tools_dict.values()) if isinstance(tools_dict, dict) else list(tools_dict)
+                tools = (
+                    list(tools_dict.values())
+                    if isinstance(tools_dict, dict)
+                    else list(tools_dict)
+                )
 
         # If still no tools, try to inspect the mcp object structure
         if not tools:
@@ -138,11 +166,14 @@ def main():
             if hasattr(mcp, "_server"):
                 server = mcp._server
                 print(f"Server type: {type(server)}")
-                print(f"Server attributes: {[attr for attr in dir(server) if not attr.startswith('__')][:20]}")
+                print(
+                    f"Server attributes: {[attr for attr in dir(server) if not attr.startswith('__')][:20]}"
+                )
             return
     except Exception as e:
         print(f"ERROR: Failed to access tools: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -169,10 +200,14 @@ def main():
         if schema_info.get("inputSchema"):
             input_schema = schema_info["inputSchema"]
             print(f"  Schema type: {input_schema.get('type')}")
-            print(f"  Has inputType: {'inputType' in str(input_schema.get('raw_schema', {}))}")
+            print(
+                f"  Has inputType: {'inputType' in str(input_schema.get('raw_schema', {}))}"
+            )
 
             if input_schema.get("properties"):
-                print(f"  Properties: {list(input_schema['properties'].keys()) if isinstance(input_schema['properties'], dict) else 'N/A'}")
+                print(
+                    f"  Properties: {list(input_schema['properties'].keys()) if isinstance(input_schema['properties'], dict) else 'N/A'}"
+                )
             if input_schema.get("required"):
                 print(f"  Required: {input_schema['required']}")
 
@@ -189,7 +224,9 @@ def main():
                 tools_without_inputType.append(schema_info["name"])
 
     if tools_without_inputType:
-        print(f"\n⚠️  {len(tools_without_inputType)} tools missing 'inputType' property:")
+        print(
+            f"\n⚠️  {len(tools_without_inputType)} tools missing 'inputType' property:"
+        )
         for name in tools_without_inputType:
             print(f"   - {name}")
     else:
@@ -208,7 +245,9 @@ def main():
         print("=" * 80)
         sample = None
         for schema_info in all_schemas:
-            if schema_info.get("inputSchema") and schema_info["inputSchema"].get("properties"):
+            if schema_info.get("inputSchema") and schema_info["inputSchema"].get(
+                "properties"
+            ):
                 sample = schema_info
                 break
 
@@ -220,4 +259,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
