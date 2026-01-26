@@ -6,8 +6,11 @@ This module contains:
 - Schema patching for n8n compatibility
 - Shared helper functions
 - Server constants
+- Server statistics tracking
 """
 
+import time
+from collections import defaultdict
 from typing import Dict, Any, Optional, List, Union
 
 from fastmcp import FastMCP
@@ -23,6 +26,66 @@ logger = get_logger(__name__)
 # n8n compatibility: Parameters that n8n's MCP Client Tool incorrectly sends
 # See: https://github.com/n8n-io/n8n/issues/21500
 N8N_EXTRA_PARAMS = {"toolCallId", "sessionId", "action", "chatInput"}
+
+# GTD quotes for shutdown messages
+GTD_QUOTES = [
+    "Your mind is for having ideas, not holding them. - David Allen",
+    "You can do anything, but not everything. - David Allen",
+    "The secret of getting ahead is getting started. - Mark Twain",
+    "Mind like water. - GTD Principle",
+    "What's the next action? - The GTD question",
+    "If it takes less than 2 minutes, do it now. - GTD Rule",
+    "Review weekly, or things will slip through the cracks. - GTD Wisdom",
+    "Your inbox is not your to-do list. - GTD Truth",
+    "Done is better than perfect. - Sheryl Sandberg",
+    "The two-minute rule: Just do it. - GTD",
+]
+
+
+class ServerStats:
+    """Track server statistics for shutdown summary."""
+
+    def __init__(self):
+        self.start_time: float = time.time()
+        self.tool_calls: Dict[str, int] = defaultdict(int)
+        self.total_calls: int = 0
+        self.errors: int = 0
+
+    def record_tool_call(self, tool_name: str, success: bool = True):
+        """Record a tool call."""
+        self.tool_calls[tool_name] += 1
+        self.total_calls += 1
+        if not success:
+            self.errors += 1
+
+    def get_uptime(self) -> str:
+        """Get human-readable uptime."""
+        elapsed = time.time() - self.start_time
+        if elapsed < 60:
+            return f"{elapsed:.0f}s"
+        elif elapsed < 3600:
+            minutes = elapsed / 60
+            return f"{minutes:.1f}m"
+        else:
+            hours = elapsed / 3600
+            return f"{hours:.1f}h"
+
+    def get_summary(self) -> Dict[str, Any]:
+        """Get statistics summary."""
+        top_tools = sorted(self.tool_calls.items(), key=lambda x: x[1], reverse=True)[
+            :5
+        ]
+        return {
+            "uptime": self.get_uptime(),
+            "total_calls": self.total_calls,
+            "unique_tools": len(self.tool_calls),
+            "errors": self.errors,
+            "top_tools": top_tools,
+        }
+
+
+# Global server stats instance
+server_stats = ServerStats()
 
 INSTRUCTIONS_TEXT = (
     "### Things MCP Server - GTD-Native Task Management\n\n"
@@ -244,9 +307,17 @@ def _patch_tool_serialization_for_n8n(mcp: FastMCP):
 
 
 class N8NCompatibilityMiddleware(Middleware):
-    """Strip extra parameters and null values that n8n's MCP Client Tool sends."""
+    """Strip extra parameters and null values that n8n's MCP Client Tool sends.
+
+    Also tracks tool call statistics for shutdown summary.
+    """
 
     async def on_call_tool(self, context, call_next):
+        # Get tool name for stats tracking
+        tool_name = None
+        if hasattr(context, "message") and hasattr(context.message, "name"):
+            tool_name = context.message.name
+
         if hasattr(context, "message") and hasattr(context.message, "arguments"):
             args = context.message.arguments
             if args:
@@ -261,7 +332,17 @@ class N8NCompatibilityMiddleware(Middleware):
                 for param in null_params:
                     del args[param]
                     logger.debug(f"Stripped null parameter '{param}' from tool call")
-        return await call_next(context)
+
+        # Execute the tool and track stats
+        try:
+            result = await call_next(context)
+            if tool_name:
+                server_stats.record_tool_call(tool_name, success=True)
+            return result
+        except Exception:
+            if tool_name:
+                server_stats.record_tool_call(tool_name, success=False)
+            raise
 
 
 def create_mcp_server() -> FastMCP:
