@@ -1,11 +1,12 @@
-import urllib.parse
-import webbrowser
-import subprocess
+import json
+import logging
 import platform
 import random
+import subprocess
 import time
-import logging
-from typing import Optional, Dict, Any, Union
+import urllib.parse
+import webbrowser
+from typing import Any, Dict, Optional, Union
 from .utils import circuit_breaker, rate_limiter, is_things_running
 
 logger = logging.getLogger(__name__)
@@ -312,24 +313,53 @@ def update_todo(
     id: str,
     title: Optional[str] = None,
     notes: Optional[str] = None,
+    prepend_notes: Optional[str] = None,
+    append_notes: Optional[str] = None,
     when: Optional[str] = None,
     deadline: Optional[str] = None,
     tags: Optional[Union[list[str], str]] = None,
     add_tags: Optional[Union[list[str], str]] = None,
     checklist_items: Optional[list[str]] = None,
+    prepend_checklist_items: Optional[list[str]] = None,
+    append_checklist_items: Optional[list[str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None,
 ) -> str:
-    """Construct URL to update an existing todo."""
+    """Construct URL to update an existing todo.
+
+    Args:
+        id: The UUID of the todo to update
+        title: New title (replaces existing)
+        notes: New notes (replaces existing)
+        prepend_notes: Text to add before existing notes
+        append_notes: Text to add after existing notes
+        when: Schedule date (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD)
+        deadline: Deadline date (YYYY-MM-DD)
+        tags: Tags to set (replaces existing)
+        add_tags: Tags to add without replacing existing ones
+        checklist_items: Checklist items (replaces existing)
+        prepend_checklist_items: Items to add at beginning of checklist
+        append_checklist_items: Items to add at end of checklist
+        completed: Mark as completed
+        canceled: Mark as canceled
+    """
     params = {
         "id": id,
         "title": title,
         "notes": notes,
+        "prepend-notes": prepend_notes,
+        "append-notes": append_notes,
         "when": when,
         "deadline": deadline,
         "tags": tags,
-        "add-tags": add_tags,  # Support for adding tags without replacing existing ones
+        "add-tags": add_tags,
         "checklist-items": "\n".join(checklist_items) if checklist_items else None,
+        "prepend-checklist-items": "\n".join(prepend_checklist_items)
+        if prepend_checklist_items
+        else None,
+        "append-checklist-items": "\n".join(append_checklist_items)
+        if append_checklist_items
+        else None,
         "completed": completed,
         "canceled": canceled,
     }
@@ -340,20 +370,40 @@ def update_project(
     id: str,
     title: Optional[str] = None,
     notes: Optional[str] = None,
+    prepend_notes: Optional[str] = None,
+    append_notes: Optional[str] = None,
     when: Optional[str] = None,
     deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
+    tags: Optional[Union[list[str], str]] = None,
+    add_tags: Optional[Union[list[str], str]] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None,
 ) -> str:
-    """Construct URL to update an existing project."""
+    """Construct URL to update an existing project.
+
+    Args:
+        id: The UUID of the project to update
+        title: New title (replaces existing)
+        notes: New notes (replaces existing)
+        prepend_notes: Text to add before existing notes
+        append_notes: Text to add after existing notes
+        when: Schedule date
+        deadline: Deadline date
+        tags: Tags to set (replaces existing)
+        add_tags: Tags to add without replacing existing ones
+        completed: Mark as completed
+        canceled: Mark as canceled
+    """
     params = {
         "id": id,
         "title": title,
         "notes": notes,
+        "prepend-notes": prepend_notes,
+        "append-notes": append_notes,
         "when": when,
         "deadline": deadline,
         "tags": tags,
+        "add-tags": add_tags,
         "completed": completed,
         "canceled": canceled,
     }
@@ -373,3 +423,279 @@ def show(
 def search(query: str) -> str:
     """Construct URL to perform a search."""
     return construct_url("search", {"query": query})
+
+
+# =============================================================================
+# JSON API Support for Bulk Operations
+# =============================================================================
+
+
+def build_todo_object(
+    title: str,
+    notes: Optional[str] = None,
+    when: Optional[str] = None,
+    deadline: Optional[str] = None,
+    tags: Optional[list[str]] = None,
+    checklist_items: Optional[list[Dict[str, Any]]] = None,
+    list_id: Optional[str] = None,
+    heading: Optional[str] = None,
+    heading_id: Optional[str] = None,
+    completed: Optional[bool] = None,
+    canceled: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """Build a to-do object for the JSON API.
+
+    Args:
+        title: Task title (required)
+        notes: Task notes
+        when: Schedule (today, tomorrow, evening, anytime, someday, or date)
+        deadline: Deadline date
+        tags: List of tag names
+        checklist_items: List of checklist item dicts with 'title' and optional 'completed'
+        list_id: UUID of project to add to
+        heading: Name of heading within project
+        heading_id: UUID of heading within project
+        completed: Mark as completed
+        canceled: Mark as canceled
+
+    Returns:
+        Dict suitable for Things JSON API
+    """
+    attributes: Dict[str, Any] = {"title": title}
+
+    if notes is not None:
+        attributes["notes"] = notes
+    if when is not None:
+        attributes["when"] = when
+    if deadline is not None:
+        attributes["deadline"] = deadline
+    if tags:
+        attributes["tags"] = tags
+    if checklist_items:
+        attributes["checklist-items"] = checklist_items
+    if list_id is not None:
+        attributes["list-id"] = list_id
+    if heading is not None:
+        attributes["heading"] = heading
+    if heading_id is not None:
+        attributes["heading-id"] = heading_id
+    if completed is not None:
+        attributes["completed"] = completed
+    if canceled is not None:
+        attributes["canceled"] = canceled
+
+    return {"type": "to-do", "attributes": attributes}
+
+
+def build_project_object(
+    title: str,
+    notes: Optional[str] = None,
+    when: Optional[str] = None,
+    deadline: Optional[str] = None,
+    tags: Optional[list[str]] = None,
+    area_id: Optional[str] = None,
+    area: Optional[str] = None,
+    items: Optional[list[Dict[str, Any]]] = None,
+    completed: Optional[bool] = None,
+    canceled: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """Build a project object for the JSON API.
+
+    Args:
+        title: Project title (required)
+        notes: Project notes
+        when: Schedule
+        deadline: Deadline date
+        tags: List of tag names
+        area_id: UUID of area to add to
+        area: Name of area to add to
+        items: List of to-do or heading objects to include in project
+        completed: Mark as completed
+        canceled: Mark as canceled
+
+    Returns:
+        Dict suitable for Things JSON API
+    """
+    attributes: Dict[str, Any] = {"title": title}
+
+    if notes is not None:
+        attributes["notes"] = notes
+    if when is not None:
+        attributes["when"] = when
+    if deadline is not None:
+        attributes["deadline"] = deadline
+    if tags:
+        attributes["tags"] = tags
+    if area_id is not None:
+        attributes["area-id"] = area_id
+    if area is not None:
+        attributes["area"] = area
+    if items:
+        attributes["items"] = items
+    if completed is not None:
+        attributes["completed"] = completed
+    if canceled is not None:
+        attributes["canceled"] = canceled
+
+    return {"type": "project", "attributes": attributes}
+
+
+def build_heading_object(title: str, archived: Optional[bool] = None) -> Dict[str, Any]:
+    """Build a heading object for the JSON API.
+
+    Args:
+        title: Heading title
+        archived: Whether the heading is archived
+
+    Returns:
+        Dict suitable for Things JSON API
+    """
+    attributes: Dict[str, Any] = {"title": title}
+    if archived is not None:
+        attributes["archived"] = archived
+    return {"type": "heading", "attributes": attributes}
+
+
+def build_checklist_item(
+    title: str, completed: Optional[bool] = None, canceled: Optional[bool] = None
+) -> Dict[str, Any]:
+    """Build a checklist item object for the JSON API.
+
+    Args:
+        title: Checklist item title
+        completed: Whether the item is completed
+        canceled: Whether the item is canceled
+
+    Returns:
+        Dict suitable for Things JSON API
+    """
+    attributes: Dict[str, Any] = {"title": title}
+    if completed is not None:
+        attributes["completed"] = completed
+    if canceled is not None:
+        attributes["canceled"] = canceled
+    return {"type": "checklist-item", "attributes": attributes}
+
+
+def construct_json_url(items: list[Dict[str, Any]]) -> str:
+    """Construct a Things JSON URL for bulk operations.
+
+    Args:
+        items: List of to-do, project, or heading objects
+
+    Returns:
+        URL string for the Things JSON API
+    """
+    # Get auth token
+    try:
+        from . import config
+
+        token = config.get_things_auth_token()
+    except Exception:
+        token = None
+
+    # Serialize to JSON and URL-encode
+    json_data = json.dumps(items, separators=(",", ":"))  # Compact JSON
+    encoded_data = urllib.parse.quote(json_data, safe="")
+
+    # Build URL
+    url = f"things:///json?data={encoded_data}"
+    if token:
+        url += f"&auth-token={urllib.parse.quote(token, safe='')}"
+
+    logger.debug(f"Constructed JSON URL with {len(items)} items")
+    return url
+
+
+def execute_json(items: list[Dict[str, Any]]) -> bool:
+    """Execute a Things JSON API request for bulk operations.
+
+    Args:
+        items: List of to-do, project, or heading objects
+
+    Returns:
+        True if successful, False otherwise
+    """
+    url = construct_json_url(items)
+    return execute_url(url)
+
+
+def add_project_with_tasks(
+    title: str,
+    tasks: list[Dict[str, Any]],
+    notes: Optional[str] = None,
+    when: Optional[str] = None,
+    deadline: Optional[str] = None,
+    tags: Optional[list[str]] = None,
+    area: Optional[str] = None,
+    area_id: Optional[str] = None,
+    headings: Optional[Dict[str, list[Dict[str, Any]]]] = None,
+) -> str:
+    """Construct JSON URL to create a project with tasks atomically.
+
+    This uses the JSON API to create a project and its tasks in a single
+    operation, ensuring atomicity.
+
+    Args:
+        title: Project title
+        tasks: List of task dicts with 'title' and optional other fields
+        notes: Project notes
+        when: Project schedule
+        deadline: Project deadline
+        tags: Project tags
+        area: Area name to add project to
+        area_id: Area UUID to add project to
+        headings: Dict mapping heading names to lists of tasks under that heading
+
+    Returns:
+        URL string for the Things JSON API
+    """
+    # Build project items (tasks and headings)
+    items: list[Dict[str, Any]] = []
+
+    # Add tasks without headings first
+    for task in tasks:
+        task_obj = build_todo_object(
+            title=task.get("title", ""),
+            notes=task.get("notes"),
+            when=task.get("when"),
+            deadline=task.get("deadline"),
+            tags=task.get("tags"),
+            checklist_items=[
+                build_checklist_item(item) if isinstance(item, str) else item
+                for item in task.get("checklist_items", [])
+            ]
+            if task.get("checklist_items")
+            else None,
+        )
+        items.append(task_obj)
+
+    # Add headings with their tasks
+    if headings:
+        for heading_name, heading_tasks in headings.items():
+            # Add the heading
+            items.append(build_heading_object(heading_name))
+            # Add tasks under this heading
+            for task in heading_tasks:
+                task_obj = build_todo_object(
+                    title=task.get("title", ""),
+                    notes=task.get("notes"),
+                    when=task.get("when"),
+                    deadline=task.get("deadline"),
+                    tags=task.get("tags"),
+                )
+                items.append(task_obj)
+
+    # Build the project object with all items
+    project = build_project_object(
+        title=title,
+        notes=notes,
+        when=when,
+        deadline=deadline,
+        tags=tags,
+        area=area,
+        area_id=area_id,
+        items=items,
+    )
+
+    return construct_json_url([project])
