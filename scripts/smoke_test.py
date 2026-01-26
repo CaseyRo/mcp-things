@@ -22,11 +22,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from things_mcp.utils import is_things_running
-from things_mcp.fast_server import (
-    get_inbox,
-    add_task,
-    update_task,
-)
+from things_mcp.fast_server import mcp
+
+
+# Helper to get tool function from FastMCP
+def _get_tool_fn(name: str):
+    return mcp._local_provider._components[f"tool:{name}@"].fn
+
+
+# Get tool functions from the registered tools
+get_inbox = _get_tool_fn("get-inbox")
+add_task = _get_tool_fn("add-todo")
+update_task = _get_tool_fn("update-todo")
 
 
 def check_things_available():

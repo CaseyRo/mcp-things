@@ -16,28 +16,37 @@ import pytest
 import time
 import things
 
-from things_mcp.fast_server import (
-    # GTD Capture
-    capture_task,
-    # GTD Clarify
-    process_inbox,
-    convert_to_project,
-    # GTD Organize
-    schedule_task,
-    delegate_task,
-    defer_task,
-    plan_project,
-    # GTD Reflect
-    daily_review,
-    weekly_review,
-    # GTD Engage
-    get_tasks,
-    focus_mode,
-    complete_task,
-    # Utility
-    search_tasks,
-)
+# Import the mcp instance to get tool functions
+from things_mcp.fast_server import mcp
 from tests.conftest import generate_test_title
+
+
+# Helper to get tool function from FastMCP
+def _get_tool_fn(name: str):
+    return mcp._local_provider._components[f"tool:{name}@"].fn
+
+
+# Get tool functions from the registered tools
+# GTD Core (Engage/Capture/Clarify)
+capture_task = _get_tool_fn("capture-task")
+process_inbox = _get_tool_fn("process-inbox")
+convert_to_project = _get_tool_fn("convert-to-project")
+get_tasks = _get_tool_fn("get-tasks")
+focus_mode = _get_tool_fn("focus-mode")
+complete_task = _get_tool_fn("complete-task")
+
+# GTD Organize
+schedule_task = _get_tool_fn("schedule-task")
+delegate_task = _get_tool_fn("delegate-task")
+defer_task = _get_tool_fn("defer-task")
+plan_project = _get_tool_fn("plan-project")
+
+# GTD Reflect
+daily_review = _get_tool_fn("daily-review")
+weekly_review = _get_tool_fn("weekly-review")
+
+# Utility
+search_tasks = _get_tool_fn("search-tasks")
 
 
 # =============================================================================

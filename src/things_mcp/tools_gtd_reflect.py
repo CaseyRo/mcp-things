@@ -1,0 +1,213 @@
+"""GTD Reflect Tools: daily and weekly reviews.
+
+These tools support the "Reflect" stage of GTD - reviewing and updating your system.
+"""
+
+import things
+from fastmcp import FastMCP, Context
+from fastmcp.exceptions import ToolError
+
+from .logging_config import get_logger
+from .tool_annotations import TOOL_ANNOTATIONS
+
+logger = get_logger(__name__)
+
+
+def _error_result(message: str):
+    """Raise a ToolError for standardized MCP error handling."""
+    raise ToolError(message)
+
+
+def register_gtd_reflect_tools(mcp: FastMCP):
+    """Register GTD Reflect stage tools with the MCP server."""
+
+    @mcp.tool(
+        name="daily-review", annotations=TOOL_ANNOTATIONS["daily-review"], timeout=5
+    )
+    async def daily_review(ctx: Context = None) -> str:
+        """Get a daily overview following GTD daily review.
+
+        GTD Stage: Reflect
+        Use when: Start of day, or asking "what do I need to do today?"
+
+        Returns:
+        - Today's scheduled tasks (hard landscape)
+        - Overdue tasks requiring attention
+        - Inbox count (items awaiting clarification)
+        """
+        if ctx:
+            await ctx.info("Running daily review...")
+
+        try:
+            from datetime import date
+
+            today_str = date.today().isoformat()
+
+            # Get data
+            today_tasks = things.today()
+            inbox = things.inbox()
+
+            # Find overdue tasks
+            all_todos = things.todos(status="incomplete")
+            overdue = [
+                t
+                for t in all_todos
+                if t.get("deadline") and t.get("deadline") < today_str
+            ]
+
+            # Build summary
+            output = "# Daily Review\n\n"
+            output += f"**Summary:** {len(today_tasks or [])} tasks today"
+            if overdue:
+                output += f", **{len(overdue)} overdue**"
+            if inbox:
+                output += f", {len(inbox)} in inbox"
+            output += "\n\n"
+
+            # Overdue section (priority)
+            if overdue:
+                output += "## Overdue\n\n"
+                for t in overdue[:5]:
+                    output += (
+                        f"- **{t.get('title')}** (deadline: {t.get('deadline')})\n"
+                    )
+                if len(overdue) > 5:
+                    output += f"- ...and {len(overdue) - 5} more\n"
+                output += "\n"
+
+            # Today's tasks
+            output += "## Today's Tasks\n\n"
+            if today_tasks:
+                for t in today_tasks:
+                    deadline_note = (
+                        f" [due: {t.get('deadline')}]" if t.get("deadline") else ""
+                    )
+                    output += f"- {t.get('title')}{deadline_note}\n"
+            else:
+                output += "No tasks scheduled for today. Check anytime tasks or process inbox.\n"
+            output += "\n"
+
+            # Inbox status
+            if inbox:
+                output += f"## Inbox ({len(inbox)} items)\n\n"
+                output += "Use process-inbox to clarify these items.\n"
+                for t in inbox[:3]:
+                    output += f"- {t.get('title')}\n"
+                if len(inbox) > 3:
+                    output += f"- ...and {len(inbox) - 3} more\n"
+
+            return output
+
+        except Exception as e:
+            logger.error(f"Error in daily review: {str(e)}")
+            _error_result(f"Error running daily review: {str(e)}")
+
+    @mcp.tool(
+        name="weekly-review", annotations=TOOL_ANNOTATIONS["weekly-review"], timeout=10
+    )
+    async def weekly_review(ctx: Context = None) -> str:
+        """Comprehensive GTD weekly review.
+
+        GTD Stage: Reflect
+        David Allen calls this the "critical factor for success."
+
+        Returns:
+        - Stalled projects (no next action)
+        - Waiting-for items (especially overdue follow-ups)
+        - Someday/Maybe items to reconsider
+        - Completed this week (celebration!)
+        - Inbox status
+        """
+        if ctx:
+            await ctx.info("Running weekly review...")
+
+        try:
+            from datetime import date
+
+            today = date.today()
+            today_str = today.isoformat()
+
+            output = "# Weekly Review\n\n"
+
+            # 1. Inbox status
+            inbox = things.inbox()
+            if inbox:
+                output += f"## Inbox: {len(inbox)} items\n"
+                output += "**GTD:** Process to zero before finishing review.\n\n"
+            else:
+                output += "## Inbox: Clear\n\n"
+
+            # 2. Stalled projects
+            projects = things.projects()
+            stalled = []
+            for project in projects or []:
+                if project.get("status") != "incomplete":
+                    continue
+                # Get tasks for this project
+                tasks = things.todos(project=project.get("uuid"), status="incomplete")
+                # Check if any task is available (anytime or today)
+                available = [
+                    t
+                    for t in (tasks or [])
+                    if t.get("start") in (None, "Anytime", "Today")
+                    or t.get("start_date") is None
+                    or t.get("start_date") == today_str
+                ]
+                if not available:
+                    stalled.append(project)
+
+            if stalled:
+                output += f"## Stalled Projects: {len(stalled)}\n"
+                output += "These projects have no available next action:\n\n"
+                for p in stalled[:5]:
+                    output += (
+                        f"- **{p.get('title')}** - Add a next action to make progress\n"
+                    )
+                if len(stalled) > 5:
+                    output += f"- ...and {len(stalled) - 5} more\n"
+                output += "\n"
+            else:
+                output += "## All Projects Have Next Actions\n\n"
+
+            # 3. Waiting-for items
+            waiting = things.todos(tag="waiting-for", status="incomplete")
+            if waiting:
+                output += f"## Waiting For: {len(waiting)} items\n\n"
+                overdue_waiting = [
+                    w
+                    for w in waiting
+                    if w.get("deadline") and w.get("deadline") < today_str
+                ]
+                if overdue_waiting:
+                    output += "**Overdue follow-ups:**\n"
+                    for w in overdue_waiting[:3]:
+                        output += f"- {w.get('title')} (was due: {w.get('deadline')})\n"
+                    output += "\n"
+                output += "Review and follow up on delegated items.\n\n"
+
+            # 4. Someday/Maybe review
+            someday = things.someday()
+            if someday:
+                output += f"## Someday/Maybe: {len(someday)} items\n"
+                output += "Consider: Should any of these become active?\n\n"
+                for s in (someday or [])[:3]:
+                    output += f"- {s.get('title')}\n"
+                if len(someday or []) > 3:
+                    output += f"- ...and {len(someday) - 3} more\n"
+                output += "\n"
+
+            # 5. Completed this week
+            completed = things.last("7d", status="completed")
+            if completed:
+                output += f"## Completed This Week: {len(completed)} items\n"
+                output += "Celebrate your accomplishments!\n\n"
+                for c in (completed or [])[:5]:
+                    output += f"- ~~{c.get('title')}~~\n"
+                if len(completed) > 5:
+                    output += f"- ...and {len(completed) - 5} more\n"
+
+            return output
+
+        except Exception as e:
+            logger.error(f"Error in weekly review: {str(e)}")
+            _error_result(f"Error running weekly review: {str(e)}")

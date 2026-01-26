@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Split server into GTD-aligned modules** - Major refactoring for maintainability:
+  - `fast_server.py` reduced from 2,404 lines to 111 lines (entry point only)
+  - New `server_core.py` - Server factory, n8n middleware, schema patches
+  - New `tool_annotations.py` - Shared tool annotations dictionary
+  - New `tools_gtd_core.py` - GTD Engage/Capture/Clarify tools (6 tools)
+  - New `tools_gtd_organize.py` - GTD Organize stage tools (5 tools)
+  - New `tools_gtd_reflect.py` - GTD Reflect stage tools (2 tools)
+  - New `tools_utility.py` - Utility tools (6 tools)
+  - New `tools_deprecated.py` - Backward-compatible aliases (18 tools)
+  - Each module now has focused responsibility, easier to test and maintain
+
+### Added
+
+- **n8n compatibility documentation** - New `docs/n8n-fastmcp-compatibility.md` documenting:
+  - Extra parameter stripping (toolCallId, sessionId, etc.)
+  - anyOf schema flattening for n8n's MCP client
+  - Null value handling in tool arguments
+  - Recommendations for FastMCP team
+
+### Previous Changes
+
 - **Upgraded to FastMCP 3.0.0b1** - Major framework upgrade with new features:
   - All tool functions converted to `async def` for better performance
   - Added `Context` dependency injection for operation logging via `await ctx.info()`
