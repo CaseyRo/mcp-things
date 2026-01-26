@@ -9,14 +9,22 @@ import pytest
 import time
 import things
 
-from things_mcp.fast_server import (
-    add_task,
-    add_new_project,
-    update_task,
-    search_todos,
-)
+# Import the mcp instance to get tool functions
+from things_mcp.fast_server import mcp
 from things_mcp.applescript_bridge import run_applescript
 from tests.conftest import generate_test_title
+
+
+# Helper to get tool function from FastMCP
+def _get_tool_fn(name: str):
+    return mcp._local_provider._components[f"tool:{name}@"].fn
+
+
+# Get tool functions from the registered tools
+add_task = _get_tool_fn("add-todo")
+add_new_project = _get_tool_fn("add-project")
+update_task = _get_tool_fn("update-todo")
+search_todos = _get_tool_fn("search-todos")
 
 
 @pytest.mark.real

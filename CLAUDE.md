@@ -62,7 +62,14 @@ uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing  # 
 
 ```
 src/things_mcp/
-├── fast_server.py           # FastMCP server with 19 MCP tool definitions
+├── fast_server.py           # Entry point: creates MCP server, registers all tools
+├── server_core.py           # Server factory, n8n middleware, schema patches
+├── tool_annotations.py      # Shared TOOL_ANNOTATIONS dict
+├── tools_gtd_core.py        # GTD Engage/Capture/Clarify tools (6 tools)
+├── tools_gtd_organize.py    # GTD Organize stage tools (5 tools)
+├── tools_gtd_reflect.py     # GTD Reflect stage tools (2 tools)
+├── tools_utility.py         # Utility tools: search, list, cache stats (6 tools)
+├── tools_deprecated.py      # Backward-compat aliases (18 tools)
 ├── url_scheme.py            # Things URL scheme builders + execution (things:///)
 ├── applescript_bridge.py    # AppleScript execution (run_applescript())
 ├── formatters.py            # Output formatting for todos/projects/areas
@@ -72,6 +79,15 @@ src/things_mcp/
 ├── tag_handler.py           # Auto-creates missing tags
 └── config.py                # Configuration management
 ```
+
+**Tool Organization by GTD Stage:**
+- **Engage** (3): get-tasks, focus-mode, complete-task
+- **Capture** (1): capture-task
+- **Clarify** (2): process-inbox, convert-to-project
+- **Organize** (5): schedule-task, delegate-task, defer-task, plan-project, modify-task
+- **Reflect** (2): daily-review, weekly-review
+- **Utility** (6): search-tasks, get-projects, get-areas, get-tags, show-in-app, get-cache-stats
+- **Deprecated** (18): Legacy aliases for backward compatibility
 
 **Data Flow:**
 1. Read operations: FastMCP → things-py (SQLite) → cache → format response
