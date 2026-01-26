@@ -217,3 +217,7 @@ See `src/things_mcp/server_core.py` for the complete implementation including:
 - [FastMCP Documentation](https://github.com/jlowin/fastmcp)
 - [JSON Schema Type Arrays](https://json-schema.org/understanding-json-schema/reference/type.html)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
+
+## See Also
+
+- `docs/chatgpt-fastmcp-compatibility.md` - ChatGPT-specific compatibility (additionalProperties, required fields)

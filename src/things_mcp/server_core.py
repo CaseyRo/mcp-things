@@ -2,8 +2,8 @@
 
 This module contains:
 - Server factory function
-- n8n compatibility middleware
-- Schema patching for n8n compatibility
+- Client compatibility middleware (n8n, ChatGPT)
+- Schema patching for client compatibility
 - Shared helper functions
 - Server constants
 - Server statistics tracking
@@ -221,17 +221,116 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
     return result
 
 
-def _patch_tool_serialization_for_n8n(mcp: FastMCP):
-    """Patch tool serialization to ensure inputSchema compatibility with n8n.
+def _add_additional_properties_false(schema: dict) -> dict:
+    """Add additionalProperties: false to all object schemas for ChatGPT compatibility.
 
-    n8n's MCP client doesn't handle 'anyOf' constructs in JSON Schema properly,
-    causing "Cannot read properties of undefined (reading 'inputType')" errors.
+    ChatGPT's strict mode requires additionalProperties: false on every object.
+    This recursively adds the property to all objects in the schema.
 
-    This patches the low-level request handler for ListToolsRequest to flatten
-    anyOf constructs (used by Pydantic for Optional types) before returning
-    tools to clients.
+    See: https://github.com/github/github-mcp-server/issues/376
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    result = dict(schema)
+
+    # If this is an object with properties, add additionalProperties: false
+    if result.get("type") == "object" or "properties" in result:
+        if "additionalProperties" not in result:
+            result["additionalProperties"] = False
+
+    # Recurse into properties
+    if "properties" in result:
+        result["properties"] = {
+            k: _add_additional_properties_false(v)
+            for k, v in result["properties"].items()
+        }
+
+    # Recurse into items (for arrays)
+    if "items" in result and isinstance(result["items"], dict):
+        result["items"] = _add_additional_properties_false(result["items"])
+
+    # Recurse into nested schemas in other locations
+    for key in ["allOf", "oneOf", "anyOf"]:
+        if key in result and isinstance(result[key], list):
+            result[key] = [
+                _add_additional_properties_false(item)
+                if isinstance(item, dict)
+                else item
+                for item in result[key]
+            ]
+
+    return result
+
+
+def _make_all_fields_required(schema: dict) -> dict:
+    """Make all fields required with nullable types for ChatGPT compatibility.
+
+    ChatGPT's strict mode requires ALL properties to be listed in the required array.
+    Optional fields should use type arrays like ["string", "null"] instead of being
+    omitted from required.
+
+    See: https://community.openai.com/t/strict-true-and-required-fields/1131075
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    result = dict(schema)
+
+    if "properties" in result:
+        all_props = list(result["properties"].keys())
+        current_required = set(result.get("required", []))
+
+        # For fields not currently required, make them nullable
+        new_properties = {}
+        for prop_name, prop_schema in result["properties"].items():
+            # Recurse first
+            prop_schema = _make_all_fields_required(dict(prop_schema))
+
+            if prop_name not in current_required:
+                # Add null to type for optional fields
+                if "type" in prop_schema:
+                    current_type = prop_schema["type"]
+                    if isinstance(current_type, str) and current_type != "null":
+                        prop_schema["type"] = [current_type, "null"]
+                    elif isinstance(current_type, list) and "null" not in current_type:
+                        prop_schema["type"] = current_type + ["null"]
+                elif "type" not in prop_schema:
+                    # No type specified, add nullable type
+                    prop_schema["type"] = ["object", "null"]
+
+            new_properties[prop_name] = prop_schema
+
+        result["properties"] = new_properties
+        result["required"] = all_props
+
+    # Recurse into items (for arrays of objects)
+    if "items" in result and isinstance(result["items"], dict):
+        result["items"] = _make_all_fields_required(result["items"])
+
+    return result
+
+
+def _patch_tool_serialization(mcp: FastMCP):
+    """Patch tool serialization for n8n and ChatGPT compatibility.
+
+    Applies schema transformations to make tools work with both:
+    - n8n: Needs anyOf flattened (can't parse anyOf constructs)
+    - ChatGPT: Needs additionalProperties:false and all fields in required
+
+    ChatGPT's requirements are a superset of n8n's, so we apply all transformations
+    to all requests. This "just works" for both clients without configuration.
+
+    Transformations applied:
+    1. Flatten anyOf to type arrays (n8n + ChatGPT)
+    2. Add additionalProperties: false to all objects (ChatGPT)
+    3. Make all fields required with nullable types (ChatGPT)
 
     Set THINGS_MCP_DEBUG_SCHEMA=1 to log full tool schemas for debugging.
+
+    See:
+    - n8n: https://github.com/n8n-io/n8n/issues/21500
+    - ChatGPT: https://github.com/github/github-mcp-server/issues/376
     """
     import os
     import json
@@ -250,41 +349,56 @@ def _patch_tool_serialization_for_n8n(mcp: FastMCP):
 
         async def patched_list_tools_handler(request):
             logger.info(
-                "ListToolsRequest handler - applying n8n schema compatibility patches"
+                "ListToolsRequest handler - applying client compatibility patches"
             )
             result = await original_handler(request)
             # Result is ServerResult with root=ListToolsResult
             tools = result.root.tools
-            # Transform each tool's inputSchema to flatten anyOf
+
+            # Transform each tool's inputSchema for client compatibility
             for tool in tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
                     if debug_schema:
                         logger.info(
-                            f"Tool '{tool.name}' BEFORE flattening: {json.dumps(tool.inputSchema, indent=2)}"
+                            f"Tool '{tool.name}' BEFORE transforms: "
+                            f"{json.dumps(tool.inputSchema, indent=2)}"
                         )
-                    # inputSchema is a dict, flatten it
-                    flattened = _flatten_anyof_for_n8n(tool.inputSchema)
+
+                    # Apply transformations in order
+                    # 1. Flatten anyOf (n8n + ChatGPT)
+                    transformed = _flatten_anyof_for_n8n(tool.inputSchema)
+                    # 2. Add additionalProperties: false (ChatGPT)
+                    transformed = _add_additional_properties_false(transformed)
+                    # 3. Make all fields required (ChatGPT)
+                    transformed = _make_all_fields_required(transformed)
+
                     # Modify the dict in place
                     if isinstance(tool.inputSchema, dict):
                         tool.inputSchema.clear()
-                        tool.inputSchema.update(flattened)
+                        tool.inputSchema.update(transformed)
+
                     if debug_schema:
                         logger.info(
-                            f"Tool '{tool.name}' AFTER flattening: {json.dumps(tool.inputSchema, indent=2)}"
+                            f"Tool '{tool.name}' AFTER transforms: "
+                            f"{json.dumps(tool.inputSchema, indent=2)}"
                         )
-            logger.info(f"Processed {len(tools)} tools with schema flattening")
+
+            logger.info(
+                f"Processed {len(tools)} tools with client compatibility transforms"
+            )
             return result
 
         request_handlers[mcp_types.ListToolsRequest] = patched_list_tools_handler
-        logger.info("Patched ListToolsRequest handler for n8n anyOf compatibility")
+        logger.info(
+            "Patched ListToolsRequest handler for n8n/ChatGPT schema compatibility"
+        )
     except Exception as e:
         logger.warning(
-            f"Could not patch ListToolsRequest handler for n8n compatibility: {e}"
+            f"Could not patch ListToolsRequest handler for client compatibility: {e}"
         )
 
     # Also patch CallToolRequest to strip null values from arguments
-    # n8n sends explicit nulls for empty optional fields, but our flattened
-    # schema declares them as non-null types
+    # n8n sends explicit nulls for empty optional fields
     try:
         original_call_tool = request_handlers[mcp_types.CallToolRequest]
 
@@ -302,14 +416,19 @@ def _patch_tool_serialization_for_n8n(mcp: FastMCP):
         logger.info("Patched CallToolRequest handler for n8n null stripping")
     except Exception as e:
         logger.warning(
-            f"Could not patch CallToolRequest handler for n8n compatibility: {e}"
+            f"Could not patch CallToolRequest handler for client compatibility: {e}"
         )
 
 
-class N8NCompatibilityMiddleware(Middleware):
-    """Strip extra parameters and null values that n8n's MCP Client Tool sends.
+class ClientCompatibilityMiddleware(Middleware):
+    """Handle client-specific quirks for n8n and ChatGPT compatibility.
 
-    Also tracks tool call statistics for shutdown summary.
+    - Strips extra parameters that n8n sends (toolCallId, sessionId, etc.)
+    - Strips null values that n8n sends for optional fields
+    - Tracks tool call statistics for shutdown summary
+
+    Note: ChatGPT doesn't send extra parameters, so these operations are
+    harmless no-ops for ChatGPT clients.
     """
 
     async def on_call_tool(self, context, call_next):
@@ -354,13 +473,14 @@ def create_mcp_server() -> FastMCP:
         icons=ICONS,
     )
 
-    # Add n8n compatibility middleware
-    # This strips extra parameters that n8n incorrectly sends (toolCallId, sessionId, etc.)
+    # Add client compatibility middleware for n8n and ChatGPT
+    # - Strips extra parameters that n8n sends (toolCallId, sessionId, etc.)
+    # - Strips null values for optional fields
     # See: https://github.com/n8n-io/n8n/issues/21500
     try:
-        server.add_middleware(N8NCompatibilityMiddleware())
-        logger.info("n8n compatibility middleware registered")
+        server.add_middleware(ClientCompatibilityMiddleware())
+        logger.info("Client compatibility middleware registered (n8n/ChatGPT)")
     except Exception as e:
-        logger.warning(f"Could not register n8n middleware: {e}")
+        logger.warning(f"Could not register client compatibility middleware: {e}")
 
     return server
