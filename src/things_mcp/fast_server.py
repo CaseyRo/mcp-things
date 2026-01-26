@@ -15,6 +15,7 @@ Architecture:
 - tools_deprecated.py: Backward-compatible tool aliases
 """
 
+import random
 import signal
 import sys
 
@@ -25,7 +26,10 @@ from .server_core import (
     _patch_tool_serialization_for_n8n,
     DEFAULT_HOST,
     HOST_ENV_VAR,
+    server_stats,
+    GTD_QUOTES,
 )
+from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
 from .logging_config import setup_logging, get_logger
@@ -52,12 +56,47 @@ register_utility_tools(mcp)  # Utility (search, list, show, cache)
 register_deprecated_tools(mcp)  # Backward compatibility
 
 
+def _print_shutdown_summary():
+    """Print a nice shutdown summary with stats."""
+    stats = server_stats.get_summary()
+    cache_stats = get_cache_stats()
+
+    print("\n")
+    print("=" * 50)
+    print("  Things MCP Server - Session Summary")
+    print("=" * 50)
+    print(f"  Uptime:        {stats['uptime']}")
+    print(f"  Tool calls:    {stats['total_calls']}")
+    print(f"  Unique tools:  {stats['unique_tools']}")
+    if stats["errors"] > 0:
+        print(f"  Errors:        {stats['errors']}")
+
+    if stats["top_tools"]:
+        print("\n  Most used tools:")
+        for tool_name, count in stats["top_tools"]:
+            print(f"    - {tool_name}: {count}")
+
+    print("\n  Cache stats:")
+    print(f"    - Hits:      {cache_stats['hits']}")
+    print(f"    - Misses:    {cache_stats['misses']}")
+    print(f"    - Hit rate:  {cache_stats['hit_rate']}")
+
+    print("\n" + "-" * 50)
+    quote = random.choice(GTD_QUOTES)
+    print(f"  {quote}")
+    print("-" * 50)
+    print("  Thanks for using Things MCP! Stay productive.")
+    print("=" * 50)
+    print("\n")
+
+
 def run_things_mcp_server():
     """Run the Things MCP server."""
 
     # Set up signal handlers for graceful shutdown
     def signal_handler(signum, frame):
         sig_name = signal.Signals(signum).name
+        _print_shutdown_summary()
         logger.info(f"Received {sig_name}, shutting down...")
         sys.exit(0)
 
