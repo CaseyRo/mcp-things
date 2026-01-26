@@ -2210,13 +2210,12 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
         if key == "anyOf" and isinstance(value, list):
             # Find the non-null type in anyOf
             non_null_types = [t for t in value if t.get("type") != "null"]
-            if len(non_null_types) == 1:
-                # Flatten: merge the non-null type into the parent
+            if len(non_null_types) >= 1:
+                # Flatten: use first non-null type (n8n can't handle anyOf at all)
+                # For union types like string|array, we pick the first option
                 flattened = _flatten_anyof_for_n8n(non_null_types[0])
                 result.update(flattened)
-            else:
-                # Multiple non-null types, keep anyOf but recurse
-                result[key] = [_flatten_anyof_for_n8n(t) for t in value]
+            # If all types are null, skip the anyOf entirely
         elif key == "properties" and isinstance(value, dict):
             # Recurse into properties
             result[key] = {k: _flatten_anyof_for_n8n(v) for k, v in value.items()}
