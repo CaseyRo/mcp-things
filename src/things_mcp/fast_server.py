@@ -2239,14 +2239,15 @@ def _patch_tool_serialization_for_n8n():
     n8n's MCP client doesn't handle 'anyOf' constructs in JSON Schema properly,
     causing "Cannot read properties of undefined (reading 'inputType')" errors.
 
-    This patches the internal _list_tools_mcp() method (the MCP protocol handler)
-    to flatten anyOf constructs (used by Pydantic for Optional types) before
-    returning tools to clients.
+    This patches the low-level request handler for ListToolsRequest to flatten
+    anyOf constructs (used by Pydantic for Optional types) before returning
+    tools to clients.
 
     Set THINGS_MCP_DEBUG_SCHEMA=1 to log full tool schemas for debugging.
     """
     import os
     import json
+    import mcp.types as mcp_types
 
     debug_schema = os.environ.get("THINGS_MCP_DEBUG_SCHEMA", "").lower() in (
         "1",
@@ -2255,14 +2256,16 @@ def _patch_tool_serialization_for_n8n():
     )
 
     try:
-        # Patch the internal MCP protocol handler, not the public list_tools method
-        original_list_tools_mcp = mcp._list_tools_mcp
+        # Patch the low-level request handler registered with the MCP server
+        # Note: 'mcp' here is the global FastMCP instance, not the mcp module
+        request_handlers = mcp._mcp_server.request_handlers
+        original_handler = request_handlers[mcp_types.ListToolsRequest]
 
-        async def patched_list_tools_mcp(request):
+        async def patched_list_tools_handler(request):
             logger.info(
-                "_list_tools_mcp called - applying n8n schema compatibility patches"
+                "ListToolsRequest handler - applying n8n schema compatibility patches"
             )
-            result = await original_list_tools_mcp(request)
+            result = await original_handler(request)
             # Transform each tool's inputSchema to flatten anyOf
             for tool in result.tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
@@ -2283,10 +2286,12 @@ def _patch_tool_serialization_for_n8n():
             logger.info(f"Processed {len(result.tools)} tools with schema flattening")
             return result
 
-        mcp._list_tools_mcp = patched_list_tools_mcp
-        logger.info("Patched _list_tools_mcp for n8n anyOf compatibility")
+        request_handlers[mcp_types.ListToolsRequest] = patched_list_tools_handler
+        logger.info("Patched ListToolsRequest handler for n8n anyOf compatibility")
     except Exception as e:
-        logger.warning(f"Could not patch _list_tools_mcp for n8n compatibility: {e}")
+        logger.warning(
+            f"Could not patch ListToolsRequest handler for n8n compatibility: {e}"
+        )
 
 
 # Main entry point
