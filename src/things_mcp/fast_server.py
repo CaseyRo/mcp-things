@@ -253,9 +253,54 @@ def run_things_mcp_server():
 
     logger.info("Press Ctrl+C to stop the server")
 
-    # Run the MCP server with HTTP transport
-    mcp.run(
-        transport="streamable-http",
+    # Run the MCP server with HTTP transport and Accept header fix
+    # ChatGPT sends Accept: */* which the MCP SDK rejects (bug in SDK)
+    # See: https://github.com/modelcontextprotocol/python-sdk/issues/1641
+    import uvicorn
+    from starlette.middleware import Middleware
+    from starlette.types import ASGIApp, Receive, Scope, Send
+
+    class AcceptHeaderFixMiddleware:
+        """Fix Accept header for clients that send wildcards.
+
+        The MCP Python SDK incorrectly rejects Accept: */* headers,
+        requiring explicit Accept: application/json, text/event-stream.
+        This middleware rewrites wildcard Accept headers to fix compatibility
+        with ChatGPT and other clients.
+        """
+
+        def __init__(self, app: ASGIApp):
+            self.app = app
+
+        async def __call__(self, scope: Scope, receive: Receive, send: Send):
+            if scope["type"] == "http":
+                # Find and fix Accept header
+                headers = list(scope.get("headers", []))
+                new_headers = []
+                for name, value in headers:
+                    if name.lower() == b"accept":
+                        # Check if it's a wildcard or missing required types
+                        accept_value = value.decode("utf-8", errors="ignore")
+                        if "*/*" in accept_value or "application/*" in accept_value:
+                            # Replace with explicit types the MCP SDK expects
+                            value = b"application/json, text/event-stream"
+                            logger.debug(
+                                f"Rewrote Accept header from '{accept_value}' to 'application/json, text/event-stream'"
+                            )
+                    new_headers.append((name, value))
+                scope = dict(scope)
+                scope["headers"] = new_headers
+
+            await self.app(scope, receive, send)
+
+    # Create ASGI app with Accept header fix middleware
+    middleware = [Middleware(AcceptHeaderFixMiddleware)]
+    http_app = mcp.http_app(middleware=middleware)
+
+    logger.info("Accept header fix middleware registered for ChatGPT compatibility")
+
+    uvicorn.run(
+        http_app,
         host=get_binding_host(),
         port=get_binding_port(),
     )
