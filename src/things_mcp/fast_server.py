@@ -2266,8 +2266,10 @@ def _patch_tool_serialization_for_n8n():
                 "ListToolsRequest handler - applying n8n schema compatibility patches"
             )
             result = await original_handler(request)
+            # Result is ServerResult with root=ListToolsResult
+            tools = result.root.tools
             # Transform each tool's inputSchema to flatten anyOf
-            for tool in result.tools:
+            for tool in tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
                     if debug_schema:
                         logger.info(
@@ -2283,7 +2285,7 @@ def _patch_tool_serialization_for_n8n():
                         logger.info(
                             f"Tool '{tool.name}' AFTER flattening: {json.dumps(tool.inputSchema, indent=2)}"
                         )
-            logger.info(f"Processed {len(result.tools)} tools with schema flattening")
+            logger.info(f"Processed {len(tools)} tools with schema flattening")
             return result
 
         request_handlers[mcp_types.ListToolsRequest] = patched_list_tools_handler
