@@ -209,7 +209,7 @@ def _create_fastmcp_instance() -> FastMCP:
     # This strips extra parameters that n8n incorrectly sends (toolCallId, sessionId, etc.)
     # See: https://github.com/n8n-io/n8n/issues/21500
     class N8NCompatibilityMiddleware(Middleware):
-        """Strip extra parameters that n8n's MCP Client Tool incorrectly sends."""
+        """Strip extra parameters and null values that n8n's MCP Client Tool sends."""
 
         async def on_call_tool(self, context, call_next):
             if hasattr(context, "message") and hasattr(context.message, "arguments"):
@@ -222,6 +222,14 @@ def _create_fastmcp_instance() -> FastMCP:
                             logger.debug(
                                 f"Stripped n8n parameter '{param}' from tool call"
                             )
+                    # Remove null values - n8n sends explicit nulls for empty optional
+                    # fields, but our flattened schema declares them as non-null types
+                    null_params = [k for k, v in args.items() if v is None]
+                    for param in null_params:
+                        del args[param]
+                        logger.debug(
+                            f"Stripped null parameter '{param}' from tool call"
+                        )
             return await call_next(context)
 
     try:
