@@ -85,8 +85,14 @@ def _print_shutdown_summary():
     WIDTH = 58  # Total width including borders
 
     def visible_len(text: str) -> int:
-        """Calculate visible length by stripping ANSI codes."""
-        return len(re.sub(r"\033\[[0-9;]*m", "", text))
+        """Calculate visible length by stripping ANSI codes and accounting for emoji width."""
+        # Strip ANSI codes
+        clean = re.sub(r"\033\[[0-9;]*m", "", text)
+        # Count emoji medals as 2 characters wide (they take 2 terminal cells)
+        emoji_count = sum(1 for c in clean if c in "🥇🥈🥉")
+        return (
+            len(clean) + emoji_count
+        )  # Add 1 extra for each emoji (already counted as 1)
 
     def hline(char=H):
         """Create horizontal line (WIDTH-2 chars to fit between corners)."""
@@ -126,12 +132,23 @@ def _print_shutdown_summary():
         for i, (tool_name, count) in enumerate(stats["top_tools"]):
             bar_len = min(count * 2, 16)
             bar = "█" * bar_len
-            # Use text medals instead of emoji for consistent width
-            medals = ["1.", "2.", "3.", " ·", " ·"]
-            medal = medals[i] if i < 5 else " ·"
+            # Emoji medals for top 3, dot for others
+            # Note: emojis are 2 chars wide, so use 1 space after; dots use 2 spaces
+            if i == 0:
+                medal = "🥇"
+                spacing = " "
+            elif i == 1:
+                medal = "🥈"
+                spacing = " "
+            elif i == 2:
+                medal = "🥉"
+                spacing = " "
+            else:
+                medal = " ·"
+                spacing = " "
             print(
                 row(
-                    f"    {medal} {WHITE}{tool_name:<18}{RESET} {GREEN}{bar:<16}{RESET} {DIM}{count}{RESET}"
+                    f"    {medal}{spacing}{WHITE}{tool_name:<18}{RESET} {GREEN}{bar:<16}{RESET} {DIM}{count}{RESET}"
                 )
             )
         print(row(""))
