@@ -58,6 +58,8 @@ register_deprecated_tools(mcp)  # Backward compatibility
 
 def _print_shutdown_summary():
     """Print a beautiful shutdown summary with stats."""
+    import re
+
     stats = server_stats.get_summary()
     cache_stats = get_cache_stats()
 
@@ -71,6 +73,7 @@ def _print_shutdown_summary():
     MAGENTA = "\033[35m"
     BLUE = "\033[34m"
     WHITE = "\033[97m"
+    RED = "\033[31m"
 
     # Box-drawing characters
     TL = "╭"  # top-left
@@ -79,130 +82,109 @@ def _print_shutdown_summary():
     BR = "╯"  # bottom-right
     H = "─"  # horizontal
     V = "│"  # vertical
-    WIDTH = 56
+    WIDTH = 58  # Total width including borders
 
-    def line(char=H):
+    def visible_len(text: str) -> int:
+        """Calculate visible length by stripping ANSI codes."""
+        return len(re.sub(r"\033\[[0-9;]*m", "", text))
+
+    def hline(char=H):
+        """Create horizontal line (WIDTH-2 chars to fit between corners)."""
         return char * (WIDTH - 2)
 
-    def padded(text, width=WIDTH - 4):
-        # Strip ANSI codes for length calculation
-        import re
-
-        clean = re.sub(r"\033\[[0-9;]*m", "", text)
-        padding = width - len(clean)
-        return text + " " * max(0, padding)
+    def row(content: str) -> str:
+        """Create a row with proper padding and borders."""
+        vis_len = visible_len(content)
+        # Content area is WIDTH - 2 (for left and right border)
+        padding = WIDTH - 2 - vis_len
+        return f"{CYAN}{V}{RESET}{content}{' ' * max(0, padding)}{CYAN}{V}{RESET}"
 
     print()
-    print(f"{CYAN}{TL}{line()}{TR}{RESET}")
+    print(f"{CYAN}{TL}{hline()}{TR}{RESET}")
 
     # Header
-    header = f"{BOLD}{WHITE}Things MCP Server{RESET}"
-    print(
-        f"{CYAN}{V}{RESET}  {header}  {DIM}Session Complete{RESET}".ljust(WIDTH + 20)
-        + f"{CYAN}{V}{RESET}"
-    )
-    print(f"{CYAN}{V}{RESET}{line()}{CYAN}{V}{RESET}")
+    print(row(f"  {BOLD}{WHITE}Things MCP Server{RESET}  {DIM}Session Complete{RESET}"))
+    print(row(hline()))
 
     # Stats section
-    print(f"{CYAN}{V}{RESET}")
-    print(f"{CYAN}{V}{RESET}  {BOLD}{YELLOW}SESSION STATS{RESET}")
-    print(f"{CYAN}{V}{RESET}")
+    print(row(""))
+    print(row(f"  {BOLD}{YELLOW}SESSION STATS{RESET}"))
+    print(row(""))
+    print(row(f"    {DIM}Uptime{RESET}        {BOLD}{WHITE}{stats['uptime']}{RESET}"))
     print(
-        f"{CYAN}{V}{RESET}    {DIM}Uptime{RESET}        {BOLD}{WHITE}{stats['uptime']}{RESET}".ljust(
-            WIDTH + 30
-        )
-        + f"{CYAN}{V}{RESET}"
+        row(f"    {DIM}Tool calls{RESET}    {BOLD}{GREEN}{stats['total_calls']}{RESET}")
     )
-    print(
-        f"{CYAN}{V}{RESET}    {DIM}Tool calls{RESET}    {BOLD}{GREEN}{stats['total_calls']}{RESET}".ljust(
-            WIDTH + 30
-        )
-        + f"{CYAN}{V}{RESET}"
-    )
-    print(
-        f"{CYAN}{V}{RESET}    {DIM}Unique tools{RESET}  {WHITE}{stats['unique_tools']}{RESET}".ljust(
-            WIDTH + 30
-        )
-        + f"{CYAN}{V}{RESET}"
-    )
+    print(row(f"    {DIM}Unique tools{RESET}  {WHITE}{stats['unique_tools']}{RESET}"))
     if stats["errors"] > 0:
-        print(
-            f"{CYAN}{V}{RESET}    {DIM}Errors{RESET}        {BOLD}\033[31m{stats['errors']}{RESET}".ljust(
-                WIDTH + 30
-            )
-            + f"{CYAN}{V}{RESET}"
-        )
-    print(f"{CYAN}{V}{RESET}")
+        print(row(f"    {DIM}Errors{RESET}        {BOLD}{RED}{stats['errors']}{RESET}"))
+    print(row(""))
 
     # Top tools
     if stats["top_tools"]:
-        print(f"{CYAN}{V}{RESET}  {BOLD}{MAGENTA}TOP TOOLS{RESET}")
-        print(f"{CYAN}{V}{RESET}")
+        print(row(f"  {BOLD}{MAGENTA}TOP TOOLS{RESET}"))
+        print(row(""))
         for i, (tool_name, count) in enumerate(stats["top_tools"]):
-            bar_len = min(count * 2, 20)
+            bar_len = min(count * 2, 16)
             bar = "█" * bar_len
-            medal = ["🥇", "🥈", "🥉", " ∙", " ∙"][i] if i < 5 else " ∙"
+            # Use text medals instead of emoji for consistent width
+            medals = ["1.", "2.", "3.", " ·", " ·"]
+            medal = medals[i] if i < 5 else " ·"
             print(
-                f"{CYAN}{V}{RESET}    {medal} {WHITE}{tool_name:<20}{RESET} {GREEN}{bar}{RESET} {DIM}{count}{RESET}".ljust(
-                    WIDTH + 40
+                row(
+                    f"    {medal} {WHITE}{tool_name:<18}{RESET} {GREEN}{bar:<16}{RESET} {DIM}{count}{RESET}"
                 )
-                + f"{CYAN}{V}{RESET}"
             )
-        print(f"{CYAN}{V}{RESET}")
+        print(row(""))
 
     # Cache stats
-    print(f"{CYAN}{V}{RESET}  {BOLD}{BLUE}CACHE PERFORMANCE{RESET}")
-    print(f"{CYAN}{V}{RESET}")
+    print(row(f"  {BOLD}{BLUE}CACHE PERFORMANCE{RESET}"))
+    print(row(""))
     hit_rate_num = float(cache_stats["hit_rate"].replace("%", ""))
-    hit_color = (
-        GREEN if hit_rate_num >= 50 else YELLOW if hit_rate_num >= 25 else "\033[31m"
-    )
+    hit_color = GREEN if hit_rate_num >= 50 else YELLOW if hit_rate_num >= 25 else RED
+    cache_detail = f"({cache_stats['hits']} hits / {cache_stats['misses']} misses)"
     print(
-        f"{CYAN}{V}{RESET}    {DIM}Hit rate{RESET}  {hit_color}{BOLD}{cache_stats['hit_rate']:>6}{RESET}  {DIM}({cache_stats['hits']} hits / {cache_stats['misses']} misses){RESET}".ljust(
-            WIDTH + 40
+        row(
+            f"    {DIM}Hit rate{RESET}  {hit_color}{BOLD}{cache_stats['hit_rate']:>6}{RESET}  {DIM}{cache_detail}{RESET}"
         )
-        + f"{CYAN}{V}{RESET}"
     )
-    print(f"{CYAN}{V}{RESET}")
+    print(row(""))
 
     # Divider
-    print(f"{CYAN}{V}{RESET}{DIM}{line('·')}{RESET}{CYAN}{V}{RESET}")
+    print(row(f"{DIM}{hline('·')}{RESET}"))
 
     # Quote
     quote = random.choice(GTD_QUOTES)
     # Word wrap the quote if needed
-    if len(quote) > WIDTH - 8:
+    max_quote_width = WIDTH - 10  # Leave room for borders and padding
+    if len(quote) > max_quote_width:
         words = quote.split()
         lines = []
         current = ""
         for word in words:
-            if len(current) + len(word) + 1 <= WIDTH - 8:
+            if len(current) + len(word) + 1 <= max_quote_width:
                 current = current + " " + word if current else word
             else:
                 lines.append(current)
                 current = word
         if current:
             lines.append(current)
-        print(f"{CYAN}{V}{RESET}")
+        print(row(""))
         for line_text in lines:
-            print(
-                f'{CYAN}{V}{RESET}    {DIM}"{line_text}"{RESET}'.ljust(WIDTH + 20)
-                + f"{CYAN}{V}{RESET}"
-            )
-        print(f"{CYAN}{V}{RESET}")
+            print(row(f'    {DIM}"{line_text}"{RESET}'))
+        print(row(""))
     else:
-        print(f"{CYAN}{V}{RESET}")
-        print(
-            f'{CYAN}{V}{RESET}    {DIM}"{quote}"{RESET}'.ljust(WIDTH + 20)
-            + f"{CYAN}{V}{RESET}"
-        )
-        print(f"{CYAN}{V}{RESET}")
+        print(row(""))
+        print(row(f'    {DIM}"{quote}"{RESET}'))
+        print(row(""))
 
     # Footer
-    print(f"{CYAN}{V}{RESET}{line()}{CYAN}{V}{RESET}")
-    footer = f"{GREEN}✓{RESET} {WHITE}Thanks for using Things MCP!{RESET} {DIM}Stay productive.{RESET}"
-    print(f"{CYAN}{V}{RESET}  {footer}".ljust(WIDTH + 35) + f"{CYAN}{V}{RESET}")
-    print(f"{CYAN}{BL}{line()}{BR}{RESET}")
+    print(row(hline()))
+    print(
+        row(
+            f"  {GREEN}✓{RESET} {WHITE}Thanks for using Things MCP!{RESET} {DIM}Stay productive.{RESET}"
+        )
+    )
+    print(f"{CYAN}{BL}{hline()}{BR}{RESET}")
     print()
 
 
