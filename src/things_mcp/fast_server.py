@@ -2239,8 +2239,9 @@ def _patch_tool_serialization_for_n8n():
     n8n's MCP client doesn't handle 'anyOf' constructs in JSON Schema properly,
     causing "Cannot read properties of undefined (reading 'inputType')" errors.
 
-    This patches the mcp.list_tools() method to flatten anyOf constructs
-    (used by Pydantic for Optional types) before returning tools to clients.
+    This patches the internal _list_tools_mcp() method (the MCP protocol handler)
+    to flatten anyOf constructs (used by Pydantic for Optional types) before
+    returning tools to clients.
 
     Set THINGS_MCP_DEBUG_SCHEMA=1 to log full tool schemas for debugging.
     """
@@ -2254,13 +2255,16 @@ def _patch_tool_serialization_for_n8n():
     )
 
     try:
-        original_list_tools = mcp.list_tools
+        # Patch the internal MCP protocol handler, not the public list_tools method
+        original_list_tools_mcp = mcp._list_tools_mcp
 
-        async def patched_list_tools(*args, **kwargs):
-            logger.info("list_tools called - applying n8n schema compatibility patches")
-            tools = await original_list_tools(*args, **kwargs)
+        async def patched_list_tools_mcp(request):
+            logger.info(
+                "_list_tools_mcp called - applying n8n schema compatibility patches"
+            )
+            result = await original_list_tools_mcp(request)
             # Transform each tool's inputSchema to flatten anyOf
-            for tool in tools:
+            for tool in result.tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
                     if debug_schema:
                         logger.info(
@@ -2268,8 +2272,7 @@ def _patch_tool_serialization_for_n8n():
                         )
                     # inputSchema is a dict, flatten it
                     flattened = _flatten_anyof_for_n8n(tool.inputSchema)
-                    # We can't directly assign to inputSchema on a Pydantic model,
-                    # but we can modify the dict in place if it's mutable
+                    # Modify the dict in place
                     if isinstance(tool.inputSchema, dict):
                         tool.inputSchema.clear()
                         tool.inputSchema.update(flattened)
@@ -2277,13 +2280,13 @@ def _patch_tool_serialization_for_n8n():
                         logger.info(
                             f"Tool '{tool.name}' AFTER flattening: {json.dumps(tool.inputSchema, indent=2)}"
                         )
-            logger.info(f"Processed {len(tools)} tools with schema flattening")
-            return tools
+            logger.info(f"Processed {len(result.tools)} tools with schema flattening")
+            return result
 
-        mcp.list_tools = patched_list_tools
-        logger.info("Patched list_tools for n8n anyOf compatibility")
+        mcp._list_tools_mcp = patched_list_tools_mcp
+        logger.info("Patched _list_tools_mcp for n8n anyOf compatibility")
     except Exception as e:
-        logger.warning(f"Could not patch list_tools for n8n compatibility: {e}")
+        logger.warning(f"Could not patch _list_tools_mcp for n8n compatibility: {e}")
 
 
 # Main entry point
