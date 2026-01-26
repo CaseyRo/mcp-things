@@ -2256,9 +2256,9 @@ def _patch_tool_serialization_for_n8n():
     try:
         original_list_tools = mcp.list_tools
 
-        async def patched_list_tools():
+        async def patched_list_tools(*args, **kwargs):
             logger.info("list_tools called - applying n8n schema compatibility patches")
-            tools = await original_list_tools()
+            tools = await original_list_tools(*args, **kwargs)
             # Transform each tool's inputSchema to flatten anyOf
             for tool in tools:
                 if hasattr(tool, "inputSchema") and tool.inputSchema:
