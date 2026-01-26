@@ -2204,11 +2204,11 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
 
     n8n's MCP client doesn't handle anyOf properly (causes 'Cannot read properties
     of undefined' errors). This function transforms:
-      {"anyOf": [{"type": "array", "items": {...}}, {"type": "null"}]}
+      {"anyOf": [{"type": "string"}, {"type": "null"}]}
     into:
-      {"type": "array", "items": {...}}
+      {"type": ["string", "null"]}
 
-    The null option is dropped since n8n handles missing/optional values differently.
+    Using type arrays is valid JSON Schema and allows n8n to accept null values.
     """
     if not isinstance(schema, dict):
         return schema
@@ -2216,13 +2216,29 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
     result = {}
     for key, value in schema.items():
         if key == "anyOf" and isinstance(value, list):
-            # Find the non-null type in anyOf
+            # Check if null is one of the options
+            has_null = any(t.get("type") == "null" for t in value)
             non_null_types = [t for t in value if t.get("type") != "null"]
-            if len(non_null_types) >= 1:
-                # Flatten: use first non-null type (n8n can't handle anyOf at all)
-                # For union types like string|array, we pick the first option
+
+            if len(non_null_types) == 1:
+                # Simple case: one type + null → use type array
                 flattened = _flatten_anyof_for_n8n(non_null_types[0])
                 result.update(flattened)
+                # Add null to type if it was in anyOf
+                if has_null and "type" in result:
+                    current_type = result["type"]
+                    if isinstance(current_type, str):
+                        result["type"] = [current_type, "null"]
+                    elif isinstance(current_type, list) and "null" not in current_type:
+                        result["type"] = current_type + ["null"]
+            elif len(non_null_types) > 1:
+                # Multiple non-null types: pick first, add null if present
+                flattened = _flatten_anyof_for_n8n(non_null_types[0])
+                result.update(flattened)
+                if has_null and "type" in result:
+                    current_type = result["type"]
+                    if isinstance(current_type, str):
+                        result["type"] = [current_type, "null"]
             # If all types are null, skip the anyOf entirely
         elif key == "properties" and isinstance(value, dict):
             # Recurse into properties
