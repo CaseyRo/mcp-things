@@ -2302,6 +2302,29 @@ def _patch_tool_serialization_for_n8n():
             f"Could not patch ListToolsRequest handler for n8n compatibility: {e}"
         )
 
+    # Also patch CallToolRequest to strip null values from arguments
+    # n8n sends explicit nulls for empty optional fields, but our flattened
+    # schema declares them as non-null types
+    try:
+        original_call_tool = request_handlers[mcp_types.CallToolRequest]
+
+        async def patched_call_tool_handler(request):
+            # Strip null values from arguments before validation
+            if request.params and request.params.arguments:
+                args = request.params.arguments
+                null_keys = [k for k, v in args.items() if v is None]
+                for key in null_keys:
+                    del args[key]
+                    logger.debug(f"Stripped null argument '{key}' from tool call")
+            return await original_call_tool(request)
+
+        request_handlers[mcp_types.CallToolRequest] = patched_call_tool_handler
+        logger.info("Patched CallToolRequest handler for n8n null stripping")
+    except Exception as e:
+        logger.warning(
+            f"Could not patch CallToolRequest handler for n8n compatibility: {e}"
+        )
+
 
 # Main entry point
 def run_things_mcp_server():
