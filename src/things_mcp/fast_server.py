@@ -15,6 +15,7 @@ Architecture:
 - tools_deprecated.py: Backward-compatible tool aliases
 """
 
+import asyncio
 import random
 import signal
 import sys
@@ -211,53 +212,107 @@ def _print_shutdown_summary():
 
 
 def _create_combined_app(mcp_instance, transport_mode: str):
-    """Create a combined ASGI app with dual transport support.
+    """Create an ASGI app with streamable-http transport support.
 
     Args:
         mcp_instance: The FastMCP server instance.
-        transport_mode: One of "both", "sse", or "streamable-http".
+        transport_mode: Must be "streamable-http" (SSE transport removed).
 
     Returns:
-        ASGI application with appropriate transport endpoints.
+        ASGI application with streamable-http transport endpoint.
     """
+    from contextlib import asynccontextmanager
     from starlette.applications import Starlette
     from starlette.routing import Mount
 
     routes = []
+    mounted_apps = []
 
-    if transport_mode in ("both", "sse"):
-        # SSE transport for ChatGPT - no Accept header patches needed
-        # ChatGPT expects SSE at /sse/ path
-        sse_app = mcp_instance.http_app(transport="sse", path="/")
-        routes.append(Mount("/sse", app=sse_app, name="sse"))
-        logger.info("SSE transport enabled at /sse/ (for ChatGPT)")
+    # Apply Accept header patch for streamable-http transport
+    patch_accept_headers()
 
-    if transport_mode in ("both", "streamable-http"):
-        # Apply Accept header patch for streamable-http transport
-        patch_accept_headers()
+    # Streamable-HTTP transport for Claude Desktop/n8n/ChatGPT
+    # Includes middleware for Accept header fixes as fallback
+    http_middleware = get_streamable_http_middleware()
+    http_app = mcp_instance.http_app(
+        transport="streamable-http",
+        path="/",
+        middleware=http_middleware,
+    )
+    routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
+    mounted_apps.append(("streamable-http", http_app))
+    logger.info(
+        "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n/ChatGPT)"
+    )
 
-        # Streamable-HTTP transport for Claude Desktop/n8n
-        # Includes middleware for Accept header fixes as fallback
-        http_middleware = get_streamable_http_middleware()
-        http_app = mcp_instance.http_app(
-            transport="streamable-http",
-            path="/",
-            middleware=http_middleware,
-        )
-        routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
-        logger.info(
-            "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n)"
-        )
+    @asynccontextmanager
+    async def lifespan(app):
+        """Propagate lifespan events to mounted MCP apps.
 
-    return Starlette(routes=routes)
+        FastMCP's streamable-http transport requires its task group to be
+        initialized during lifespan startup. Without this, requests fail with:
+        'RuntimeError: Task group is not initialized. Make sure to use run().'
+        """
+
+        # Start up all mounted apps by triggering their lifespan
+        async def send_lifespan_startup(asgi_app, name):
+            """Send lifespan.startup to an ASGI app."""
+            startup_complete = False
+            startup_failed = False
+
+            async def receive():
+                return {"type": "lifespan.startup"}
+
+            async def send(message):
+                nonlocal startup_complete, startup_failed
+                if message["type"] == "lifespan.startup.complete":
+                    startup_complete = True
+                elif message["type"] == "lifespan.startup.failed":
+                    startup_failed = True
+                    logger.error(
+                        f"Lifespan startup failed for {name}: {message.get('message', 'unknown error')}"
+                    )
+
+            scope = {"type": "lifespan", "asgi": {"version": "3.0"}}
+            # Start the lifespan in a task - it will block waiting for shutdown
+            import asyncio
+
+            task = asyncio.create_task(asgi_app(scope, receive, send))
+            # Give it a moment to start up
+            await asyncio.sleep(0.1)
+            if startup_failed:
+                raise RuntimeError(f"Failed to start {name} transport")
+            logger.info(f"Lifespan started for {name} transport")
+            return task
+
+        tasks = []
+        for name, asgi_app in mounted_apps:
+            try:
+                task = await send_lifespan_startup(asgi_app, name)
+                tasks.append((name, task, asgi_app))
+            except Exception as e:
+                logger.error(f"Error starting lifespan for {name}: {e}")
+                raise
+
+        yield
+
+        # Shutdown: send lifespan.shutdown to all apps
+        for name, task, asgi_app in tasks:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            logger.info(f"Lifespan stopped for {name} transport")
+
+    return Starlette(routes=routes, lifespan=lifespan)
 
 
 def run_things_mcp_server():
-    """Run the Things MCP server with dual transport support.
+    """Run the Things MCP server with streamable-http transport support.
 
     Endpoints:
-        /sse/ - SSE transport for ChatGPT
-        /mcp - Streamable-HTTP transport for Claude Desktop, n8n
+        /mcp - Streamable-HTTP transport for Claude Desktop, n8n, ChatGPT
     """
     import uvicorn
 
@@ -310,15 +365,12 @@ def run_things_mcp_server():
     transport_mode = get_transport()
     logger.info(f"Transport mode: {transport_mode}")
 
-    # Create combined ASGI app with dual transport support
+    # Create ASGI app with streamable-http transport support
     combined_app = _create_combined_app(mcp, transport_mode)
 
     port = get_binding_port()
     logger.info("Server endpoints:")
-    if transport_mode in ("both", "sse"):
-        logger.info(f"  - SSE (ChatGPT):        http://{host}:{port}/sse/")
-    if transport_mode in ("both", "streamable-http"):
-        logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")
+    logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")
 
     # Use wsproto to avoid deprecation warnings from websockets 14+
     # See: https://github.com/python-websockets/websockets/issues/975

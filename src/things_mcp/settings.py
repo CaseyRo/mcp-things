@@ -41,9 +41,9 @@ class Settings(BaseSettings):
         le=65535,
         description="Port for the MCP server to listen on",
     )
-    things_mcp_transport: Literal["both", "sse", "streamable-http"] = Field(
-        default="both",
-        description="Transport protocol(s) to enable: 'both' (SSE + streamable-http), 'sse' (ChatGPT), or 'streamable-http' (Claude Desktop/n8n)",
+    things_mcp_transport: Literal["streamable-http"] = Field(
+        default="streamable-http",
+        description="Transport protocol: 'streamable-http' (for Claude Desktop, n8n, ChatGPT)",
     )
 
     # Things authentication
@@ -120,10 +120,10 @@ def get_port() -> int:
     return get_settings().things_fastmcp_port
 
 
-def get_transport() -> Literal["both", "sse", "streamable-http"]:
+def get_transport() -> Literal["streamable-http"]:
     """Get the transport protocol setting.
 
     Returns:
-        str: The transport protocol(s) to enable.
+        str: The transport protocol to enable (always "streamable-http").
     """
     return get_settings().things_mcp_transport

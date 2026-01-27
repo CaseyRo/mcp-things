@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+- **Removed SSE transport support** - SSE transport is deprecated in MCP protocol (2025-03-26)
+  - Removed `/sse/` endpoint - all clients now use `/mcp` (streamable-http transport)
+  - Transport configuration simplified: `THINGS_MCP_TRANSPORT` now only accepts `"streamable-http"` (default)
+  - **Migration**: Update `THINGS_MCP_TRANSPORT` from `"both"` or `"sse"` to `"streamable-http"` or remove it to use default
+  - ChatGPT, Claude Desktop, and n8n all use streamable-http transport via `/mcp` endpoint
+
 ### Changed
 
 - **Split server into GTD-aligned modules** - Major refactoring for maintainability:

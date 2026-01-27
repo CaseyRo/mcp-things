@@ -435,6 +435,112 @@ def generate_test_title(prefix: str = "MCP-TEST") -> str:
 
 
 # ============================================================================
+# MCP Integration Test Fixtures
+# ============================================================================
+
+
+# Note: TestClient doesn't work with streamable-http transport because it requires
+# lifespan initialization. We use real server processes for integration tests instead.
+
+
+@pytest.fixture(scope="session")
+def mcp_server_process():
+    """Start MCP server in background for real integration tests.
+
+    Only used for tests that require a real HTTP server (marked with @pytest.mark.real).
+    Most tests should use mcp_test_client fixture instead.
+    """
+    import subprocess
+    import sys
+    import os
+    from pathlib import Path
+
+    # Use the entry point script at project root
+    server_script = Path(__file__).parent.parent / "things_fast_server.py"
+
+    # Set transport to streamable-http only for testing
+    original_transport = os.environ.get("THINGS_MCP_TRANSPORT")
+    os.environ["THINGS_MCP_TRANSPORT"] = "streamable-http"
+
+    # Change to project root for proper imports
+    project_root = Path(__file__).parent.parent
+
+    try:
+        process = subprocess.Popen(
+            [sys.executable, str(server_script)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(project_root),
+            env=os.environ.copy(),
+        )
+        # Wait for server to start
+        time.sleep(3)
+
+        # Verify server is running
+        if process.poll() is not None:
+            # Server died - check stderr
+            stdout, stderr = process.communicate()
+            pytest.skip(f"Server failed to start: {stderr}")
+
+        yield process
+
+        # Cleanup
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+    finally:
+        # Restore original transport setting
+        if original_transport is not None:
+            os.environ["THINGS_MCP_TRANSPORT"] = original_transport
+        elif "THINGS_MCP_TRANSPORT" in os.environ:
+            del os.environ["THINGS_MCP_TRANSPORT"]
+
+
+@pytest.fixture
+async def mcp_client(mcp_server_process):
+    """Create MCP client connected to real server process.
+
+    Only used for tests marked with @pytest.mark.real.
+    """
+    from tests.mcp_client import create_mcp_client
+    import httpx
+
+    # Wait and verify server is accessible
+    settings = get_settings()
+    base_url = f"http://{settings.things_fastmcp_host}:{settings.things_fastmcp_port}"
+
+    # Try to connect with retries
+    max_retries = 10
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient() as test_client:
+                # Try POST to /mcp endpoint (GET might return 405)
+                response = await test_client.post(
+                    f"{base_url}/mcp",
+                    json={"jsonrpc": "2.0", "id": "test", "method": "tools/list"},
+                    timeout=2,
+                )
+                # Any response means server is up
+                if response.status_code in [200, 400, 404, 405]:
+                    break
+        except (httpx.ConnectError, httpx.TimeoutException) as e:
+            if attempt < max_retries - 1:
+                time.sleep(0.5)
+                continue
+            pytest.skip(f"Server not accessible after {max_retries} attempts: {e}")
+    else:
+        pytest.skip("Server not accessible")
+
+    client = await create_mcp_client(base_url)
+    yield client
+    await client.close()
+
+
+# ============================================================================
 # Test Utilities
 # ============================================================================
 

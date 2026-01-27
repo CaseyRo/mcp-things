@@ -105,8 +105,14 @@ Key variables:
 |----------|---------|---------|
 | `THINGS_FASTMCP_HOST` | `127.0.0.1` | Server bind address |
 | `THINGS_FASTMCP_PORT` | `8009` | Server port |
+| `THINGS_MCP_TRANSPORT` | `streamable-http` | Transport protocol (streamable-http only) |
 | `THINGS_AUTH_TOKEN` | (required) | Things URL scheme auth token |
 | `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | unset | Show Things in foreground for debugging |
+
+**Transport Configuration:**
+- The server uses **streamable-http transport only** (SSE transport removed as deprecated)
+- Endpoint: `/mcp` (streamable-http transport)
+- Compatible with: Claude Desktop, n8n MCP Client Tool node, ChatGPT (via streamable-http)
 
 ### Running the Server
 

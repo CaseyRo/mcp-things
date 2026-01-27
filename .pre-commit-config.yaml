@@ -16,6 +16,31 @@ repos:
   # Local hooks
   - repo: local
     hooks:
+      # Unit tests - fast tests that don't require Things 3
+      - id: unit-tests
+        name: Unit Tests (CI/CD safe)
+        entry: uv run python -m pytest tests -m "not real and not integration" -v
+        language: system
+        pass_filenames: false
+        # Run when test files or source files change
+        files: ^(tests/.*\.py|src/things_mcp/.*\.py)$
+        stages: [pre-commit]
+        verbose: true
+        # Allow failures in CI where pytest might not be available
+        always_run: false
+
+      # Transport smoke tests - fast configuration verification
+      - id: transport-smoke-tests
+        name: Transport Smoke Tests
+        entry: uv run python -m pytest tests/test_transport_smoke.py tests/test_transport_endpoints.py tests/test_accept_headers.py tests/test_configuration.py -v
+        language: system
+        pass_filenames: false
+        # Run when transport-related files change
+        files: ^(tests/test_transport.*\.py|tests/test_accept_headers\.py|tests/test_configuration\.py|src/things_mcp/fast_server\.py|src/things_mcp/client_compat\.py|src/things_mcp/settings\.py)$
+        stages: [pre-commit]
+        verbose: true
+        always_run: false
+
       # Smoke test - basic integration check
       - id: smoke-test
         name: Smoke Test (Things 3 integration)
