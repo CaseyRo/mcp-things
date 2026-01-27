@@ -6,6 +6,7 @@ Settings are loaded once and cached for the lifetime of the application.
 """
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -39,6 +40,10 @@ class Settings(BaseSettings):
         ge=1,
         le=65535,
         description="Port for the MCP server to listen on",
+    )
+    things_mcp_transport: Literal["both", "sse", "streamable-http"] = Field(
+        default="both",
+        description="Transport protocol(s) to enable: 'both' (SSE + streamable-http), 'sse' (ChatGPT), or 'streamable-http' (Claude Desktop/n8n)",
     )
 
     # Things authentication
@@ -113,3 +118,12 @@ def get_port() -> int:
         int: The port number to listen on.
     """
     return get_settings().things_fastmcp_port
+
+
+def get_transport() -> Literal["both", "sse", "streamable-http"]:
+    """Get the transport protocol setting.
+
+    Returns:
+        str: The transport protocol(s) to enable.
+    """
+    return get_settings().things_mcp_transport

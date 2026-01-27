@@ -29,6 +29,11 @@ from .server_core import (
     server_stats,
     GTD_QUOTES,
 )
+from .client_compat import (
+    patch_accept_headers,
+    get_streamable_http_middleware,
+)
+from .settings import get_transport
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
@@ -205,8 +210,56 @@ def _print_shutdown_summary():
     print()
 
 
+def _create_combined_app(mcp_instance, transport_mode: str):
+    """Create a combined ASGI app with dual transport support.
+
+    Args:
+        mcp_instance: The FastMCP server instance.
+        transport_mode: One of "both", "sse", or "streamable-http".
+
+    Returns:
+        ASGI application with appropriate transport endpoints.
+    """
+    from starlette.applications import Starlette
+    from starlette.routing import Mount
+
+    routes = []
+
+    if transport_mode in ("both", "sse"):
+        # SSE transport for ChatGPT - no Accept header patches needed
+        # ChatGPT expects SSE at /sse/ path
+        sse_app = mcp_instance.http_app(transport="sse", path="/")
+        routes.append(Mount("/sse", app=sse_app, name="sse"))
+        logger.info("SSE transport enabled at /sse/ (for ChatGPT)")
+
+    if transport_mode in ("both", "streamable-http"):
+        # Apply Accept header patch for streamable-http transport
+        patch_accept_headers()
+
+        # Streamable-HTTP transport for Claude Desktop/n8n
+        # Includes middleware for Accept header fixes as fallback
+        http_middleware = get_streamable_http_middleware()
+        http_app = mcp_instance.http_app(
+            transport="streamable-http",
+            path="/",
+            middleware=http_middleware,
+        )
+        routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
+        logger.info(
+            "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n)"
+        )
+
+    return Starlette(routes=routes)
+
+
 def run_things_mcp_server():
-    """Run the Things MCP server."""
+    """Run the Things MCP server with dual transport support.
+
+    Endpoints:
+        /sse/ - SSE transport for ChatGPT
+        /mcp - Streamable-HTTP transport for Claude Desktop, n8n
+    """
+    import uvicorn
 
     # Set up signal handlers for graceful shutdown
     def signal_handler(signum, frame):
@@ -253,94 +306,27 @@ def run_things_mcp_server():
 
     logger.info("Press Ctrl+C to stop the server")
 
-    # Run the MCP server with HTTP transport and Accept header fix
-    # ChatGPT sends Accept: */* which the MCP SDK rejects (bug in SDK)
-    # See: https://github.com/modelcontextprotocol/python-sdk/issues/1641
-    import uvicorn
-    from starlette.middleware import Middleware
-    from starlette.types import ASGIApp, Receive, Scope, Send
+    # Get transport mode from settings
+    transport_mode = get_transport()
+    logger.info(f"Transport mode: {transport_mode}")
 
-    # Monkey-patch MCP SDK to fix Accept header validation
-    # This is more reliable than middleware as it fixes the root cause
-    # PR #1948 will fix this upstream but is not yet merged
-    try:
-        from mcp.server import streamable_http
+    # Create combined ASGI app with dual transport support
+    combined_app = _create_combined_app(mcp, transport_mode)
 
-        def patched_check_accept_headers(self, request) -> tuple[bool, bool]:
-            """Patched version that handles wildcard Accept headers per RFC 7231."""
-            accept_header = request.headers.get("accept", "")
-            accept_types = [
-                media_type.strip().split(";")[0]  # Strip quality params
-                for media_type in accept_header.split(",")
-            ]
+    port = get_binding_port()
+    logger.info("Server endpoints:")
+    if transport_mode in ("both", "sse"):
+        logger.info(f"  - SSE (ChatGPT):        http://{host}:{port}/sse/")
+    if transport_mode in ("both", "streamable-http"):
+        logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")
 
-            # Check for explicit types or wildcards that match them
-            has_json = any(
-                t.startswith("application/json") or t == "*/*" or t == "application/*"
-                for t in accept_types
-            )
-            has_sse = any(
-                t.startswith("text/event-stream") or t == "*/*" or t == "text/*"
-                for t in accept_types
-            )
-
-            return has_json, has_sse
-
-        streamable_http.StreamableHTTPServerTransport._check_accept_headers = (
-            patched_check_accept_headers
-        )
-        logger.info(
-            "Patched MCP SDK Accept header validation for wildcard support (RFC 7231)"
-        )
-    except Exception as e:
-        logger.warning(f"Could not patch MCP SDK Accept header validation: {e}")
-
-    class AcceptHeaderFixMiddleware:
-        """Fallback: Fix Accept header for clients that send wildcards.
-
-        The MCP Python SDK incorrectly rejects Accept: */* headers,
-        requiring explicit Accept: application/json, text/event-stream.
-        This middleware rewrites wildcard Accept headers as a fallback
-        in case the monkey-patch above fails.
-        """
-
-        def __init__(self, app: ASGIApp):
-            self.app = app
-
-        async def __call__(self, scope: Scope, receive: Receive, send: Send):
-            if scope["type"] == "http":
-                # Find and fix Accept header
-                headers = list(scope.get("headers", []))
-                new_headers = []
-                for name, value in headers:
-                    if name.lower() == b"accept":
-                        # Check if it's a wildcard or missing required types
-                        accept_value = value.decode("utf-8", errors="ignore")
-                        if "*/*" in accept_value or "application/*" in accept_value:
-                            # Replace with explicit types the MCP SDK expects
-                            value = b"application/json, text/event-stream"
-                            logger.debug(
-                                f"Rewrote Accept header from '{accept_value}' to 'application/json, text/event-stream'"
-                            )
-                    new_headers.append((name, value))
-                scope = dict(scope)
-                scope["headers"] = new_headers
-
-            await self.app(scope, receive, send)
-
-    # Create ASGI app with Accept header fix middleware as fallback
-    middleware = [Middleware(AcceptHeaderFixMiddleware)]
-    http_app = mcp.http_app(middleware=middleware)
-
-    logger.info("Accept header fix middleware registered for ChatGPT compatibility")
-
-    # Use websockets-sansio to avoid deprecation warnings from websockets 14+
+    # Use wsproto to avoid deprecation warnings from websockets 14+
     # See: https://github.com/python-websockets/websockets/issues/975
     uvicorn.run(
-        http_app,
-        host=get_binding_host(),
-        port=get_binding_port(),
-        ws="wsproto",  # Use wsproto instead of deprecated websockets.legacy
+        combined_app,
+        host=host,
+        port=port,
+        ws="wsproto",
     )
 
 
