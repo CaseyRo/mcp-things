@@ -18,7 +18,6 @@ Architecture:
 import random
 import signal
 import sys
-import time
 
 from .server_core import (
     create_mcp_server,
@@ -221,12 +220,10 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     Returns:
         ASGI application with streamable-http transport endpoint.
     """
-    from contextlib import asynccontextmanager
     from starlette.applications import Starlette
     from starlette.routing import Mount
 
     routes = []
-    mounted_apps = []
 
     # Apply Accept header patch for streamable-http transport
     patch_accept_headers()
@@ -239,91 +236,17 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
     )
-    # #region agent log
-    import json
-
-    log_data = {
-        "sessionId": "debug-session",
-        "runId": "pre-fix",
-        "hypothesisId": "A",
-        "location": "fast_server.py:237",
-        "message": "Checking http_app attributes",
-        "data": {
-            "has_lifespan": hasattr(http_app, "lifespan"),
-            "http_app_type": str(type(http_app)),
-            "http_app_dir": [
-                attr for attr in dir(http_app) if not attr.startswith("_")
-            ][:10],
-        },
-        "timestamp": int(time.time() * 1000),
-    }
-    with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
-        f.write(json.dumps(log_data) + "\n")
-    # #endregion agent log
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
-    mounted_apps.append(("streamable-http", http_app))
     logger.info(
         "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n/ChatGPT)"
     )
 
-    # #region agent log
-    log_data = {
-        "sessionId": "debug-session",
-        "runId": "pre-fix",
-        "hypothesisId": "B",
-        "location": "fast_server.py:248",
-        "message": "Checking if http_app has lifespan attribute",
-        "data": {
-            "has_lifespan_attr": hasattr(http_app, "lifespan"),
-            "lifespan_type": str(type(getattr(http_app, "lifespan", None)))
-            if hasattr(http_app, "lifespan")
-            else None,
-        },
-        "timestamp": int(time.time() * 1000),
-    }
-    with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
-        f.write(json.dumps(log_data) + "\n")
-    # #endregion agent log
-
-    # Use FastMCP's lifespan directly as recommended by the error message
-    # The error states: "Please ensure you are setting lifespan=mcp_app.lifespan
-    # in your parent app's constructor"
-    if hasattr(http_app, "lifespan"):
-        # #region agent log
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "C",
-            "location": "fast_server.py:260",
-            "message": "Using http_app.lifespan directly",
-            "data": {"lifespan_source": "http_app.lifespan"},
-            "timestamp": int(time.time() * 1000),
-        }
-        with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
-            f.write(json.dumps(log_data) + "\n")
-        # #endregion agent log
-        mcp_lifespan = http_app.lifespan
-    else:
-        # #region agent log
-        log_data = {
-            "sessionId": "debug-session",
-            "runId": "pre-fix",
-            "hypothesisId": "D",
-            "location": "fast_server.py:270",
-            "message": "http_app has no lifespan attribute, creating custom",
-            "data": {"fallback": "custom_lifespan"},
-            "timestamp": int(time.time() * 1000),
-        }
-        with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
-            f.write(json.dumps(log_data) + "\n")
-        # #endregion agent log
-
-        @asynccontextmanager
-        async def mcp_lifespan(app):
-            """Fallback lifespan if http_app doesn't provide one."""
-            yield
-
-    return Starlette(routes=routes, lifespan=mcp_lifespan)
+    # Use FastMCP's lifespan directly as recommended by the error message.
+    # FastMCP's http_app() returns a StarletteWithLifespan instance that includes
+    # the proper lifespan for initializing the streamable-http transport's task group.
+    # Without using this lifespan directly, requests fail with:
+    # "RuntimeError: Task group is not initialized. Make sure to use run()."
+    return Starlette(routes=routes, lifespan=http_app.lifespan)
 
 
 def run_things_mcp_server():
