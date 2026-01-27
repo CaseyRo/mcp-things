@@ -64,6 +64,7 @@ uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing  # 
 src/things_mcp/
 ├── fast_server.py           # Entry point: creates MCP server, registers all tools
 ├── server_core.py           # Server factory, n8n middleware, schema patches
+├── client_compat.py         # Client compatibility: Accept header patches, transport middleware
 ├── tool_annotations.py      # Shared TOOL_ANNOTATIONS dict
 ├── tools_gtd_core.py        # GTD Engage/Capture/Clarify tools (6 tools)
 ├── tools_gtd_organize.py    # GTD Organize stage tools (5 tools)
@@ -109,6 +110,7 @@ src/things_mcp/
 ```bash
 THINGS_FASTMCP_HOST=127.0.0.1    # Server bind address (default: localhost)
 THINGS_FASTMCP_PORT=8009         # Server port
+THINGS_MCP_TRANSPORT=both        # Transport: "both", "sse", or "streamable-http"
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
@@ -142,9 +144,29 @@ This project uses OpenSpec for spec-driven development. When planning features o
 - Results saved to `test-results/test-results.md`
 - Main branch is `source` (not `main`)
 
+## Client Compatibility & Endpoints
+
+The server supports multiple MCP clients through dual transport protocols:
+
+| Endpoint | Transport | Clients | Use Case |
+|----------|-----------|---------|----------|
+| `/sse/` | SSE | ChatGPT | ChatGPT MCP integration |
+| `/mcp` | Streamable-HTTP | Claude Desktop, n8n | Desktop apps, automation |
+
+**Transport Configuration:**
+```bash
+THINGS_MCP_TRANSPORT=both           # Default: enable both transports
+THINGS_MCP_TRANSPORT=sse            # SSE only (ChatGPT)
+THINGS_MCP_TRANSPORT=streamable-http # Streamable-HTTP only (Claude Desktop/n8n)
+```
+
+**ChatGPT Setup:** Use `http://localhost:8009/sse/` as the MCP server URL.
+
+**Claude Desktop Setup:** Use `http://localhost:8009/mcp` as the MCP server URL.
+
 ## n8n Integration
 
-n8n's MCP Client Tool has a [known bug (#21500)](https://github.com/n8n-io/n8n/issues/21500) where it sends extra parameters (`toolCallId`, `sessionId`, `action`, `chatInput`) that cause Pydantic validation errors. The server includes `N8NCompatibilityMiddleware` that automatically strips these parameters (requires FastMCP 2.9+).
+n8n's MCP Client Tool has a [known bug (#21500)](https://github.com/n8n-io/n8n/issues/21500) where it sends extra parameters (`toolCallId`, `sessionId`, `action`, `chatInput`) that cause Pydantic validation errors. The server includes `ClientCompatibilityMiddleware` that automatically strips these parameters (requires FastMCP 2.9+).
 
 ## Important Constraints
 
