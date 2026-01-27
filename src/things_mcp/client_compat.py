@@ -1,13 +1,10 @@
 """Client compatibility utilities for MCP transport protocols.
 
 This module consolidates all client-specific compatibility patches for:
-- ChatGPT: Requires SSE transport and strict JSON schema
-- Claude Desktop/n8n: Uses streamable-http transport
+- Claude Desktop/n8n/ChatGPT: All use streamable-http transport
 
 The streamable-http transport requires patching the MCP SDK's Accept header
 validation to support RFC 7231 wildcard Accept headers (e.g., "*/*").
-
-ChatGPT's SSE transport doesn't need Accept header patches.
 """
 
 from typing import List
@@ -25,8 +22,6 @@ def patch_accept_headers() -> bool:
 
     The MCP SDK incorrectly rejects wildcard Accept headers (*/*, application/*)
     which are valid per RFC 7231. This patch makes the SDK accept wildcards.
-
-    Only needed for streamable-http transport. SSE transport doesn't have this issue.
 
     See: https://github.com/modelcontextprotocol/python-sdk/issues/1641
     PR #1948 will fix this upstream but is not yet merged.
@@ -79,8 +74,6 @@ class AcceptHeaderFixMiddleware:
 
     Rewrites wildcard Accept headers to explicit types required by MCP SDK.
     This is a fallback in case the monkey-patch doesn't apply.
-
-    Only needed for streamable-http transport.
     """
 
     def __init__(self, app: ASGIApp):

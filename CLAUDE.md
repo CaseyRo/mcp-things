@@ -110,7 +110,7 @@ src/things_mcp/
 ```bash
 THINGS_FASTMCP_HOST=127.0.0.1    # Server bind address (default: localhost)
 THINGS_FASTMCP_PORT=8009         # Server port
-THINGS_MCP_TRANSPORT=both        # Transport: "both", "sse", or "streamable-http"
+THINGS_MCP_TRANSPORT=streamable-http  # Transport: "streamable-http" (default, SSE removed)
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
@@ -146,23 +146,18 @@ This project uses OpenSpec for spec-driven development. When planning features o
 
 ## Client Compatibility & Endpoints
 
-The server supports multiple MCP clients through dual transport protocols:
+The server uses streamable-http transport (SSE transport removed as deprecated):
 
 | Endpoint | Transport | Clients | Use Case |
 |----------|-----------|---------|----------|
-| `/sse/` | SSE | ChatGPT | ChatGPT MCP integration |
-| `/mcp` | Streamable-HTTP | Claude Desktop, n8n | Desktop apps, automation |
+| `/mcp` | Streamable-HTTP | Claude Desktop, n8n, ChatGPT | All MCP clients |
 
 **Transport Configuration:**
 ```bash
-THINGS_MCP_TRANSPORT=both           # Default: enable both transports
-THINGS_MCP_TRANSPORT=sse            # SSE only (ChatGPT)
-THINGS_MCP_TRANSPORT=streamable-http # Streamable-HTTP only (Claude Desktop/n8n)
+THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only option)
 ```
 
-**ChatGPT Setup:** Use `http://localhost:8009/sse/` as the MCP server URL.
-
-**Claude Desktop Setup:** Use `http://localhost:8009/mcp` as the MCP server URL.
+**Client Setup:** All clients (ChatGPT, Claude Desktop, n8n) should use `http://localhost:8009/mcp` as the MCP server URL.
 
 ## n8n Integration
 
