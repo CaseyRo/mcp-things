@@ -151,6 +151,7 @@ People:   @person-name (for agenda items)
 | `TERMS_OF_USE.md` | Terms of use |
 | `MIGRATION.md` | Migration guide from previous versions |
 | `CHANGELOG.md` | Version history |
+| `node-red-flow.json` | Node-RED proxy flow for remote access via Tailscale (forwards mcp-session-id headers) |
 
 ### Key Source Files
 
