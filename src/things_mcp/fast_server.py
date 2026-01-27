@@ -15,10 +15,10 @@ Architecture:
 - tools_deprecated.py: Backward-compatible tool aliases
 """
 
-import asyncio
 import random
 import signal
 import sys
+import time
 
 from .server_core import (
     create_mcp_server,
@@ -239,73 +239,91 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
     )
+    # #region agent log
+    import json
+
+    log_data = {
+        "sessionId": "debug-session",
+        "runId": "pre-fix",
+        "hypothesisId": "A",
+        "location": "fast_server.py:237",
+        "message": "Checking http_app attributes",
+        "data": {
+            "has_lifespan": hasattr(http_app, "lifespan"),
+            "http_app_type": str(type(http_app)),
+            "http_app_dir": [
+                attr for attr in dir(http_app) if not attr.startswith("_")
+            ][:10],
+        },
+        "timestamp": int(time.time() * 1000),
+    }
+    with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
+        f.write(json.dumps(log_data) + "\n")
+    # #endregion agent log
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     mounted_apps.append(("streamable-http", http_app))
     logger.info(
         "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n/ChatGPT)"
     )
 
-    @asynccontextmanager
-    async def lifespan(app):
-        """Propagate lifespan events to mounted MCP apps.
+    # #region agent log
+    log_data = {
+        "sessionId": "debug-session",
+        "runId": "pre-fix",
+        "hypothesisId": "B",
+        "location": "fast_server.py:248",
+        "message": "Checking if http_app has lifespan attribute",
+        "data": {
+            "has_lifespan_attr": hasattr(http_app, "lifespan"),
+            "lifespan_type": str(type(getattr(http_app, "lifespan", None)))
+            if hasattr(http_app, "lifespan")
+            else None,
+        },
+        "timestamp": int(time.time() * 1000),
+    }
+    with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
+        f.write(json.dumps(log_data) + "\n")
+    # #endregion agent log
 
-        FastMCP's streamable-http transport requires its task group to be
-        initialized during lifespan startup. Without this, requests fail with:
-        'RuntimeError: Task group is not initialized. Make sure to use run().'
-        """
+    # Use FastMCP's lifespan directly as recommended by the error message
+    # The error states: "Please ensure you are setting lifespan=mcp_app.lifespan
+    # in your parent app's constructor"
+    if hasattr(http_app, "lifespan"):
+        # #region agent log
+        log_data = {
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "C",
+            "location": "fast_server.py:260",
+            "message": "Using http_app.lifespan directly",
+            "data": {"lifespan_source": "http_app.lifespan"},
+            "timestamp": int(time.time() * 1000),
+        }
+        with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
+            f.write(json.dumps(log_data) + "\n")
+        # #endregion agent log
+        mcp_lifespan = http_app.lifespan
+    else:
+        # #region agent log
+        log_data = {
+            "sessionId": "debug-session",
+            "runId": "pre-fix",
+            "hypothesisId": "D",
+            "location": "fast_server.py:270",
+            "message": "http_app has no lifespan attribute, creating custom",
+            "data": {"fallback": "custom_lifespan"},
+            "timestamp": int(time.time() * 1000),
+        }
+        with open("/Users/caseyromkes/dev/things-fastmcp/.cursor/debug.log", "a") as f:
+            f.write(json.dumps(log_data) + "\n")
+        # #endregion agent log
 
-        # Start up all mounted apps by triggering their lifespan
-        async def send_lifespan_startup(asgi_app, name):
-            """Send lifespan.startup to an ASGI app."""
-            startup_complete = False
-            startup_failed = False
+        @asynccontextmanager
+        async def mcp_lifespan(app):
+            """Fallback lifespan if http_app doesn't provide one."""
+            yield
 
-            async def receive():
-                return {"type": "lifespan.startup"}
-
-            async def send(message):
-                nonlocal startup_complete, startup_failed
-                if message["type"] == "lifespan.startup.complete":
-                    startup_complete = True
-                elif message["type"] == "lifespan.startup.failed":
-                    startup_failed = True
-                    logger.error(
-                        f"Lifespan startup failed for {name}: {message.get('message', 'unknown error')}"
-                    )
-
-            scope = {"type": "lifespan", "asgi": {"version": "3.0"}}
-            # Start the lifespan in a task - it will block waiting for shutdown
-            import asyncio
-
-            task = asyncio.create_task(asgi_app(scope, receive, send))
-            # Give it a moment to start up
-            await asyncio.sleep(0.1)
-            if startup_failed:
-                raise RuntimeError(f"Failed to start {name} transport")
-            logger.info(f"Lifespan started for {name} transport")
-            return task
-
-        tasks = []
-        for name, asgi_app in mounted_apps:
-            try:
-                task = await send_lifespan_startup(asgi_app, name)
-                tasks.append((name, task, asgi_app))
-            except Exception as e:
-                logger.error(f"Error starting lifespan for {name}: {e}")
-                raise
-
-        yield
-
-        # Shutdown: send lifespan.shutdown to all apps
-        for name, task, asgi_app in tasks:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-            logger.info(f"Lifespan stopped for {name} transport")
-
-    return Starlette(routes=routes, lifespan=lifespan)
+    return Starlette(routes=routes, lifespan=mcp_lifespan)
 
 
 def run_things_mcp_server():
