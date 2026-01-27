@@ -260,13 +260,48 @@ def run_things_mcp_server():
     from starlette.middleware import Middleware
     from starlette.types import ASGIApp, Receive, Scope, Send
 
+    # Monkey-patch MCP SDK to fix Accept header validation
+    # This is more reliable than middleware as it fixes the root cause
+    # PR #1948 will fix this upstream but is not yet merged
+    try:
+        from mcp.server import streamable_http
+
+        def patched_check_accept_headers(self, request) -> tuple[bool, bool]:
+            """Patched version that handles wildcard Accept headers per RFC 7231."""
+            accept_header = request.headers.get("accept", "")
+            accept_types = [
+                media_type.strip().split(";")[0]  # Strip quality params
+                for media_type in accept_header.split(",")
+            ]
+
+            # Check for explicit types or wildcards that match them
+            has_json = any(
+                t.startswith("application/json") or t == "*/*" or t == "application/*"
+                for t in accept_types
+            )
+            has_sse = any(
+                t.startswith("text/event-stream") or t == "*/*" or t == "text/*"
+                for t in accept_types
+            )
+
+            return has_json, has_sse
+
+        streamable_http.StreamableHTTPServerTransport._check_accept_headers = (
+            patched_check_accept_headers
+        )
+        logger.info(
+            "Patched MCP SDK Accept header validation for wildcard support (RFC 7231)"
+        )
+    except Exception as e:
+        logger.warning(f"Could not patch MCP SDK Accept header validation: {e}")
+
     class AcceptHeaderFixMiddleware:
-        """Fix Accept header for clients that send wildcards.
+        """Fallback: Fix Accept header for clients that send wildcards.
 
         The MCP Python SDK incorrectly rejects Accept: */* headers,
         requiring explicit Accept: application/json, text/event-stream.
-        This middleware rewrites wildcard Accept headers to fix compatibility
-        with ChatGPT and other clients.
+        This middleware rewrites wildcard Accept headers as a fallback
+        in case the monkey-patch above fails.
         """
 
         def __init__(self, app: ASGIApp):
@@ -293,16 +328,19 @@ def run_things_mcp_server():
 
             await self.app(scope, receive, send)
 
-    # Create ASGI app with Accept header fix middleware
+    # Create ASGI app with Accept header fix middleware as fallback
     middleware = [Middleware(AcceptHeaderFixMiddleware)]
     http_app = mcp.http_app(middleware=middleware)
 
     logger.info("Accept header fix middleware registered for ChatGPT compatibility")
 
+    # Use websockets-sansio to avoid deprecation warnings from websockets 14+
+    # See: https://github.com/python-websockets/websockets/issues/975
     uvicorn.run(
         http_app,
         host=get_binding_host(),
         port=get_binding_port(),
+        ws="wsproto",  # Use wsproto instead of deprecated websockets.legacy
     )
 
 

@@ -37,6 +37,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "things-py>=0.0.15",
     "rich>=13.7.0",
+    "wsproto>=1.2.0",  # WebSocket protocol without deprecation warnings
 ]
 
 [project.urls]
