@@ -246,7 +246,10 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # the proper lifespan for initializing the streamable-http transport's task group.
     # Without using this lifespan directly, requests fail with:
     # "RuntimeError: Task group is not initialized. Make sure to use run()."
-    return Starlette(routes=routes, lifespan=http_app.lifespan)
+    app = Starlette(routes=routes, lifespan=http_app.lifespan)
+    # Disable redirect_slashes to avoid 307 redirects when clients hit /mcp without trailing slash
+    app.router.redirect_slashes = False
+    return app
 
 
 def run_things_mcp_server():
