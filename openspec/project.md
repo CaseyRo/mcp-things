@@ -201,7 +201,7 @@ things:///show?id=today&query=search
 1. **User Consent Required** - Privacy Notice and Terms of Use must be reviewed before setup
 2. **Local Data Only** - Never transmit task data externally
 3. **Log Redaction** - Sensitive content (titles, notes) must not appear in logs
-4. **Token-Based Auth** - Things authentication token must be configured via `configure_token.py`
+4. **Token-Based Auth** - Things authentication token must be configured via `scripts/configure_token.py`
 
 ### Version History
 - **v2.0.0 (2025-10-16)** - Removed legacy MCP implementation, consolidated to FastMCP-only

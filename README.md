@@ -59,7 +59,7 @@ cd things-fastmcp
 uv pip install -e .
 
 # Configure Things 3 authentication token
-python configure_token.py
+python scripts/configure_token.py
 ```
 
 ### Running
@@ -142,16 +142,14 @@ People:   @person-name (for agenda items)
 | File/Directory | Purpose |
 |----------------|---------|
 | `README.md` | This file — project overview and quick start |
-| `DEVELOPERS.md` | Developer guide — setup, architecture, testing, contributing |
-| `CLAUDE.md` | AI assistant instructions for working in this codebase |
+| `docs/` | Documentation (DEVELOPERS.md, CLAUDE.md, MIGRATION.md, TESTING.md, compatibility guides) |
 | `openspec/` | Spec-driven development framework and change proposals |
 | `src/things_mcp/` | Main source code |
 | `tests/` | Test suite (unit + integration) |
+| `scripts/` | Utility scripts (configure_token.py, run_tests.sh, etc.) |
 | `PRIVACY.md` | Privacy notice |
 | `TERMS_OF_USE.md` | Terms of use |
-| `MIGRATION.md` | Migration guide from previous versions |
 | `CHANGELOG.md` | Version history |
-| `node-red-flow.json` | Node-RED proxy flow for remote access via Tailscale (forwards mcp-session-id headers) |
 
 ### Key Source Files
 
@@ -178,7 +176,7 @@ When planning significant changes, create a proposal in `openspec/changes/<chang
 
 ## Development
 
-For development setup, architecture details, testing, and contribution guidelines, see **[DEVELOPERS.md](DEVELOPERS.md)**.
+For development setup, architecture details, testing, and contribution guidelines, see **[docs/DEVELOPERS.md](docs/DEVELOPERS.md)**.
 
 Quick commands:
 

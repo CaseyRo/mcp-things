@@ -164,6 +164,15 @@ cython_debug/
 # VSCode
 .vscode/
 
+# Cursor IDE
+.cursor/
+
+# Claude IDE
+.claude/
+
+# Ruff cache
+.ruff_cache/
+
 # macOS
 .DS_Store
 .AppleDouble
@@ -185,3 +194,6 @@ logs/
 test-results/*.md
 test-results/*.json
 !test-results/.gitkeep
+
+# Runtime data files
+things_dlq.json

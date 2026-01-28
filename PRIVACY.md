@@ -12,13 +12,13 @@ When you start the server you grant it permission to interact with the local Thi
 - Metadata such as creation dates, reminders, and linked items exposed by the Things API
 - Task identifiers that Things uses to reference individual records
 
-The server also requires a Things authentication token so that URL commands can be executed. You provide this token explicitly via the `configure_token.py` helper or the `THINGS_AUTH_TOKEN` environment variable.
+The server also requires a Things authentication token so that URL commands can be executed. You provide this token explicitly via the `scripts/configure_token.py` helper or the `THINGS_AUTH_TOKEN` environment variable.
 
 ## Local storage and logging
 
 All persistent data is stored locally on the same macOS account that runs the server:
 
-- The authentication token and runtime settings are written to `~/.things-mcp/config.json` when you run `configure_token.py` or when the configuration module saves updates.
+- The authentication token and runtime settings are written to `~/.things-mcp/config.json` when you run `scripts/configure_token.py` or when the configuration module saves updates.
 - The server writes runtime information, warnings, and errors to the terminal. If you redirect logs to a file, the contents remain on your machine.
 - Optional debugging artifacts such as the dead-letter queue (`things_dlq.json`) or cache snapshots are created in the project directory when the related features are enabled.
 

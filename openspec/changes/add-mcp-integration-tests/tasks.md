@@ -86,4 +86,4 @@
 - [x] 9.2 Document MCP protocol client implementation
 - [x] 9.3 Document how to run integration tests - Covered in test file docstrings
 - [x] 9.4 Document test data requirements (Things 3, auth token) - Covered in test file docstrings
-- [ ] 9.5 Update DEVELOPERS.md with integration testing guidance - Optional enhancement
+- [ ] 9.5 Update docs/DEVELOPERS.md with integration testing guidance - Optional enhancement

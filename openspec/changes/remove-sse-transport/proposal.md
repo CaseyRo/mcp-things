@@ -33,6 +33,6 @@ SSE (Server-Sent Events) transport is deprecated in the MCP protocol as of versi
   - `tests/test_server_startup.py` - Remove SSE endpoint tests
   - `tests/test_configuration.py` - Update transport validation tests
   - `tests/test_accept_headers.py` - May simplify (SSE-specific headers)
-  - `node-red-flow.json` - Remove SSE endpoint handlers, keep streamable-http endpoint
-  - Documentation files (README.md, CLAUDE.md, DEVELOPERS.md) - Remove SSE references, add transport config docs
+  - `docs/node-red-flow.json` - Remove SSE endpoint handlers, keep streamable-http endpoint
+  - Documentation files (README.md, docs/CLAUDE.md, docs/DEVELOPERS.md) - Remove SSE references, add transport config docs
 - **Migration**: Users must update `THINGS_MCP_TRANSPORT` environment variable from "both" or "sse" to "streamable-http" (or remove it to use default)
