@@ -6,7 +6,7 @@ while delegating to pydantic-settings for the primary configuration.
 
 Priority order for settings:
 1. Environment variables (including .env file via pydantic-settings)
-2. ~/.things-mcp/config.json file (legacy, for configure_token.py compatibility)
+2. ~/.things-mcp/config.json file (legacy, for scripts/configure_token.py compatibility)
 3. Default values
 """
 
@@ -79,7 +79,7 @@ def get_things_auth_token() -> str:
         return token
 
     logger.warning(
-        "No Things auth token found. Set THINGS_AUTH_TOKEN in .env or run configure_token.py"
+        "No Things auth token found. Set THINGS_AUTH_TOKEN in .env or run scripts/configure_token.py"
     )
     return ""
 
@@ -88,7 +88,7 @@ def set_things_auth_token(token: str) -> bool:
     """Set the Things authentication token in the legacy config file.
 
     Note: This saves to ~/.things-mcp/config.json for backwards compatibility
-    with configure_token.py. For new setups, prefer using .env file.
+    with scripts/configure_token.py. For new setups, prefer using .env file.
 
     Args:
         token: The authentication token to save.

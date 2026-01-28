@@ -36,7 +36,7 @@ cd things-fastmcp
 uv pip install -e .
 
 # Configure authentication token
-python configure_token.py
+python scripts/configure_token.py
 ```
 
 ## Common Commands

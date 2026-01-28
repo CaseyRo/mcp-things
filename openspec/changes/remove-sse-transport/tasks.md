@@ -42,8 +42,8 @@
 
 ## 7. Documentation Updates
 - [x] 7.1 Update `README.md` to remove SSE transport references
-- [x] 7.2 Update `CLAUDE.md` to remove SSE transport references and update transport config
-- [x] 7.3 Update `DEVELOPERS.md` to add transport configuration documentation and remove SSE references
+- [x] 7.2 Update `docs/CLAUDE.md` to remove SSE transport references and update transport config
+- [x] 7.3 Update `docs/DEVELOPERS.md` to add transport configuration documentation and remove SSE references
 - [x] 7.4 Update transport configuration documentation (streamable-http only)
 - [x] 7.5 Update client setup instructions (ChatGPT, n8n) to use streamable-http only
 - [x] 7.6 Add migration note about transport configuration change

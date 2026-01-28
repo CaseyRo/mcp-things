@@ -48,7 +48,7 @@ registry:
     configuration:
         required:
             - name: "THINGS_AUTH_TOKEN"
-              description: "Authentication token from Things 3 Preferences → General (configure via configure_token.py)"
+              description: "Authentication token from Things 3 Preferences → General (configure via scripts/configure_token.py)"
               type: "string"
               secret: true
         optional:

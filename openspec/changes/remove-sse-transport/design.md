@@ -127,7 +127,7 @@ The Things MCP server currently implements dual transport support (SSE for ChatG
 
 ### Decision: Update Node-RED Flow to Remove SSE Endpoints
 
-**What**: Update node-red-flow.json to remove all SSE endpoint handlers (GET, POST, DELETE `/things/sse`) while keeping the streamable-http endpoint (`POST /things/mcp`).
+**What**: Update docs/node-red-flow.json to remove all SSE endpoint handlers (GET, POST, DELETE `/things/sse`) while keeping the streamable-http endpoint (`POST /things/mcp`).
 
 **Why**:
 - SSE endpoints are no longer available on server
@@ -136,7 +136,7 @@ The Things MCP server currently implements dual transport support (SSE for ChatG
 - Prevents confusion about which endpoints to use
 
 **Alternatives Considered**:
-- Remove node-red-flow.json entirely: Users may find it useful for proxying requests
+- Remove docs/node-red-flow.json entirely: Users may find it useful for proxying requests
 - Keep SSE endpoints pointing to streamable-http: Confusing, incorrect endpoint names
 - Leave SSE endpoints as-is: Will fail when server doesn't have SSE endpoint
 
