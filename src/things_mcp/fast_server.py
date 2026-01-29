@@ -210,6 +210,29 @@ def _print_shutdown_summary():
     print()
 
 
+class _TrailingSlashMiddleware:
+    """ASGI middleware that silently adds trailing slash to /mcp requests.
+
+    This avoids 307 redirects by normalizing the path internally before
+    it reaches Starlette's router, eliminating the extra round-trip.
+    Preserves access to the wrapped app's attributes (routes, router, etc.).
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    def __getattr__(self, name):
+        # Delegate attribute access to the wrapped app
+        return getattr(self.app, name)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/mcp":
+            # Silently rewrite /mcp to /mcp/ without a redirect
+            scope = dict(scope)
+            scope["path"] = "/mcp/"
+        await self.app(scope, receive, send)
+
+
 def _create_combined_app(mcp_instance, transport_mode: str):
     """Create an ASGI app with streamable-http transport support.
 
@@ -247,9 +270,9 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # Without using this lifespan directly, requests fail with:
     # "RuntimeError: Task group is not initialized. Make sure to use run()."
     app = Starlette(routes=routes, lifespan=http_app.lifespan)
-    # Disable redirect_slashes to avoid 307 redirects when clients hit /mcp without trailing slash
-    app.router.redirect_slashes = False
-    return app
+
+    # Wrap with middleware to silently normalize /mcp to /mcp/ (avoids 307 redirects)
+    return _TrailingSlashMiddleware(app)
 
 
 def run_things_mcp_server():
