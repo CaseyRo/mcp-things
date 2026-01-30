@@ -112,6 +112,7 @@ THINGS_FASTMCP_HOST=127.0.0.1    # Server bind address (default: localhost)
 THINGS_FASTMCP_PORT=8009         # Server port
 THINGS_MCP_TRANSPORT=streamable-http  # Transport: "streamable-http" (default, SSE removed)
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
+THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (default: INFO only)
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
 

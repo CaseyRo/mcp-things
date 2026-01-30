@@ -33,7 +33,7 @@ from .client_compat import (
     patch_accept_headers,
     get_streamable_http_middleware,
 )
-from .settings import get_transport
+from .settings import get_transport, is_debug_enabled
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
@@ -47,7 +47,9 @@ from .tools_utility import register_utility_tools
 from .tools_deprecated import register_deprecated_tools
 
 # Configure enhanced logging
-setup_logging(console_level="INFO", file_level="DEBUG", structured_logs=True)
+# Console shows DEBUG if THINGS_MCP_DEBUG=true, otherwise INFO
+_console_level = "DEBUG" if is_debug_enabled() else "INFO"
+setup_logging(console_level=_console_level, file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
 
 # Create the FastMCP server
