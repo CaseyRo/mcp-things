@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     )
 
     # Debug settings
+    things_mcp_debug: bool = Field(
+        default=False,
+        description="Enable verbose debug logging to console (default: INFO only)",
+    )
     things_mcp_disable_background_osascript: bool = Field(
         default=False,
         description="Disable background AppleScript execution (shows Things in foreground)",
@@ -127,3 +131,12 @@ def get_transport() -> Literal["streamable-http"]:
         str: The transport protocol to enable (always "streamable-http").
     """
     return get_settings().things_mcp_transport
+
+
+def is_debug_enabled() -> bool:
+    """Check if debug logging is enabled.
+
+    Returns:
+        bool: True if debug logging should be enabled.
+    """
+    return get_settings().things_mcp_debug
