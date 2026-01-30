@@ -15,9 +15,11 @@ and is automatically cleaned up.
 import pytest
 import time
 import things
+from datetime import date, timedelta
 
 # Import the mcp instance to get tool functions
 from things_mcp.fast_server import mcp
+from things_mcp.url_scheme import add_todo, execute_url
 from tests.conftest import generate_test_title
 
 
@@ -174,6 +176,74 @@ class TestGTDClarify:
         project = next((p for p in projects if title in p.get("title", "")), None)
         if project:
             test_data_tracker.add_project(project["uuid"])
+
+    @pytest.mark.asyncio
+    async def test_convert_to_project_preserves_checklist_and_deadline(
+        self, test_data_tracker
+    ):
+        """Convert a task with checklist items and deadline to a project.
+
+        Verifies that:
+        - Checklist items become tasks in the project
+        - Deadline is preserved on the project (not child tasks)
+        """
+        # Create a task with checklist items and deadline
+        title = generate_test_title("GTD-CONVERT-CHECKLIST")
+        deadline = (date.today() + timedelta(days=14)).isoformat()
+        checklist_items = ["Step 1: Research", "Step 2: Plan", "Step 3: Execute"]
+
+        url = add_todo(
+            title=title,
+            notes="Task with checklist for conversion test",
+            deadline=deadline,
+            checklist_items=checklist_items,
+        )
+        execute_url(url)
+        time.sleep(1.5)
+
+        # Find the task
+        inbox = things.inbox()
+        todo = next((t for t in inbox if t.get("title") == title), None)
+        assert todo is not None, f"Could not find task: {title}"
+        todo_id = todo["uuid"]
+
+        # Verify checklist items exist on the task
+        task_checklist = things.checklist_items(todo_id)
+        assert len(task_checklist) == 3, "Task should have 3 checklist items"
+
+        # Convert to project
+        result = await convert_to_project(task_id=todo_id)
+        time.sleep(1.5)
+
+        # Verify result mentions checklist conversion
+        assert "project" in result.lower()
+        assert "checklist" in result.lower() or "3" in result
+
+        # Find the created project
+        projects = things.projects()
+        project = next((p for p in projects if title in p.get("title", "")), None)
+        assert project is not None, f"Could not find project: {title}"
+        test_data_tracker.add_project(project["uuid"])
+
+        # Verify project has the deadline
+        assert project.get("deadline") == deadline, "Project should have the deadline"
+
+        # Verify project has tasks (converted from checklist)
+        project_tasks = things.todos(project=project["uuid"])
+        assert (
+            len(project_tasks) >= 3
+        ), "Project should have at least 3 tasks from checklist"
+
+        # Verify task titles match original checklist items
+        task_titles = [t.get("title") for t in project_tasks]
+        for item in checklist_items:
+            assert (
+                item in task_titles
+            ), f"Checklist item '{item}' should be a project task"
+
+        # Verify child tasks don't have the deadline (only project has it)
+        for task in project_tasks:
+            assert task.get("deadline") is None, "Child tasks should not have deadline"
 
 
 # =============================================================================

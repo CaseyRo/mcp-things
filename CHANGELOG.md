@@ -30,6 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **THINGS_MCP_DEBUG environment variable** - Enable verbose console logging for debugging
+  - When `false` (default): Console shows INFO level only
+  - When `true`: Console shows DEBUG level (verbose output)
+  - File logs always capture DEBUG regardless of this setting
+
+### Fixed
+
+- **convert-to-project now preserves checklist items and deadline**
+  - Checklist items from the original task are converted to project tasks
+  - Task deadline is preserved on the project (not on child tasks)
+  - Only incomplete checklist items are converted (completed items are skipped)
+
+### Documentation
+
 - **n8n compatibility documentation** - New `docs/n8n-fastmcp-compatibility.md` documenting:
   - Extra parameter stripping (toolCallId, sessionId, etc.)
   - anyOf schema flattening for n8n's MCP client

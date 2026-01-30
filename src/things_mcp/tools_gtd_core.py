@@ -523,9 +523,15 @@ def register_gtd_core_tools(mcp: FastMCP):
         Use when: Realizing a task is actually a multi-step outcome.
         GTD rule: Any outcome requiring >1 action is a project.
 
+        Preserves from the original task:
+        - Title becomes project title
+        - Notes, tags, and area are transferred
+        - Deadline becomes project deadline (not on child tasks)
+        - Incomplete checklist items become project tasks
+
         Args:
             task_id: UUID of the task to convert
-            first_action: Title of the first next action (recommended)
+            first_action: Title of the first next action (added before checklist items)
         """
         if ctx:
             await ctx.info("Converting task to project...")
@@ -547,17 +553,27 @@ def register_gtd_core_tools(mcp: FastMCP):
             # Create project with task's details
             project_title = task.get("title", "New Project")
             project_notes = task.get("notes", "")
+            project_deadline = task.get("deadline")
+
+            # Get checklist items from the original task
+            checklist_items = things.checklist_items(task_id)
 
             # Build tasks array for the project
             tasks = []
             if first_action:
                 tasks.append({"title": first_action, "when": "anytime"})
 
+            # Convert checklist items to project tasks (incomplete ones only)
+            for item in checklist_items:
+                if item.get("status") != "completed":
+                    tasks.append({"title": item.get("title", ""), "when": "anytime"})
+
             # Use JSON API for atomic creation
             url = add_project_with_tasks(
                 title=project_title,
                 tasks=tasks,
                 notes=project_notes,
+                deadline=project_deadline,
                 tags=task.get("tags"),
                 area=task.get("area_title"),
             )
@@ -572,9 +588,20 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-inbox", "get-projects", "get-tasks"])
 
+            # Build result message
             result = f"Converted '{project_title}' to project."
-            if first_action:
+            if project_deadline:
+                result += f"\nDeadline: {project_deadline}"
+
+            checklist_count = len(
+                [i for i in checklist_items if i.get("status") != "completed"]
+            )
+            if first_action and checklist_count > 0:
+                result += f"\nTasks: {first_action} + {checklist_count} from checklist"
+            elif first_action:
                 result += f"\nFirst action: {first_action}"
+            elif checklist_count > 0:
+                result += f"\nConverted {checklist_count} checklist items to tasks."
             else:
                 result += "\n\n**Warning:** Project has no next action. GTD requires every project to have a clear next step. Use schedule-task to add one."
 
