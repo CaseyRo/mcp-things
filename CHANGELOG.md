@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### BREAKING CHANGES
 
+- **Removed 18 deprecated tool aliases** - Legacy CRUD-style tools removed in favor of GTD-native tools
+  - **Migration guide:**
+    | Removed Tool | Replacement |
+    |--------------|-------------|
+    | `get-inbox` | `get-tasks(list_filter="inbox")` |
+    | `get-today` | `get-tasks(list_filter="today")` |
+    | `get-upcoming` | `get-tasks(list_filter="upcoming")` |
+    | `get-anytime` | `get-tasks(list_filter="anytime")` |
+    | `get-someday` | `get-tasks(list_filter="someday")` |
+    | `get-logbook` | `get-tasks(list_filter="logbook")` |
+    | `get-trash` | `get-tasks(list_filter="trash")` |
+    | `get-todos` | `get-tasks()` |
+    | `get-tagged-items` | `get-tasks(tag="tag-name")` |
+    | `get-recent` | `get-tasks(list_filter="logbook")` |
+    | `search-todos` | `search-tasks` |
+    | `search-advanced` | `search-tasks` |
+    | `search-items` | `search-tasks` |
+    | `add-todo` | `capture-task` or `schedule-task` |
+    | `add-project` | `plan-project` |
+    | `update-todo` | `modify-task` |
+    | `update-project` | `modify-task` |
+    | `show-item` | `show-in-app` |
+
 - **Removed SSE transport support** - SSE transport is deprecated in MCP protocol (2025-03-26)
   - Removed `/sse/` endpoint - all clients now use `/mcp` (streamable-http transport)
   - Transport configuration simplified: `THINGS_MCP_TRANSPORT` now only accepts `"streamable-http"` (default)
@@ -25,7 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `tools_gtd_organize.py` - GTD Organize stage tools (5 tools)
   - New `tools_gtd_reflect.py` - GTD Reflect stage tools (2 tools)
   - New `tools_utility.py` - Utility tools (6 tools)
-  - New `tools_deprecated.py` - Backward-compatible aliases (18 tools)
   - Each module now has focused responsibility, easier to test and maintain
 
 ### Added
