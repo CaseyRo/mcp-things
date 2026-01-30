@@ -4,10 +4,10 @@ Smoke test for Things MCP server.
 
 This script performs a quick integration test to verify:
 1. Things 3 is available
-2. Can read inbox
-3. Can create a todo
-4. Can update the todo
-5. Can delete (cancel) the todo
+2. Can read inbox (via get-tasks)
+3. Can create a todo (via capture-task)
+4. Can update the todo (via modify-task)
+5. Can complete the todo (via complete-task)
 
 Run manually: uv run python scripts/smoke_test.py
 Used by pre-commit hook to catch issues before committing.
@@ -30,10 +30,11 @@ def _get_tool_fn(name: str):
     return mcp._local_provider._components[f"tool:{name}@"].fn
 
 
-# Get tool functions from the registered tools
-get_inbox = _get_tool_fn("get-inbox")
-add_task = _get_tool_fn("add-todo")
-update_task = _get_tool_fn("update-todo")
+# Get tool functions from the registered GTD tools
+get_tasks = _get_tool_fn("get-tasks")
+capture_task = _get_tool_fn("capture-task")
+modify_task = _get_tool_fn("modify-task")
+complete_task = _get_tool_fn("complete-task")
 
 
 def check_things_available():
@@ -56,9 +57,9 @@ def check_things_available():
 
 
 async def test_read_inbox():
-    """Test reading the inbox."""
+    """Test reading the inbox via get-tasks."""
     print("Testing: Read inbox...")
-    result = await get_inbox()
+    result = await get_tasks(view="inbox")
     if "Error" in result or "error" in result.lower():
         print(f"FAIL: Could not read inbox: {result}")
         return False
@@ -67,18 +68,17 @@ async def test_read_inbox():
 
 
 async def test_create_todo():
-    """Test creating a todo and return its title for later tests."""
+    """Test creating a todo via capture-task and return its title."""
     print("Testing: Create todo...")
     # Use a unique title to avoid conflicts
     title = f"SMOKE-TEST-{int(time.time())}"
 
-    result = await add_task(
+    result = await capture_task(
         title=title,
         notes="Smoke test - will be deleted automatically",
-        when="today",
     )
 
-    if "Successfully created todo" not in result:
+    if "Captured to Inbox" not in result:
         print(f"FAIL: Could not create todo: {result}")
         return None
 
@@ -116,7 +116,7 @@ async def find_todo_id(title: str, max_retries: int = 3):
 
 
 async def test_update_todo(title: str):
-    """Test updating a todo."""
+    """Test updating a todo via modify-task."""
     print("Testing: Update todo...")
 
     # Find the todo ID
@@ -126,12 +126,12 @@ async def test_update_todo(title: str):
         return False
 
     # Update it
-    result = await update_task(
-        id=todo_id,
+    result = await modify_task(
+        task_id=todo_id,
         notes="Smoke test - updated notes",
     )
 
-    if "Successfully updated todo" not in result:
+    if "Updated" not in result and "updated" not in result.lower():
         print(f"FAIL: Could not update todo: {result}")
         return False
 
@@ -139,27 +139,24 @@ async def test_update_todo(title: str):
     return True
 
 
-async def test_delete_todo(title: str):
-    """Test deleting (canceling) a todo."""
-    print("Testing: Delete todo...")
+async def test_complete_todo(title: str):
+    """Test completing a todo via complete-task."""
+    print("Testing: Complete todo...")
 
     # Find the todo ID
     todo_id = await find_todo_id(title)
     if not todo_id:
-        print(f"FAIL: Could not find todo '{title}' to delete")
+        print(f"FAIL: Could not find todo '{title}' to complete")
         return False
 
-    # Cancel it (Things URL scheme doesn't support true delete)
-    result = await update_task(
-        id=todo_id,
-        canceled=True,
-    )
+    # Complete it
+    result = await complete_task(task_id=todo_id)
 
-    if "Successfully updated todo" not in result:
-        print(f"FAIL: Could not delete todo: {result}")
+    if "completed" not in result.lower():
+        print(f"FAIL: Could not complete todo: {result}")
         return False
 
-    print("OK: Deleted (canceled) todo")
+    print("OK: Completed todo")
     return True
 
 
@@ -193,8 +190,8 @@ async def run_smoke_tests():
 
         time.sleep(0.5)
 
-        # Test 4: Delete todo
-        if not await test_delete_todo(title):
+        # Test 4: Complete todo
+        if not await test_complete_todo(title):
             all_passed = False
 
     print("=" * 50)

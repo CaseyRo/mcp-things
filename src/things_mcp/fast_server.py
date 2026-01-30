@@ -44,7 +44,6 @@ from .tools_gtd_core import register_gtd_core_tools
 from .tools_gtd_organize import register_gtd_organize_tools
 from .tools_gtd_reflect import register_gtd_reflect_tools
 from .tools_utility import register_utility_tools
-from .tools_deprecated import register_deprecated_tools
 
 # Configure enhanced logging
 # Console shows DEBUG if THINGS_MCP_DEBUG=true, otherwise INFO
@@ -60,7 +59,6 @@ register_gtd_core_tools(mcp)  # Engage, Capture, Clarify
 register_gtd_organize_tools(mcp)  # Organize
 register_gtd_reflect_tools(mcp)  # Reflect
 register_utility_tools(mcp)  # Utility (search, list, show, cache)
-register_deprecated_tools(mcp)  # Backward compatibility
 
 
 def _print_shutdown_summary():

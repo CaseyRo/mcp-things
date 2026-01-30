@@ -209,3 +209,32 @@ MIT License — see [LICENSE](LICENSE).
 - [FastMCP Documentation](https://gofastmcp.com)
 - [Things 3 URL Scheme](https://culturedcode.com/things/support/articles/2803573/)
 - [GTD Methodology](https://gettingthingsdone.com/)
+
+---
+
+## Removed Tools
+
+The following legacy CRUD-style tools have been removed in favor of GTD-native tools. If you were using these tools, update your code to use the replacements below:
+
+| Removed Tool | Replacement |
+|--------------|-------------|
+| `get-inbox` | `get-tasks(list_filter="inbox")` |
+| `get-today` | `get-tasks(list_filter="today")` |
+| `get-upcoming` | `get-tasks(list_filter="upcoming")` |
+| `get-anytime` | `get-tasks(list_filter="anytime")` |
+| `get-someday` | `get-tasks(list_filter="someday")` |
+| `get-logbook` | `get-tasks(list_filter="logbook")` |
+| `get-trash` | `get-tasks(list_filter="trash")` |
+| `get-todos` | `get-tasks()` |
+| `get-tagged-items` | `get-tasks(tag="tag-name")` |
+| `get-recent` | `get-tasks(list_filter="logbook")` |
+| `search-todos` | `search-tasks` |
+| `search-advanced` | `search-tasks` |
+| `search-items` | `search-tasks` |
+| `add-todo` | `capture-task` or `schedule-task` |
+| `add-project` | `plan-project` |
+| `update-todo` | `modify-task` |
+| `update-project` | `modify-task` |
+| `show-item` | `show-in-app` |
+
+**Why?** The GTD-native tools are designed around how you actually work with tasks, not database operations. Instead of "add a todo", you "capture a thought" or "schedule a task with context". This matches how AI assistants naturally think about task management.
