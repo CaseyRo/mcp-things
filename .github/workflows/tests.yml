@@ -1,0 +1,36 @@
+# CI: lint and run tests (CI-safe; Things 3 not available in CI)
+name: Tests
+
+on:
+  push:
+    branches: [source, main]
+  pull_request:
+    branches: [source, main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format (check only)
+        run: uv run ruff format --check .
+
+      - name: Pytest (CI-safe, excludes real/Things 3 tests)
+        run: uv run python -m pytest tests -v

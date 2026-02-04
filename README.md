@@ -181,11 +181,11 @@ For development setup, architecture details, testing, and contribution guideline
 Quick commands:
 
 ```bash
-# Run tests (requires Things 3)
-uv run python -m pytest tests -v
+# Run tests (default is CI-safe: excludes Things 3 / real tests)
+uv run python -m pytest tests
 
-# Run unit tests only (CI/CD safe)
-uv run python -m pytest tests -m "not real"
+# Run real integration tests only (Things 3 required, local/deployment)
+uv run python -m pytest tests -m real
 
 # Lint and format
 uv run ruff check . && uv run ruff format .
