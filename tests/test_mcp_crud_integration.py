@@ -41,7 +41,7 @@ class TestMCPCRUDIntegration:
         test_data_tracker.add_todo(todo_id)
 
         # Read
-        read_response = await mcp_client.call_tool("get-todos", arguments={})
+        read_response = await mcp_client.call_tool("get-tasks", arguments={})
         assert "result" in read_response
         assert "content" in read_response["result"]
 
@@ -94,7 +94,7 @@ class TestMCPCRUDIntegration:
         test_data_tracker.add_todo(todo_id)
 
         # Read
-        read_response = await mcp_client.call_tool("get-todos", arguments={})
+        read_response = await mcp_client.call_tool("get-tasks", arguments={})
         assert "result" in read_response
 
         # Update with n8n params
@@ -138,7 +138,7 @@ class TestMCPCRUDIntegration:
         test_data_tracker.add_todo(todo_id)
 
         # Read
-        read_response = await mcp_client.call_tool("get-todos", arguments={})
+        read_response = await mcp_client.call_tool("get-tasks", arguments={})
         assert "result" in read_response
 
         # Update with explicit nulls
@@ -231,7 +231,7 @@ class TestMCPCRUDIntegration:
         test_data_tracker.add_todo(todo_id)
 
         # Read via MCP
-        read_response = await mcp_client.call_tool("get-todos", arguments={})
+        read_response = await mcp_client.call_tool("get-tasks", arguments={})
         assert "result" in read_response
 
         # Verify data matches
