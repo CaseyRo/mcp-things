@@ -1,21 +1,3 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
 
 # CLAUDE.md
 
@@ -137,10 +119,10 @@ This project uses OpenSpec for spec-driven development. When planning features o
 
 ## Testing Notes
 
-- Tests use pytest markers: `unit`, `integration`, `real`, `slow`
-- Real tests require Things 3 running + `THINGS_AUTH_TOKEN` in `.env`
-- Test data uses `MCP-TEST-` prefix and auto-cleans after tests
-- Results saved to `test-results/test-results.md`
+- Default run is CI-safe: `pytest tests` excludes `real` (addopts in pytest.ini)
+- Markers: `unit`, `integration`, `real`, `slow`; real tests require Things 3 (local/deployment only, never in CI)
+- Real tests need Things 3 running + `THINGS_AUTH_TOKEN` in `.env`; test data uses `MCP-TEST-` prefix and auto-cleans
+- Results saved to `test-results/test-results.md` (plugin in conftest)
 - Main branch is `source` (not `main`)
 
 ## Client Compatibility & Endpoints

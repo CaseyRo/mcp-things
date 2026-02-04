@@ -22,21 +22,10 @@ import mcp.types as types  # noqa: E402 - must load after settings
 
 
 # ============================================================================
-# Pytest Markers Configuration
+# Pytest Plugins
 # ============================================================================
 
-
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line("markers", "unit: Unit tests with mocked dependencies")
-    config.addinivalue_line(
-        "markers", "integration: Integration tests (may be mocked or real)"
-    )
-    config.addinivalue_line(
-        "markers", "real: Real integration tests requiring Things 3"
-    )
-    config.addinivalue_line("markers", "slow: Tests that may take longer")
-
+pytest_plugins = ["tests.pytest_test_results"]
 
 # ============================================================================
 # Mock Data Generators

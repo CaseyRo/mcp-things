@@ -178,25 +178,24 @@ src/things_mcp/
 
 ### Test Structure
 
-```
-tests/
-├── conftest.py              # Fixtures, mock generators, test utilities
-├── test_gtd_workflow.py     # 24 GTD stage tests (Capture, Clarify, Organize, Reflect, Engage)
-├── test_mcp_workflow.py     # 6 legacy MCP workflow tests
-└── pytest_test_results.py   # Results plugin (saves to markdown)
-```
+See **[docs/TESTING.md](TESTING.md)** for full details. Summary:
+
+- **Unit** (no server/Things 3): `test_accept_headers`, `test_configuration`, `test_mcp_protocol`, `test_schema_transforms`, `test_transport_*`
+- **Integration** (may start server, no Things 3): `test_lifespan`, `test_mcp_streamable_http`, `test_server_startup`
+- **Real** (Things 3 required, local/deployment only): `test_gtd_workflow`, `test_mcp_crud_integration`
+- `conftest.py`: fixtures, mock generators, `pytest_plugins = ["pytest_test_results"]`
+- `pytest_test_results.py`: plugin that writes `test-results/test-results.md`
 
 ### Running Tests
 
+Default run is **CI-safe** (excludes `real` via pytest.ini addopts):
+
 ```bash
-# All tests (requires Things 3 running + auth token)
-uv run python -m pytest tests -v
+# CI-safe (default; no Things 3 needed)
+uv run python -m pytest tests
 
-# Unit tests only (CI/CD safe, no Things 3 needed)
-uv run python -m pytest tests -m "not real"
-
-# Real integration tests only
-uv run python -m pytest tests -m real -v
+# Real integration tests only (Things 3 required)
+uv run python -m pytest tests -m real
 
 # With coverage
 uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing
@@ -206,16 +205,15 @@ uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing
 
 | Marker | Purpose |
 |--------|---------|
-| `@pytest.mark.unit` | Unit tests with mocked dependencies |
-| `@pytest.mark.integration` | Integration tests (may use mocks or real Things) |
-| `@pytest.mark.real` | Real integration tests requiring Things 3 |
-| `@pytest.mark.slow` | Tests that take longer to run |
+| `unit` | Unit tests with mocked dependencies (CI-safe) |
+| `integration` | Integration tests (may use mocks or real server) |
+| `real` | Real integration tests requiring Things 3 (excluded by default) |
+| `slow` | Tests that take longer |
 
 ### Test Data
 
-- Test data uses `MCP-TEST-` prefix
-- Automatic cleanup after test completion
-- Results saved to `test-results/test-results.md`
+- Real tests use `MCP-TEST-` prefix and auto-clean via `test_data_tracker`
+- Results saved to `test-results/test-results.md` when the results plugin is loaded
 
 ### Writing Tests
 
