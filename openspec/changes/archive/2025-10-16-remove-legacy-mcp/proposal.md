@@ -102,4 +102,3 @@ None - this is an implementation consolidation, not a capability change. All 19 
 - **Target Removal**: Aligns with previously announced EOY 2025 deprecation
 - **Current Date**: October 2025 - plenty of notice has been given
 - **Version**: Bump to 2.0.0 to signal breaking change
-

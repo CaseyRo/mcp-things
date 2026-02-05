@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Removed 18 deprecated tool aliases** - Legacy CRUD-style tools removed in favor of GTD-native tools
   - **Migration guide:**
+
     | Removed Tool | Replacement |
     |--------------|-------------|
     | `get-inbox` | `get-tasks(list_filter="inbox")` |
@@ -128,6 +129,7 @@ If upgrading from 1.x:
 ## [1.0.0] - 2025-05-30
 
 ### Added
+
 - 🚀 **FastMCP Implementation**: Complete rewrite using FastMCP pattern for better maintainability
 - 🔄 **Reliability Features**:
   - Circuit breaker pattern to prevent cascading failures
@@ -149,17 +151,20 @@ If upgrading from 1.x:
 - 📝 **Documentation**: Enhanced README with detailed setup and troubleshooting guides
 
 ### Changed
+
 - Rebranded to "Things 3 Enhanced MCP" for clear differentiation
 - Updated package name to `things3-enhanced-mcp`
 - Improved configuration token handling
 - Enhanced URL scheme operations with better error recovery
 
 ### Fixed
+
 - Token configuration import issues
 - URL scheme reliability problems
 - Various edge cases in task/project operations
 
 ### Attribution
+
 Based on the original [things-mcp](https://github.com/hald/things-mcp) by Harald Lindstrøm
 
 [1.0.0]: https://github.com/CaseyRo/things-fastmcp/releases/tag/v1.0.0

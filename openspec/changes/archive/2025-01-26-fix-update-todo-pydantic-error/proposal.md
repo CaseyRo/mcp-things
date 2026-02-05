@@ -3,6 +3,7 @@
 ## Summary
 
 The `update-todo` FastMCP tool is failing with a Pydantic validation error:
+
 ```
 Error executing tool update-todo: 1 validation error for update_taskOutput
 Input should be a valid dictionary or instance of update_taskOutput [type=model_type, input_value=None, input_type=NoneType]
@@ -13,12 +14,14 @@ This error occurs when FastMCP tries to validate the tool's return value against
 ## Why This Change
 
 **Problem:**
+
 - FastMCP generates Pydantic models for tool outputs based on return type annotations
 - The `update_task` function is annotated as `-> str`, but FastMCP's introspection/validation is receiving `None`
 - This prevents the tool from working correctly when called via MCP
 - No local test exists to reproduce and verify the fix
 
 **Impact:**
+
 - Users cannot update todos via the MCP interface
 - The error is cryptic and doesn't clearly indicate the root cause
 - Without a local test, fixes must be deployed to production to verify
@@ -54,4 +57,3 @@ This error occurs when FastMCP tries to validate the tool's return value against
 3. ✅ Unit test exists that reproduces the issue and verifies the fix
 4. ✅ Test can be run locally without deploying to production
 5. ✅ All existing tests continue to pass
-

@@ -1,4 +1,5 @@
 ## 1. Research and Planning
+
 - [x] 1.1 Research MCP streamable-http transport specification (2025-03-26 or later)
 - [x] 1.2 Research MCP SSE transport specification (legacy but still used by ChatGPT) - Skipped per design
 - [x] 1.3 Review n8n MCP Client Tool documentation and requirements
@@ -7,6 +8,7 @@
 - [x] 1.6 Identify test scenarios based on specification requirements
 
 ## 2. MCP Protocol Test Client
+
 - [x] 2.1 Create `tests/mcp_client.py` with MCP protocol client implementation
 - [x] 2.2 Implement streamable-http client methods (POST requests, JSON-RPC)
 - [x] 2.3 Implement SSE client methods (SSE connection, event parsing) - Skipped (SSE removed)
@@ -16,6 +18,7 @@
 - [x] 2.7 Add support for both transports (streamable-http and SSE) - SSE skipped
 
 ## 3. Streamable-HTTP Integration Tests (Primary Focus)
+
 - [x] 3.1 Create `tests/test_mcp_streamable_http.py`
 - [x] 3.2 Add test for tool discovery (`list_tools` request)
 - [x] 3.3 Add test for tool discovery response format validation
@@ -36,9 +39,11 @@
 - [x] 3.18 Verify tests use proper pytest markers (`@pytest.mark.integration`)
 
 ## 4. SSE Integration Tests
+
 - [x] 4.1 **SKIP** - SSE testing removed per design decision. SSE support will be removed after this work is complete.
 
 ## 5. End-to-End CRUD Integration Tests
+
 - [x] 5.1 Create `tests/test_mcp_crud_integration.py`
 - [x] 5.2 Add test for complete CRUD workflow via streamable-http (use `test_data_tracker` fixture) - **Primary focus**
 - [x] 5.3 Add test for n8n CRUD workflow (create → read → update → delete via streamable-http with n8n compatibility)
@@ -51,6 +56,7 @@
 - [x] 5.10 Verify tests use proper pytest markers (`@pytest.mark.integration`, `@pytest.mark.real`)
 
 ## 6. Protocol Compliance Tests
+
 - [x] 6.1 Create `tests/test_mcp_protocol.py`
 - [x] 6.2 Add test for JSON-RPC request format validation
 - [x] 6.3 Add test for JSON-RPC response format validation
@@ -62,6 +68,7 @@
 - [x] 6.9 Verify tests use proper pytest markers (`@pytest.mark.unit` or `@pytest.mark.integration`)
 
 ## 7. Test Infrastructure
+
 - [x] 7.1 Create test fixtures for running server instances
 - [x] 7.2 Add fixture for streamable-http test client
 - [x] 7.3 Add fixture for SSE test client - Skipped (SSE removed)
@@ -73,6 +80,7 @@
 - [x] 7.9 Verify tests are excluded from pre-commit (via `@pytest.mark.real` marker)
 
 ## 8. Test Execution & Validation
+
 - [x] 8.1 Run all new integration tests to verify they pass - Protocol tests pass, integration tests require server
 - [x] 8.2 Verify tests work with both transport modes ("both", "sse", "streamable-http") - Focus on streamable-http only
 - [x] 8.3 Verify tests can be run independently or as part of full test suite
@@ -82,6 +90,7 @@
 - [x] 8.7 Verify test execution time is acceptable (< 60 seconds for full suite)
 
 ## 9. Documentation
+
 - [x] 9.1 Add test file docstrings explaining test purpose and protocol requirements
 - [x] 9.2 Document MCP protocol client implementation
 - [x] 9.3 Document how to run integration tests - Covered in test file docstrings

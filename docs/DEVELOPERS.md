@@ -110,6 +110,7 @@ Key variables:
 | `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | unset | Show Things in foreground for debugging |
 
 **Transport Configuration:**
+
 - The server uses **streamable-http transport only** (SSE transport removed as deprecated)
 - Endpoint: `/mcp` (streamable-http transport)
 - Compatible with: Claude Desktop, n8n MCP Client Tool node, ChatGPT (via streamable-http)
@@ -159,6 +160,7 @@ src/things_mcp/
 **fast_server.py** — Main entry point with all tool definitions. Tools are organized by GTD stage in the source code.
 
 **url_scheme.py** — Builds Things URL scheme URLs for write operations. Key functions:
+
 - `add_todo()`, `update_todo()` — Task operations
 - `add_project()`, `update_project()` — Project operations
 - `add_project_with_tasks()` — Atomic project creation via JSON API
@@ -255,6 +257,7 @@ uv run ruff format .
 ### Pre-commit Hooks
 
 The project uses pre-commit hooks (`.pre-commit-config.yaml`):
+
 - `ruff` — Linting
 - `ruff-format` — Formatting
 - Smoke test — Verifies Things 3 integration
@@ -301,6 +304,7 @@ mkdir -p openspec/changes/<change-id>
 ```
 
 Required files:
+
 - `proposal.md` — Why and what changes
 - `tasks.md` — Implementation checklist
 - `design.md` — Technical decisions (if needed)
@@ -321,6 +325,7 @@ See `openspec/AGENTS.md` for detailed instructions.
 3. **Follow GTD stage organization** when adding tools
 4. **Write tests** for new functionality
 5. **Run linting and tests** before submitting PRs:
+
    ```bash
    uv run ruff check . && uv run ruff format .
    uv run python -m pytest tests -v

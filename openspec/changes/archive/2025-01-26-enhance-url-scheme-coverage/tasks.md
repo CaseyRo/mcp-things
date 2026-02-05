@@ -3,6 +3,7 @@
 ## 1. GTD Clarify Stage (NEW)
 
 ### 1.1 Process Inbox Tool
+
 - [ ] 1.1.1 Create `process-inbox` tool that fetches oldest unprocessed inbox item
 - [ ] 1.1.2 Return item with GTD decision tree prompts in description
 - [ ] 1.1.3 Include "Is this actionable?" as first decision point
@@ -12,6 +13,7 @@
 - [ ] 1.1.7 Write tests for processing logic
 
 ### 1.2 Convert to Project Tool
+
 - [ ] 1.2.1 Create `convert-to-project` tool
 - [ ] 1.2.2 Accept task_id and optional first_action title
 - [ ] 1.2.3 Implement: Create project with task's title/notes, create first action, delete original task
@@ -21,6 +23,7 @@
 ## 2. GTD Context-First Design
 
 ### 2.1 Unified Get Tasks Tool (Context-Aware)
+
 - [ ] 2.1.1 Create `get-tasks` tool with context as primary filter
 - [ ] 2.1.2 Parameters: view, context (tag), energy, time_available, area, project
 - [ ] 2.1.3 Support multiple contexts: `context=["@computer", "@office"]`
@@ -31,6 +34,7 @@
 - [ ] 2.1.8 Write tests for all filter combinations
 
 ### 2.2 Document Recommended Tag Structure
+
 - [ ] 2.2.1 Create GTD tag structure documentation
 - [ ] 2.2.2 Contexts: @computer, @phone, @office, @home, @errands, @anywhere
 - [ ] 2.2.3 Energy: high-energy, low-energy
@@ -42,6 +46,7 @@
 ## 3. GTD Waiting For (Delegation)
 
 ### 3.1 Delegate Task Tool
+
 - [ ] 3.1.1 Create `delegate-task` tool
 - [ ] 3.1.2 Required: task_id, delegated_to (person name)
 - [ ] 3.1.3 Optional: follow_up_date, notes
@@ -53,6 +58,7 @@
 - [ ] 3.1.9 Write tests
 
 ### 3.2 Get Waiting For Items
+
 - [ ] 3.2.1 Ensure `get-tasks` can filter by `context="waiting-for"`
 - [ ] 3.2.2 Add `get-tasks(context="waiting-for")` example to description
 - [ ] 3.2.3 Weekly review should automatically surface waiting-for items
@@ -60,6 +66,7 @@
 ## 4. GTD Reflect Stage (Reviews)
 
 ### 4.1 Daily Review Tool
+
 - [ ] 4.1.1 Create `daily-review` tool
 - [ ] 4.1.2 Return: Today's scheduled tasks (hard landscape)
 - [ ] 4.1.3 Return: Overdue tasks requiring attention
@@ -70,6 +77,7 @@
 - [ ] 4.1.8 Write tests
 
 ### 4.2 Weekly Review Tool (GTD-Compliant)
+
 - [ ] 4.2.1 Create `weekly-review` tool with GTD weekly review structure
 - [ ] 4.2.2 Return: Stalled projects (active projects with no next action)
 - [ ] 4.2.3 Return: Waiting-for items (especially overdue follow-ups)
@@ -83,6 +91,7 @@
 ## 5. GTD Engage Stage
 
 ### 5.1 Focus Mode Tool
+
 - [ ] 5.1.1 Create `focus-mode` tool
 - [ ] 5.1.2 Accept optional: context, energy, time_available
 - [ ] 5.1.3 Priority: overdue with deadline > today with deadline > today > anytime
@@ -93,6 +102,7 @@
 - [ ] 5.1.8 Write tests
 
 ### 5.2 Complete Task Tool
+
 - [ ] 5.2.1 Create `complete-task` tool with fuzzy matching
 - [ ] 5.2.2 Accept task_id OR task_title (fuzzy match)
 - [ ] 5.2.3 Optional: completion_notes (append before completing)
@@ -103,6 +113,7 @@
 ## 6. GTD Organize Stage
 
 ### 6.1 Capture Task Tool
+
 - [ ] 6.1.1 Refine existing `capture-task` for quick inbox capture
 - [ ] 6.1.2 Minimal params: title required, notes and tags optional
 - [ ] 6.1.3 Always creates in Inbox (no scheduling)
@@ -110,6 +121,7 @@
 - [ ] 6.1.5 Write tests
 
 ### 6.2 Schedule Task Tool
+
 - [ ] 6.2.1 Create `schedule-task` for organized task creation
 - [ ] 6.2.2 Required: title, when (or project)
 - [ ] 6.2.3 Optional: deadline, project, area, context (tags), checklist, notes
@@ -118,6 +130,7 @@
 - [ ] 6.2.6 Write tests
 
 ### 6.3 Defer Task Tool
+
 - [ ] 6.3.1 Create `defer-task` with GTD-aware semantics
 - [ ] 6.3.2 Required: task_id, defer_to
 - [ ] 6.3.3 defer_to values: tomorrow, next_week, someday, specific date
@@ -126,6 +139,7 @@
 - [ ] 6.3.6 Write tests
 
 ### 6.4 Plan Project Tool
+
 - [ ] 6.4.1 Create `plan-project` for atomic project creation
 - [ ] 6.4.2 Required: title, tasks (array of task objects)
 - [ ] 6.4.3 Optional: area, deadline, notes, when
@@ -138,6 +152,7 @@
 ## 7. Tool Descriptions (GTD-Native)
 
 ### 7.1 Rewrite All Descriptions with GTD Context
+
 - [ ] 7.1.1 Include GTD stage reference where applicable
 - [ ] 7.1.2 Include "Use when..." with GTD triggers
 - [ ] 7.1.3 Include "Instead use X if..." for GTD alternatives
@@ -147,6 +162,7 @@
 ## 8. Error Handling (GTD-Aware)
 
 ### 8.1 Actionable Error Messages
+
 - [ ] 8.1.1 "Task not found" → "Task not found. Use search-tasks to locate it, or check get-tasks(view='logbook') if completed."
 - [ ] 8.1.2 "Multiple matches" → "Found 3 tasks matching 'meeting'. Specify which one: [list with IDs]"
 - [ ] 8.1.3 "No next action" → "Project has no active next action. Add one with schedule-task or use process-inbox to define it."
@@ -155,22 +171,26 @@
 ## 9. URL Scheme Infrastructure
 
 ### 9.1 Note Manipulation (Required for Delegation)
+
 - [ ] 9.1.1 Add `append_notes` to url_scheme.update_todo()
 - [ ] 9.1.2 Add `prepend_notes` to url_scheme.update_todo()
 - [ ] 9.1.3 Write tests
 
 ### 9.2 Tag Operations (Required for Contexts)
+
 - [ ] 9.2.1 Add `add_tags` parameter (append without replacing)
 - [ ] 9.2.2 Ensure proper tag encoding for @-prefixed contexts
 - [ ] 9.2.3 Write tests
 
 ### 9.3 JSON Bulk API (Required for Projects)
+
 - [ ] 9.3.1 Investigate why JSON API was disabled
 - [ ] 9.3.2 Implement `build_json_payload()` for structured objects
 - [ ] 9.3.3 Add `execute_json_url()` function
 - [ ] 9.3.4 Write tests for project with tasks creation
 
 ### 9.4 Time Scheduling
+
 - [ ] 9.4.1 Add `evening` support
 - [ ] 9.4.2 Add time string parsing
 - [ ] 9.4.3 Add datetime format support
@@ -179,6 +199,7 @@
 ## 10. Migration & Deprecation
 
 ### 10.1 Backward Compatibility
+
 - [ ] 10.1.1 Keep old tool names as deprecated aliases
 - [ ] 10.1.2 Log deprecation warnings when old tools used
 - [ ] 10.1.3 Document migration path in CHANGELOG
@@ -186,6 +207,7 @@
 - [ ] 10.1.5 Plan removal timeline (suggest: 2 minor versions)
 
 ### 10.2 Documentation Updates
+
 - [ ] 10.2.1 Update CLAUDE.md with GTD workflow guidance
 - [ ] 10.2.2 Add recommended tag structure to documentation
 - [ ] 10.2.3 Document "Waiting For" convention

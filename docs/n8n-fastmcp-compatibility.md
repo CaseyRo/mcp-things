@@ -11,6 +11,7 @@ n8n (v1.70+) includes an MCP Client Tool that can connect to Model Context Proto
 **GitHub Issue:** [n8n-io/n8n#21500](https://github.com/n8n-io/n8n/issues/21500)
 
 **Problem:** n8n's MCP Client Tool sends extra parameters with every tool call that aren't part of the tool's schema:
+
 - `toolCallId`
 - `sessionId`
 - `action`
@@ -19,6 +20,7 @@ n8n (v1.70+) includes an MCP Client Tool that can connect to Model Context Proto
 These cause Pydantic validation errors in FastMCP because they aren't declared in the tool's input schema.
 
 **Error:**
+
 ```
 Extra inputs are not permitted [type=extra_forbidden, input_value='call_abc123', input_type=str]
 ```
@@ -61,6 +63,7 @@ mcp.add_middleware(N8NCompatibilityMiddleware())
 ```
 
 This causes n8n to throw:
+
 ```
 Cannot read properties of undefined (reading 'inputType')
 ```
@@ -184,6 +187,7 @@ def _patch_tool_serialization_for_n8n(mcp: FastMCP):
 ## Complete Implementation
 
 See `src/things_mcp/server_core.py` for the complete implementation including:
+
 - `N8NCompatibilityMiddleware` class
 - `_flatten_anyof_for_n8n()` function
 - `_patch_tool_serialization_for_n8n()` function
@@ -191,6 +195,7 @@ See `src/things_mcp/server_core.py` for the complete implementation including:
 ## Testing n8n Compatibility
 
 1. Enable debug logging:
+
    ```bash
    export THINGS_MCP_DEBUG_SCHEMA=1
    ```

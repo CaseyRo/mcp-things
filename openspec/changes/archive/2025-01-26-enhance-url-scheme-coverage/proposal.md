@@ -31,9 +31,11 @@ Additionally, the URL scheme implementation is missing features documented in th
 ### Part 1: GTD Workflow Tools
 
 **Capture Stage**
+
 - `capture-task`: Quick inbox capture, minimal friction (exists, refine description)
 
 **Clarify Stage (NEW)**
+
 - `process-inbox`: Fetch oldest inbox item, present GTD decision tree to agent:
   1. Is it actionable?
   2. If no → Trash, Someday/Maybe, or Reference (notes)
@@ -42,12 +44,14 @@ Additionally, the URL scheme implementation is missing features documented in th
   5. Guides agent through proper GTD processing
 
 **Organize Stage**
+
 - `schedule-task`: Create with date/project/context (enhanced with context awareness)
 - `delegate-task`: Set "Waiting For" state (tag + annotation + follow-up date)
 - `convert-to-project`: Transform inbox item into project with initial next action
 - `defer-task`: Distinct handling for "Tickler" (future date) vs "Someday/Maybe" (incubate)
 
 **Reflect Stage**
+
 - `daily-review`: Today's calendar + available Next Actions by context
 - `weekly-review`: GTD-compliant review including:
   - Stalled projects (no next action)
@@ -56,6 +60,7 @@ Additionally, the URL scheme implementation is missing features documented in th
   - Completed items for closure
 
 **Engage Stage**
+
 - `get-tasks`: Primary filter by **context (tags)**, then view
 - `focus-mode`: Single most important task considering context, energy, time
 
@@ -73,6 +78,7 @@ get_tasks(view="anytime", context="@errands")  # "What can I do while out?"
 ```
 
 **Recommended Tag Structure** (documented for users):
+
 - Contexts: `@computer`, `@phone`, `@office`, `@home`, `@errands`, `@anywhere`
 - Energy: `high-energy`, `low-energy`
 - Time: `5min`, `15min`, `30min`, `1hr+`
@@ -129,6 +135,7 @@ for project in projects:
 ### Part 6: URL Scheme Feature Gaps
 
 Required for GTD tools:
+
 - `append-notes`: For delegation annotations
 - `prepend-notes`: For "Waiting: Person -" title patterns (or title modification)
 - JSON bulk API: For atomic `plan-project` creation

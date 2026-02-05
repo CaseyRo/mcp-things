@@ -5,12 +5,14 @@
 The Things FastMCP server evolved from a simple MCP implementation to a production-ready server with enterprise reliability features. During this evolution, both implementations were maintained in parallel to allow gradual migration. The deprecation was announced with an EOY 2025 timeline, and we're now ready to complete the transition.
 
 **Stakeholders:**
+
 - End users running the MCP server locally
 - AI assistant platforms (Claude Desktop, etc.)
 - Contributors maintaining the codebase
 - Smithery registry users discovering the server
 
 **Constraints:**
+
 - Must maintain tool API compatibility (no changes to tool names or signatures)
 - Must provide clear migration path for users still on legacy implementation
 - Should minimize user disruption while maintaining security and maintainability
@@ -37,6 +39,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 ### Decision 1: Complete Removal vs. Deprecation Stub
 
 **Options:**
+
 - A) Complete removal of all legacy files
 - B) Keep stub files that print deprecation error and exit
 - C) Redirect legacy imports to FastMCP
@@ -44,6 +47,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 **Choice:** A - Complete removal
 
 **Rationale:**
+
 - Deprecation notice has been active for months
 - README already states "will be removed by EOY 2025"
 - Stub files still require maintenance and testing
@@ -53,6 +57,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 ### Decision 2: Version Bump Strategy
 
 **Options:**
+
 - A) Major version bump (2.0.0)
 - B) Minor version bump (1.1.0) with deprecation
 - C) Stay at 1.0.0
@@ -60,6 +65,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 **Choice:** A - Major version bump to 2.0.0
 
 **Rationale:**
+
 - Semantic versioning: breaking changes require major bump
 - Signals to users that manual intervention may be needed
 - Package managers will prompt users about major version updates
@@ -68,6 +74,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 ### Decision 3: Migration Documentation
 
 **Options:**
+
 - A) Separate MIGRATION.md file
 - B) Prominent section in README
 - C) CHANGELOG.md entry only
@@ -76,6 +83,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 **Choice:** B + C - README section + CHANGELOG entry (remove separate file after transition)
 
 **Rationale:**
+
 - Users check README first
 - CHANGELOG provides version history
 - Separate file adds clutter after migration complete
@@ -86,6 +94,7 @@ The Things FastMCP server evolved from a simple MCP implementation to a producti
 **Choice:** Remove all at once in single commit
 
 **Rationale:**
+
 - Atomic change prevents partial state
 - Easier to revert if issues discovered
 - All related changes in one PR for review
@@ -119,12 +128,14 @@ rg "import.*mcp_tools" --type py
 ### Entry Points
 
 Current:
+
 ```python
 # things_server.py (OLD)
 # things_fast_server.py (NEW)
 ```
 
 After change:
+
 ```python
 # things_fast_server.py (ONLY)
 ```
@@ -137,6 +148,7 @@ After change:
 **Impact:** High (broken workflows)
 
 **Mitigation:**
+
 - Major version bump forces attention
 - CHANGELOG entry prominently describes change
 - README has clear migration guide
@@ -149,6 +161,7 @@ After change:
 **Impact:** Medium (confusion for new users)
 
 **Mitigation:**
+
 - Can't control external docs
 - Our official docs are authoritative
 - Search engine results will eventually catch up
@@ -160,6 +173,7 @@ After change:
 **Impact:** High (deployment failures)
 
 **Mitigation:**
+
 - Pre-flight check: search GitHub for public references
 - Version pinning in CI prevents automatic breakage
 - Clear migration path in docs
@@ -171,6 +185,7 @@ After change:
 **Impact:** Medium (development workflow)
 
 **Mitigation:**
+
 - Run full test suite before commit
 - Run `ruff check .` before commit
 - Fix any import errors immediately
@@ -245,4 +260,3 @@ If critical issues discovered:
 - [ ] No broken imports in codebase
 - [ ] Documentation is consistent and clear
 - [ ] Smithery registry validates
-

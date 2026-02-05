@@ -63,6 +63,7 @@ src/things_mcp/
 ```
 
 **Tool Organization by GTD Stage (19 tools total):**
+
 - **Engage** (3): get-tasks, focus-mode, complete-task
 - **Capture** (1): capture-task
 - **Clarify** (2): process-inbox, convert-to-project
@@ -71,6 +72,7 @@ src/things_mcp/
 - **Utility** (6): search-tasks, get-projects, get-areas, get-tags, show-in-app, get-cache-stats
 
 **Data Flow:**
+
 1. Read operations: FastMCP → things-py (SQLite) → cache → format response
 2. Write operations: FastMCP → URL scheme builder → macOS `open -g` → Things app
 
@@ -113,6 +115,7 @@ This project uses OpenSpec for spec-driven development. When planning features o
 5. Validate with `openspec validate <change-id> --strict`
 
 **Cursor commands available:**
+
 - `/openspec-proposal` - Create new change proposal
 - `/openspec-apply` - Implement approved change
 - `/openspec-archive` - Archive completed change
@@ -134,6 +137,7 @@ The server uses streamable-http transport (SSE transport removed as deprecated):
 | `/mcp` | Streamable-HTTP | Claude Desktop, n8n, ChatGPT | All MCP clients |
 
 **Transport Configuration:**
+
 ```bash
 THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only option)
 ```
