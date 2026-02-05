@@ -1,13 +1,13 @@
 # Terms of Use
 
-_Last updated: 2025-10-07_
+_Last updated: 2026-02-05_
 
 These Terms of Use govern your access to and use of the Things FastMCP project (the "Software"). By running the Software you agree to the responsibilities and limitations described below. If you do not agree, do not install or execute the Software.
 
 ## Your responsibilities
 
 - **Authorized access only**. Use the Software solely with Things accounts and macOS devices that you own or are authorized to manage.
-- **Protect credentials**. Safeguard the Things authentication token stored in `~/.things-mcp/config.json` or any environment variables you configure. Rotate or revoke the token if you suspect it has been exposed.
+- **Protect credentials**. Safeguard the Things authentication token stored in your `.env` file (preferred), `~/.things-mcp/config.json` (legacy), or any environment variables you configure. Rotate or revoke the token if you suspect it has been exposed.
 - **Review data access**. Understand that the Software can read and modify tasks, projects, and other personal information stored in Things. Ensure that anyone with access to your machine is aware of this capability.
 - **Provide clear prompts**. When using AI assistants with this MCP server, avoid prompting them to violate platform rules, perform unauthorized scraping, or process sensitive personal data beyond what is necessary for your workflow.
 
