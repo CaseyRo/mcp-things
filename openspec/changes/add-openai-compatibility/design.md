@@ -44,6 +44,7 @@ def transform_schema(schema: dict) -> dict:
 ### Example Transformation
 
 **Input (Pydantic-generated):**
+
 ```json
 {
   "type": "object",
@@ -56,6 +57,7 @@ def transform_schema(schema: dict) -> dict:
 ```
 
 **Output (ChatGPT-compatible):**
+
 ```json
 {
   "type": "object",

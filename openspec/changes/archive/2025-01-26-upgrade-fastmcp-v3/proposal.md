@@ -3,6 +3,7 @@
 ## Why
 
 FastMCP v3.0.0 is the new standalone package replacing the `mcp[cli]` package. It offers:
+
 - Cleaner import paths (flat structure)
 - Guaranteed feature availability (no version detection needed)
 - New features: tool timeouts, Context dependency injection, ToolResult pattern

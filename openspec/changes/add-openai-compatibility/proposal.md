@@ -18,6 +18,7 @@ This is a known issue affecting all MCP servers trying to integrate with OpenAI 
 2. **All fields in `required`** - Every property must be listed in `required` array
 
 We already handle:
+
 - `anyOf` flattening (works for both n8n and OpenAI)
 - Null value stripping in middleware (harmless for OpenAI)
 

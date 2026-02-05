@@ -7,7 +7,7 @@
 - [ ] 1.3 Research clawdbot MCP integration official documentation and requirements
 - [ ] 1.4 Research approval/listing processes for n8n extensions directory (if applicable)
 - [ ] 1.5 Research approval/listing processes for ChatGPT MCP server directory (if applicable)
-- [ ] 1.6 Research ClawdHub (https://clawdhub.com/) skill publishing process and requirements
+- [ ] 1.6 Research ClawdHub (<https://clawdhub.com/>) skill publishing process and requirements
 - [ ] 1.6.1 Research SKILL.md format requirements (frontmatter: name, description, optional metadata)
 - [ ] 1.6.2 Research ClawdHub CLI publishing commands (`clawdhub publish` or similar)
 - [ ] 1.6.3 Research skill bundle structure (SKILL.md + supporting files)
@@ -44,7 +44,7 @@
   - Prerequisites (clawdbot installation/access)
   - Step-by-step setup instructions
   - Configuration details (server URL, transport type)
-  - Link to official clawdbot documentation (https://docs.clawd.bot/)
+  - Link to official clawdbot documentation (<https://docs.clawd.bot/>)
   - Troubleshooting section
 - [ ] 4.2 Include information about ClawdHub skill registry and how to install skills
 - [ ] 4.3 Include examples of configuration and setup
@@ -56,7 +56,7 @@
   - Overview of approval/listing processes for each client
   - n8n approval process (if applicable - check for extensions directory)
   - ChatGPT approval process (if applicable - check for MCP server directory)
-  - ClawdHub skill publishing process (https://clawdhub.com/) - how to publish skills to the registry
+  - ClawdHub skill publishing process (<https://clawdhub.com/>) - how to publish skills to the registry
   - SKILL.md format requirements (YAML frontmatter with name, description, optional metadata)
   - Skill bundle structure (SKILL.md + supporting files)
   - ClawdHub CLI commands for publishing (`npx clawdhub@latest publish` or similar)

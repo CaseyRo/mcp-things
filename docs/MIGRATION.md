@@ -9,6 +9,7 @@ This guide covers upgrading from previous versions of Things 3 Enhanced MCP.
 ### Update MCP Client Configuration
 
 **Old configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -20,6 +21,7 @@ This guide covers upgrading from previous versions of Things 3 Enhanced MCP.
 ```
 
 **New configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -55,18 +57,21 @@ This guide covers upgrading from previous versions of Things 3 Enhanced MCP.
 If you were previously using the bash script (`./run_things_fastmcp.sh`):
 
 **Old way:**
+
 ```bash
 ./run_things_fastmcp.sh
 ./run_things_fastmcp.sh --host 0.0.0.0 --port 9000
 ```
 
 **New way:**
+
 ```bash
 uv run server
 THINGS_FASTMCP_HOST=0.0.0.0 THINGS_FASTMCP_PORT=9000 uv run server
 ```
 
 **Benefits:**
+
 - Simpler command syntax
 - Better dependency management with UV
 - Configuration via `.env` files

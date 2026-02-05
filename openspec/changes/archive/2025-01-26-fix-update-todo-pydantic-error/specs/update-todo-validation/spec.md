@@ -9,12 +9,14 @@
 **Rationale:** FastMCP generates Pydantic models for tool outputs based on return type annotations. If a function annotated as `-> str` returns `None`, FastMCP's validation will fail with a type error.
 
 #### Scenario: update-todo Returns String on Success
+
 **Given** a valid todo ID and update parameters
 **When** the `update-todo` tool is called successfully
 **Then** the function returns a string message like `"Successfully updated todo with ID: {id}"`
 **And** FastMCP can validate the return value without errors
 
 #### Scenario: update-todo Returns String on Error
+
 **Given** invalid parameters or a failed operation
 **When** the `update-todo` tool encounters an error
 **Then** the function returns a string error message (via `_error_result()`)
@@ -22,6 +24,7 @@
 **And** FastMCP can validate the return value without errors
 
 #### Scenario: update-todo Never Returns None
+
 **Given** any input to the `update-todo` tool
 **When** the function executes (success or failure)
 **Then** the return value is always a string (never `None`)
@@ -34,6 +37,7 @@
 **Rationale:** Without a local test, fixes must be deployed to production to verify, which is slow and risky. A local test allows rapid iteration and confidence in the fix.
 
 #### Scenario: Test Reproduces Pydantic Error
+
 **Given** the exact JSON input that triggers the error
 **When** the test calls `update_task` with mocked dependencies
 **And** the function returns `None` (simulating the bug)
@@ -41,6 +45,7 @@
 **And** the test documents the error scenario
 
 #### Scenario: Test Verifies Fix
+
 **Given** the fix is implemented
 **When** the test calls `update_task` with the same input
 **Then** the function returns a string value
@@ -48,6 +53,7 @@
 **And** the test passes
 
 #### Scenario: Test Uses Mocked Dependencies
+
 **Given** the test is a unit test
 **When** the test runs
 **Then** it uses mocked Things 3 dependencies
@@ -66,9 +72,9 @@
 **Modification:** Enhanced to require explicit string returns in all code paths to prevent Pydantic validation errors.
 
 #### Scenario: Explicit Return Type Guarantee
+
 **Given** any execution path in `update_task`
 **When** the function completes (success or exception)
 **Then** an explicit `return` statement is executed
 **And** the return value is always a `str` type
 **And** no code path can implicitly return `None`
-

@@ -7,6 +7,7 @@
 The system SHALL transform tool schemas to comply with ChatGPT's strict mode requirements.
 
 ChatGPT strict mode requires:
+
 1. `additionalProperties: false` on all object schemas
 2. All properties listed in the `required` array
 3. No `anyOf`, `oneOf`, or `allOf` constructs (already handled for n8n)
@@ -36,6 +37,7 @@ ChatGPT strict mode requires:
 The system SHALL apply all schema transformations for all MCP clients without requiring configuration.
 
 Transformations applied:
+
 1. Flatten `anyOf` to type arrays (n8n + ChatGPT)
 2. Add `additionalProperties: false` to objects (ChatGPT)
 3. Make all fields required with nullable types (ChatGPT)

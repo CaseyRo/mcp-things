@@ -7,12 +7,14 @@
 ## Why
 
 `fast_server.py` has grown to 2,404 lines (50.8% of the entire codebase), mixing:
+
 - 34 tool definitions across 5 GTD stages
 - Server configuration and middleware
 - n8n compatibility patches
 - 19 deprecated backward-compatibility tools
 
 This creates:
+
 - **Poor maintainability** - Single file too large to navigate efficiently
 - **High cognitive load** - Hard to reason about one GTD stage in isolation
 - **Testing friction** - Can't easily test one stage without loading everything

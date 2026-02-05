@@ -11,6 +11,7 @@ The Things MCP server uses a dual transport architecture (SSE for ChatGPT, strea
 5. Server startup and endpoint availability can be verified
 
 Without these tests, we cannot confidently verify that:
+
 - Transport configuration changes don't break client compatibility
 - Lifespan startup/shutdown works correctly for both transports
 - Client compatibility patches (Accept headers, schema transforms) function properly

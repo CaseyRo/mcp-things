@@ -71,4 +71,3 @@
 - [x] **4.3** Update documentation
   - Add note about return type requirements for FastMCP tools
   - Document the fix in code comments if needed
-

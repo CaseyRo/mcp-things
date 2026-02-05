@@ -3,6 +3,7 @@
 ## Context
 
 MCP servers designed for LLM agents should not mirror REST APIs. The fundamental difference:
+
 - **REST API**: Developer knows exactly what endpoint to call
 - **MCP Tools**: LLM is trying to figure out *how* to solve a problem
 
@@ -24,6 +25,7 @@ The tools should help the agent externalize thinking into Things, then guide pro
 ## Goals / Non-Goals
 
 ### Goals
+
 - Map every tool to a GTD stage for clear LLM routing
 - Support the complete GTD workflow including Clarify phase
 - Make GTD contexts (tags) a first-class filter
@@ -31,6 +33,7 @@ The tools should help the agent externalize thinking into Things, then guide pro
 - Reduce tool count while increasing GTD coverage
 
 ### Non-Goals
+
 - Full backward compatibility (will provide migration period)
 - Exposing every URL scheme parameter
 - Implementing Things features that don't exist (native delegation, repeating task editing)
@@ -51,6 +54,7 @@ The tools should help the agent externalize thinking into Things, then guide pro
 | Engage | `get-tasks`, `focus-mode`, `complete-task` |
 
 **Why:**
+
 - LLMs can route based on user intent → GTD stage → appropriate tool
 - Tool descriptions include "GTD Stage: X" for clarity
 - Covers workflows current implementation ignores entirely (Clarify, Reflect)
@@ -87,6 +91,7 @@ async def process_inbox() -> str:
 ```
 
 **Why:**
+
 - GTD Clarify is completely missing from current implementation
 - The 2-minute rule is core GTD but impossible without tool support
 - Guides agent through proper processing rather than ad-hoc organizing
@@ -117,6 +122,7 @@ async def get_tasks(
 ```
 
 **Why:**
+
 - GTD: "Context is always your first limitation when choosing what to do"
 - Current time-first design (`get-today`, `get-anytime`) ignores this
 - Supports GTD questions like "I have 15 minutes at my computer, what should I do?"
@@ -142,6 +148,7 @@ async def delegate_task(
 ```
 
 **Why:**
+
 - Delegation tracking is core GTD but missing from current tools
 - Convention matches common Things 3 GTD user practices
 - `waiting-for` tag enables filtering: `get-tasks(context="waiting-for")`
@@ -168,6 +175,7 @@ async def weekly_review() -> str:
 ```
 
 **Why:**
+
 - GTD: "Every project needs a clear next action"
 - Stalled projects are a top GTD failure mode
 - Human GTD practitioners check this weekly; agent should surface it
@@ -196,6 +204,7 @@ async def defer_task(
 ```
 
 **Why:**
+
 - Current `defer-task` doesn't explain the semantic difference
 - Users/agents confuse "someday" (incubation) with scheduling
 - GTD treats these as fundamentally different workflows
@@ -222,6 +231,7 @@ People (for agendas):
 ```
 
 **Why:**
+
 - Tools filter by these tags; users need consistent naming
 - GTD contexts are useless without user adoption
 - Document in CLAUDE.md and tool descriptions
@@ -229,21 +239,25 @@ People (for agendas):
 ## Risks / Trade-offs
 
 ### Risk: Users Don't Use GTD Tag Conventions
+
 - **Risk:** `get-tasks(context="@computer")` returns nothing if user doesn't tag
 - **Mitigation:** Document conventions, surface untagged tasks in review tools
 - **Trade-off:** Can't force GTD compliance, but can encourage it
 
 ### Risk: Stalled Project Detection Is Opinionated
+
 - **Risk:** Some projects legitimately have all future-dated tasks
 - **Mitigation:** Report as "stalled" with explanation, don't auto-fix
 - **Trade-off:** May produce false positives for legitimate cases
 
 ### Risk: Breaking Existing Integrations
+
 - **Risk:** Claude Desktop configs reference `get-inbox` not `get-tasks(view="inbox")`
 - **Mitigation:** Deprecation aliases for 2 versions
 - **Trade-off:** Churn for better long-term design
 
 ### Risk: process-inbox Is Too Prescriptive
+
 - **Risk:** GTD decision tree may not fit all users
 - **Mitigation:** Guidance is in response text, not enforced in code
 - **Trade-off:** GTD-aligned users benefit; others can ignore guidance
@@ -251,6 +265,7 @@ People (for agendas):
 ## Things 3 Specific Considerations
 
 ### What Things 3 Does Well for GTD
+
 - Inbox → Capture
 - Today/Anytime/Someday → Next Actions / Someday-Maybe
 - Areas → Areas of Focus (GTD Horizons)
@@ -259,6 +274,7 @@ People (for agendas):
 - Logbook → Completed items for review
 
 ### What Things 3 Lacks
+
 - Native delegation/Waiting For tracking (→ we use tags)
 - Convert task to project (→ we simulate: create project, move notes, delete task)
 - Energy/time estimate fields (→ we use tags)
@@ -268,6 +284,7 @@ People (for agendas):
 ### URL Scheme Requirements for GTD Tools
 
 The following URL scheme features are required:
+
 - `append-notes`: For delegation annotations
 - `add-tags`: For adding waiting-for without replacing existing tags
 - JSON bulk API: For atomic `plan-project` creation

@@ -5,6 +5,7 @@
 SSE (Server-Sent Events) transport is deprecated in the MCP protocol as of version 2025-03-26. Modern clients (n8n v1.102.3+, ChatGPT via OpenAI Agents SDK) use streamable-http transport exclusively. Maintaining dual transport support adds unnecessary complexity, increases maintenance burden, and requires testing multiple code paths for deprecated functionality.
 
 **Client Support Verification:**
+
 - **n8n**: Supports streamable-http transport only (non-streamable HTTP) as of v1.102.3+ (MCP Client Tool node)
 - **ChatGPT**: Should use streamable-http transport (modern standard). SSE is deprecated as of MCP protocol version 2025-03-26. OpenAI Agents SDK notes: "Prefer Streamable HTTP or stdio for new integrations"
 - **SSE Support**: No longer needed - removing legacy support simplifies the codebase
@@ -23,7 +24,7 @@ SSE (Server-Sent Events) transport is deprecated in the MCP protocol as of versi
 ## Impact
 
 - **Affected specs**: `server-testing` (remove SSE requirements, add streamable-http CRUD testing)
-- **Affected code**: 
+- **Affected code**:
   - `src/things_mcp/fast_server.py` - Remove SSE transport creation logic
   - `src/things_mcp/settings.py` - Simplify transport enum to only "streamable-http"
   - `src/things_mcp/client_compat.py` - Remove SSE-related compatibility code (if any)

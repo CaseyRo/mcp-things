@@ -92,17 +92,20 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 The server provides **12 GTD-native tools** organized by methodology stage:
 
 ### Capture
+
 | Tool | Purpose |
 |------|---------|
 | `capture-task` | Quick capture to Inbox without organizing |
 
 ### Clarify
+
 | Tool | Purpose |
 |------|---------|
 | `process-inbox` | Process oldest inbox item with GTD decision guidance |
 | `convert-to-project` | Transform a task into a multi-step project |
 
 ### Organize
+
 | Tool | Purpose |
 |------|---------|
 | `schedule-task` | Create organized tasks with context, dates, projects |
@@ -111,12 +114,14 @@ The server provides **12 GTD-native tools** organized by methodology stage:
 | `plan-project` | Create project with initial tasks atomically |
 
 ### Reflect
+
 | Tool | Purpose |
 |------|---------|
 | `daily-review` | Today's tasks, overdue items, inbox status |
 | `weekly-review` | Stalled projects, waiting-for items, someday review |
 
 ### Engage
+
 | Tool | Purpose |
 |------|---------|
 | `get-tasks` | Context-first task retrieval (replaces 7 view tools) |

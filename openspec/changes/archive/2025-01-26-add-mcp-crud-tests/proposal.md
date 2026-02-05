@@ -45,4 +45,3 @@ Adding a comprehensive test suite will improve code quality, enable safe refacto
   - Real integration tests run locally via `uv run test:dev` command (requires Things 3)
 - **Code Quality**: Enables safe refactoring and regression detection
 - **Test Data Management**: Real integration tests automatically clean up created items, ensuring no test data remains in Things 3
-

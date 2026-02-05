@@ -3,6 +3,7 @@
 ## Problem Analysis
 
 ### Error Details
+
 ```
 Error executing tool update-todo: 1 validation error for update_taskOutput
 Input should be a valid dictionary or instance of update_taskOutput [type=model_type, input_value=None, input_type=NoneType]
@@ -11,16 +12,19 @@ Input should be a valid dictionary or instance of update_taskOutput [type=model_
 ### Root Cause Hypotheses
 
 **Hypothesis 1: Implicit None Return**
+
 - Python functions return `None` if no explicit return statement is executed
 - Some code path in `update_task` might not have an explicit return
 - FastMCP generates Pydantic model expecting `str`, but receives `None`
 
 **Hypothesis 2: FastMCP Return Type Mismatch**
+
 - FastMCP might expect `CallToolResult` directly, not strings
 - String returns might need special handling
 - Type annotation `-> str` might not match FastMCP's expectations
 
 **Hypothesis 3: Exception Handling Issue**
+
 - Exception might be raised but not caught properly
 - Function might return `None` in exception case
 - FastMCP validation happens before exception handling
@@ -41,6 +45,7 @@ def update_task(...) -> str:
 ```
 
 **Observations:**
+
 - All code paths appear to have explicit returns
 - `_error_result()` should return `str` (recently changed)
 - Exception handling has explicit return
@@ -69,6 +74,7 @@ def update_task(...) -> str:
 **Fix Location:** `src/things_mcp/fast_server.py`
 
 **Changes:**
+
 1. Add explicit return type check in `update_task`
 2. Ensure `_error_result()` returns `str` (verify current implementation)
 3. Add defensive return statement at end of function (should never execute)
@@ -76,6 +82,7 @@ def update_task(...) -> str:
 **Test Location:** `tests/test_crud_todos.py`
 
 **Test Structure:**
+
 ```python
 class TestUpdateTodoPydanticValidation:
     """Test Pydantic validation for update-todo tool."""
@@ -91,14 +98,17 @@ class TestUpdateTodoPydanticValidation:
 ## Risks & Mitigations
 
 **Risk 1: FastMCP Behavior Change**
+
 - **Mitigation:** Test with actual FastMCP instance if possible
 - **Fallback:** Review FastMCP source code or documentation
 
 **Risk 2: Breaking Other Tools**
+
 - **Mitigation:** Only modify `update-todo`, keep other tools unchanged
 - **Verification:** Run full test suite to ensure no regressions
 
 **Risk 3: Test Doesn't Reproduce Issue**
+
 - **Mitigation:** Create test that directly calls FastMCP validation
 - **Alternative:** Test with mocked FastMCP introspection
 
@@ -118,4 +128,3 @@ class TestUpdateTodoPydanticValidation:
 - **Decision:** Use string returns (not CallToolResult) to match other tools
 - **Rationale:** Other tools (`add-todo`, `add-project`) work with `-> str` annotation
 - **Status:** Implemented in previous fix attempt, but error persists - need deeper investigation
-

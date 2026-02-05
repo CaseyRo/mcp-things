@@ -10,6 +10,7 @@ The Things MCP server currently has basic transport configuration tests but lack
 4. **Protocol Compliance**: Requests and responses conform to MCP specification requirements
 
 Without these tests, we cannot confidently verify that:
+
 - Tool discovery (`list_tools`) works correctly via streamable-http transport
 - Tool invocation (`call_tool`) handles parameters and returns proper responses
 - Error handling conforms to MCP error response format

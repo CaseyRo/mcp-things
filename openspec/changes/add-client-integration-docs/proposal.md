@@ -9,6 +9,7 @@ The Things MCP server is now compatible with n8n, ChatGPT, and clawdbot (all tes
 3. **How to get integrations approved** for listing in client directories/marketplaces
 
 Currently, integration information is scattered across compatibility guides (`docs/n8n-fastmcp-compatibility.md`, `docs/chatgpt-fastmcp-compatibility.md`) and the README, but lacks:
+
 - Step-by-step integration guides for each client
 - Links to official client documentation
 - Guidance on getting integrations approved/listed in client directories
@@ -22,7 +23,7 @@ Adding comprehensive integration documentation improves user onboarding, reduces
   - `docs/integration-chatgpt.md` - Step-by-step guide for integrating with ChatGPT's MCP integration
   - `docs/integration-clawdbot.md` - Step-by-step guide for integrating with clawdbot
 - **Official Documentation Links**: Each guide includes links to official client documentation
-- **Approval Process Guide**: Create `docs/integration-approval.md` - Guide on how to get integrations approved/listed in client directories and how to publish skills to ClawdHub (https://clawdhub.com/)
+- **Approval Process Guide**: Create `docs/integration-approval.md` - Guide on how to get integrations approved/listed in client directories and how to publish skills to ClawdHub (<https://clawdhub.com/>)
 - **README Updates**: Update README.md to link to new integration guides and consolidate client setup information
 - **Documentation Structure**: Organize integration docs in `docs/` directory with clear naming and cross-references
 

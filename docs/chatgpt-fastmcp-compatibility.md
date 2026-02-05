@@ -9,12 +9,14 @@ ChatGPT adopted MCP in March 2025. However, ChatGPT uses "strict mode" for funct
 ## Issue 1: Missing `additionalProperties: false`
 
 **GitHub Issues:**
+
 - [github-mcp-server #376](https://github.com/github/github-mcp-server/issues/376)
 - [FastMCP #855](https://github.com/jlowin/fastmcp/issues/855)
 
 **Problem:** ChatGPT strict mode requires `additionalProperties: false` on every object in the schema. Standard MCP schemas (and Pydantic-generated schemas) don't include this.
 
 **Error:**
+
 ```
 Invalid schema for function 'add_issue_comment': In context=(), 'additionalProperties' is required to be supplied and to be false.
 ```
@@ -56,6 +58,7 @@ def _add_additional_properties_false(schema: dict) -> dict:
 > "If you turn on `strict: true` in the function calling schema, then you have to list all of your fields under `required`."
 
 **Before (Standard JSON Schema):**
+
 ```json
 {
   "type": "object",
@@ -68,6 +71,7 @@ def _add_additional_properties_false(schema: dict) -> dict:
 ```
 
 **After (ChatGPT Strict Mode):**
+
 ```json
 {
   "type": "object",
@@ -126,6 +130,7 @@ def _make_all_fields_required(schema: dict) -> dict:
 **Problem:** ChatGPT strict mode doesn't support `anyOf`, `oneOf`, or `allOf` constructs. Pydantic generates `anyOf` for `Optional[T]` types.
 
 **Error:**
+
 ```
 Invalid schema: anyOf is not supported in strict mode
 ```
@@ -163,11 +168,13 @@ def _transform_schema_for_clients(schema: dict) -> dict:
 ## Testing ChatGPT Compatibility
 
 1. **Enable debug logging:**
+
    ```bash
    export THINGS_MCP_DEBUG_SCHEMA=1
    ```
 
 2. **Use ngrok for HTTPS** (ChatGPT requires HTTPS):
+
    ```bash
    ngrok http 127.0.0.1:8009
    ```
