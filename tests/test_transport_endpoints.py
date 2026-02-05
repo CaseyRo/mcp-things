@@ -23,9 +23,9 @@ class TestTransportEndpoints:
         # Verify /mcp route exists
         routes = [route for route in app.routes if isinstance(route, Mount)]
         http_routes = [r for r in routes if r.path == "/mcp"]
-        assert (
-            len(http_routes) == 1
-        ), "Streamable-HTTP endpoint should be created when transport='streamable-http'"
+        assert len(http_routes) == 1, (
+            "Streamable-HTTP endpoint should be created when transport='streamable-http'"
+        )
 
     def test_single_transport_endpoint_exists(self):
         """Only streamable-http endpoint should exist."""

@@ -139,9 +139,9 @@ class TestStreamableHTTPTransport:
         # Verify schemas don't have anyOf (should be flattened)
         for tool in tools:
             schema = tool.get("inputSchema", {})
-            assert "anyOf" not in str(
-                schema
-            ), f"Tool {tool['name']} still has anyOf in schema"
+            assert "anyOf" not in str(schema), (
+                f"Tool {tool['name']} still has anyOf in schema"
+            )
 
     @pytest.mark.asyncio
     async def test_chatgpt_additional_properties(self, mcp_client):
@@ -153,16 +153,16 @@ class TestStreamableHTTPTransport:
             schema = tool.get("inputSchema", {})
             # Check if schema has properties (object type)
             if "properties" in schema:
-                assert (
-                    schema.get("additionalProperties") is False
-                ), f"Tool {tool['name']} missing additionalProperties: false"
+                assert schema.get("additionalProperties") is False, (
+                    f"Tool {tool['name']} missing additionalProperties: false"
+                )
 
                 # Check nested objects
                 for prop_schema in schema.get("properties", {}).values():
                     if isinstance(prop_schema, dict) and "properties" in prop_schema:
-                        assert (
-                            prop_schema.get("additionalProperties") is False
-                        ), f"Tool {tool['name']} nested object missing additionalProperties: false"
+                        assert prop_schema.get("additionalProperties") is False, (
+                            f"Tool {tool['name']} nested object missing additionalProperties: false"
+                        )
 
     @pytest.mark.asyncio
     async def test_chatgpt_required_fields(self, mcp_client):
@@ -177,9 +177,9 @@ class TestStreamableHTTPTransport:
                 required = schema.get("required", [])
 
                 # All properties should be in required array
-                assert set(props.keys()) == set(
-                    required
-                ), f"Tool {tool['name']} has properties not in required array"
+                assert set(props.keys()) == set(required), (
+                    f"Tool {tool['name']} has properties not in required array"
+                )
 
                 # Optional fields should have nullable types
                 for prop_name, prop_schema in props.items():
