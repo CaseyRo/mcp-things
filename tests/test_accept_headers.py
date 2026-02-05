@@ -25,10 +25,11 @@ class TestAcceptHeaders:
         app = Starlette()
         app.add_middleware(AcceptHeaderFixMiddleware)
 
-        @app.route("/test")
         async def test_route(request):
             accept = request.headers.get("accept", "")
             return JSONResponse({"accept": accept})
+
+        app.add_route("/test", test_route)
 
         client = TestClient(app)
         response = client.get("/test", headers={"accept": "*/*"})
@@ -43,10 +44,11 @@ class TestAcceptHeaders:
         app = Starlette()
         app.add_middleware(AcceptHeaderFixMiddleware)
 
-        @app.route("/test")
         async def test_route(request):
             accept = request.headers.get("accept", "")
             return JSONResponse({"accept": accept})
+
+        app.add_route("/test", test_route)
 
         client = TestClient(app)
         response = client.get("/test")  # No Accept header
@@ -61,10 +63,11 @@ class TestAcceptHeaders:
         app = Starlette()
         app.add_middleware(AcceptHeaderFixMiddleware)
 
-        @app.route("/test")
         async def test_route(request):
             accept = request.headers.get("accept", "")
             return JSONResponse({"accept": accept})
+
+        app.add_route("/test", test_route)
 
         client = TestClient(app)
         response = client.get(
