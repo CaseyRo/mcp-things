@@ -230,16 +230,16 @@ class TestGTDClarify:
 
         # Verify project has tasks (converted from checklist)
         project_tasks = things.todos(project=project["uuid"])
-        assert (
-            len(project_tasks) >= 3
-        ), "Project should have at least 3 tasks from checklist"
+        assert len(project_tasks) >= 3, (
+            "Project should have at least 3 tasks from checklist"
+        )
 
         # Verify task titles match original checklist items
         task_titles = [t.get("title") for t in project_tasks]
         for item in checklist_items:
-            assert (
-                item in task_titles
-            ), f"Checklist item '{item}' should be a project task"
+            assert item in task_titles, (
+                f"Checklist item '{item}' should be a project task"
+            )
 
         # Verify child tasks don't have the deadline (only project has it)
         for task in project_tasks:
