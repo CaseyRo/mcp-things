@@ -45,7 +45,7 @@ uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing  # 
 ```
 src/things_mcp/
 ├── fast_server.py           # Entry point: creates MCP server, registers all tools
-├── server_core.py           # Server factory, n8n middleware, schema patches
+├── server_core.py           # Server factory, client-aware middleware, schema transforms
 ├── client_compat.py         # Client compatibility: Accept header patches, transport middleware
 ├── tool_annotations.py      # Shared TOOL_ANNOTATIONS dict
 ├── tools_gtd_core.py        # GTD Engage/Capture/Clarify tools (6 tools)
@@ -76,7 +76,7 @@ src/things_mcp/
 1. Read operations: FastMCP → things-py (SQLite) → cache → format response
 2. Write operations: FastMCP → URL scheme builder → macOS `open -g` → Things app
 
-## Key Patterns (FastMCP 3.0)
+## Key Patterns (FastMCP 3.x)
 
 - **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"])`
 - **Async tools**: All tool functions must be `async def` with `ctx: Context` parameter for logging
@@ -144,9 +144,22 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 
 **Client Setup:** All clients (ChatGPT, Claude Desktop, n8n) should use `http://localhost:8009/mcp` as the MCP server URL.
 
-## n8n Integration
+## Client Compatibility Middleware
 
-n8n's MCP Client Tool has a [known bug (#21500)](https://github.com/n8n-io/n8n/issues/21500) where it sends extra parameters (`toolCallId`, `sessionId`, `action`, `chatInput`) that cause Pydantic validation errors. The server includes `ClientCompatibilityMiddleware` that automatically strips these parameters (requires FastMCP 2.9+).
+`ClientCompatibilityMiddleware` in `server_core.py` handles all client-specific quirks using FastMCP 3.x middleware hooks:
+
+**`on_list_tools` — Client-aware schema transforms:**
+
+- Detects client type via `User-Agent` header (ChatGPT, n8n, Claude, unknown)
+- **All clients**: Flattens `anyOf` → type arrays (valid JSON Schema, needed for n8n)
+- **ChatGPT only**: Applies strict-mode transforms (`additionalProperties: false`, all fields required with nullable types)
+- Non-ChatGPT clients get standard schemas where optional params are truly optional, saving LLM tokens
+
+**`on_call_tool` — Request sanitization:**
+
+- Strips n8n-specific extra parameters (`toolCallId`, `sessionId`, `action`, `chatInput`) per [n8n bug #21500](https://github.com/n8n-io/n8n/issues/21500)
+- Strips null values for optional fields (n8n sends explicit nulls)
+- Tracks tool call statistics for shutdown summary
 
 ## Important Constraints
 

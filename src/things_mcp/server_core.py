@@ -311,125 +311,78 @@ def _make_all_fields_required(schema: dict) -> dict:
     return result
 
 
-def _patch_tool_serialization(mcp: FastMCP):
-    """Patch tool serialization for n8n and ChatGPT compatibility.
-
-    Applies schema transformations to make tools work with both:
-    - n8n: Needs anyOf flattened (can't parse anyOf constructs)
-    - ChatGPT: Needs additionalProperties:false and all fields in required
-
-    ChatGPT's requirements are a superset of n8n's, so we apply all transformations
-    to all requests. This "just works" for both clients without configuration.
-
-    Transformations applied:
-    1. Flatten anyOf to type arrays (n8n + ChatGPT)
-    2. Add additionalProperties: false to all objects (ChatGPT)
-    3. Make all fields required with nullable types (ChatGPT)
-
-    Set THINGS_MCP_DEBUG_SCHEMA=1 to log full tool schemas for debugging.
-
-    See:
-    - n8n: https://github.com/n8n-io/n8n/issues/21500
-    - ChatGPT: https://github.com/github/github-mcp-server/issues/376
-    """
-    import os
-    import json
-    import mcp.types as mcp_types
-
-    debug_schema = os.environ.get("THINGS_MCP_DEBUG_SCHEMA", "").lower() in (
-        "1",
-        "true",
-        "yes",
-    )
-
-    try:
-        # Patch the low-level request handler registered with the MCP server
-        request_handlers = mcp._mcp_server.request_handlers
-        original_handler = request_handlers[mcp_types.ListToolsRequest]
-
-        async def patched_list_tools_handler(request):
-            logger.info(
-                "ListToolsRequest handler - applying client compatibility patches"
-            )
-            result = await original_handler(request)
-            # Result is ServerResult with root=ListToolsResult
-            tools = result.root.tools
-
-            # Transform each tool's inputSchema for client compatibility
-            for tool in tools:
-                if hasattr(tool, "inputSchema") and tool.inputSchema:
-                    if debug_schema:
-                        logger.info(
-                            f"Tool '{tool.name}' BEFORE transforms: "
-                            f"{json.dumps(tool.inputSchema, indent=2)}"
-                        )
-
-                    # Apply transformations in order
-                    # 1. Flatten anyOf (n8n + ChatGPT)
-                    transformed = _flatten_anyof_for_n8n(tool.inputSchema)
-                    # 2. Add additionalProperties: false (ChatGPT)
-                    transformed = _add_additional_properties_false(transformed)
-                    # 3. Make all fields required (ChatGPT)
-                    transformed = _make_all_fields_required(transformed)
-
-                    # Modify the dict in place
-                    if isinstance(tool.inputSchema, dict):
-                        tool.inputSchema.clear()
-                        tool.inputSchema.update(transformed)
-
-                    if debug_schema:
-                        logger.info(
-                            f"Tool '{tool.name}' AFTER transforms: "
-                            f"{json.dumps(tool.inputSchema, indent=2)}"
-                        )
-
-            logger.info(
-                f"Processed {len(tools)} tools with client compatibility transforms"
-            )
-            return result
-
-        request_handlers[mcp_types.ListToolsRequest] = patched_list_tools_handler
-        logger.info(
-            "Patched ListToolsRequest handler for n8n/ChatGPT schema compatibility"
-        )
-    except Exception as e:
-        logger.warning(
-            f"Could not patch ListToolsRequest handler for client compatibility: {e}"
-        )
-
-    # Also patch CallToolRequest to strip null values from arguments
-    # n8n sends explicit nulls for empty optional fields
-    try:
-        original_call_tool = request_handlers[mcp_types.CallToolRequest]
-
-        async def patched_call_tool_handler(request):
-            # Strip null values from arguments before validation
-            if request.params and request.params.arguments:
-                args = request.params.arguments
-                null_keys = [k for k, v in args.items() if v is None]
-                for key in null_keys:
-                    del args[key]
-                    logger.debug(f"Stripped null argument '{key}' from tool call")
-            return await original_call_tool(request)
-
-        request_handlers[mcp_types.CallToolRequest] = patched_call_tool_handler
-        logger.info("Patched CallToolRequest handler for n8n null stripping")
-    except Exception as e:
-        logger.warning(
-            f"Could not patch CallToolRequest handler for client compatibility: {e}"
-        )
-
-
 class ClientCompatibilityMiddleware(Middleware):
     """Handle client-specific quirks for n8n and ChatGPT compatibility.
 
+    on_list_tools:
+    - Detects client via User-Agent header
+    - Always flattens anyOf constructs (all clients need this)
+    - Only applies ChatGPT strict-mode transforms (additionalProperties:false,
+      all-fields-required) when the client is ChatGPT
+
+    on_call_tool:
     - Strips extra parameters that n8n sends (toolCallId, sessionId, etc.)
     - Strips null values that n8n sends for optional fields
     - Tracks tool call statistics for shutdown summary
-
-    Note: ChatGPT doesn't send extra parameters, so these operations are
-    harmless no-ops for ChatGPT clients.
     """
+
+    def _detect_client(self) -> str:
+        """Detect the MCP client type from HTTP headers.
+
+        Returns one of: "chatgpt", "n8n", "claude", or "unknown".
+        """
+        try:
+            from fastmcp.server.dependencies import get_http_headers
+
+            headers = get_http_headers(include_all=True)
+            user_agent = headers.get("user-agent", "").lower()
+
+            if "chatgpt" in user_agent or "openai" in user_agent:
+                return "chatgpt"
+            if "n8n" in user_agent:
+                return "n8n"
+            if "claude" in user_agent or "anthropic" in user_agent:
+                return "claude"
+        except Exception:
+            pass
+        return "unknown"
+
+    async def on_list_tools(self, context, call_next):
+        """Apply client-aware schema transforms to tool listings.
+
+        All clients get anyOf flattening (type arrays are valid JSON Schema).
+        Only ChatGPT gets the strict-mode transforms that make every field
+        required — other clients keep normal optional parameters.
+        """
+        tools = await call_next(context)
+
+        client = self._detect_client()
+        is_chatgpt = client == "chatgpt"
+
+        if is_chatgpt:
+            logger.info(
+                "ChatGPT client detected — applying strict-mode schema transforms"
+            )
+        else:
+            logger.debug(
+                f"Client '{client}' — applying standard schema transforms (anyOf only)"
+            )
+
+        for tool in tools:
+            if hasattr(tool, "parameters") and tool.parameters:
+                # 1. Always flatten anyOf → type arrays (all clients)
+                transformed = _flatten_anyof_for_n8n(tool.parameters)
+
+                # 2-3. Only for ChatGPT: strict-mode transforms
+                if is_chatgpt:
+                    transformed = _add_additional_properties_false(transformed)
+                    transformed = _make_all_fields_required(transformed)
+
+                tool.parameters.clear()
+                tool.parameters.update(transformed)
+
+        logger.info(f"Processed {len(tools)} tool schemas for client '{client}'")
+        return tools
 
     async def on_call_tool(self, context, call_next):
         # Get tool name for stats tracking

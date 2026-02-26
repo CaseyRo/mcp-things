@@ -165,33 +165,35 @@ class TestStreamableHTTPTransport:
                         )
 
     @pytest.mark.asyncio
-    async def test_chatgpt_required_fields(self, mcp_client):
-        """Test ChatGPT compatibility: all fields in required array."""
+    async def test_standard_client_optional_fields(self, mcp_client):
+        """Test that non-ChatGPT clients get standard schemas with optional fields.
+
+        ChatGPT strict-mode transforms (all-fields-required, additionalProperties:false)
+        are only applied when a ChatGPT User-Agent is detected. Standard clients should
+        get normal JSON Schema where optional parameters are NOT in the required array.
+        """
         response = await mcp_client.list_tools()
 
         tools = response["result"]["tools"]
-        for tool in tools:
-            schema = tool.get("inputSchema", {})
-            if "properties" in schema:
-                props = schema.get("properties", {})
-                required = schema.get("required", [])
+        # Find a tool that has optional parameters (e.g., get-tasks)
+        get_tasks = next((t for t in tools if t["name"] == "get-tasks"), None)
+        assert get_tasks is not None, "get-tasks tool not found"
 
-                # All properties should be in required array
-                assert set(props.keys()) == set(required), (
-                    f"Tool {tool['name']} has properties not in required array"
-                )
+        schema = get_tasks.get("inputSchema", {})
+        props = set(schema.get("properties", {}).keys())
+        required = set(schema.get("required", []))
 
-                # Optional fields should have nullable types
-                for prop_name, prop_schema in props.items():
-                    prop_type = prop_schema.get("type")
-                    # If type is a list, it should include "null" for optional fields
-                    # (though all fields are in required, some may be nullable)
-                    if isinstance(prop_type, list):
-                        # This is fine - nullable type
-                        pass
-                    elif isinstance(prop_type, str) and prop_type != "null":
-                        # Non-nullable type is fine
-                        pass
+        # Standard clients should NOT have all fields required
+        # get-tasks has many optional params (view, context, energy, etc.)
+        assert props != required, (
+            "Standard client should not get ChatGPT strict-mode schemas "
+            "(all fields required). Only ChatGPT clients should."
+        )
+        # anyOf should still be flattened for all clients
+        for prop_schema in schema.get("properties", {}).values():
+            assert "anyOf" not in prop_schema, (
+                "anyOf should be flattened to type arrays for all clients"
+            )
 
     @pytest.mark.asyncio
     async def test_accept_header_wildcard_support(self, mcp_client):

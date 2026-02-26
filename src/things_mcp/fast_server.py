@@ -23,7 +23,6 @@ from .server_core import (
     create_mcp_server,
     get_binding_host,
     get_binding_port,
-    _patch_tool_serialization,
     DEFAULT_HOST,
     HOST_ENV_VAR,
     server_stats,
@@ -307,8 +306,10 @@ def run_things_mcp_server():
             host,
         )
 
-    # Ensure tool schema compatibility for n8n and ChatGPT
-    _patch_tool_serialization(mcp)
+    # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
+    # which detects the client type and applies transforms accordingly:
+    # - All clients: anyOf flattening (type arrays)
+    # - ChatGPT only: additionalProperties:false + all-fields-required
 
     # Check if Things app is available
     if not app_state.update_app_state():
