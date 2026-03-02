@@ -1,6 +1,6 @@
 # @format
 
-name: things3-enhanced-mcp
+name: mcp-things
 version: 2.0.0
 description: "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 
@@ -36,14 +36,14 @@ registry:
         platform: ["local"]
 
     # Documentation
-    homepage: "https://github.com/CaseyRo/things-fastmcp"
-    repository: "https://github.com/CaseyRo/things-fastmcp"
-    documentation: "https://github.com/CaseyRo/things-fastmcp#readme"
+    homepage: "https://github.com/CaseyRo/mcp-things"
+    repository: "https://github.com/CaseyRo/mcp-things"
+    documentation: "https://github.com/CaseyRo/mcp-things#readme"
 
     # Installation
     installation:
         type: "pip"
-        package: "things3-enhanced-mcp"
+        package: "mcp-things"
     # Configuration requirements
     configuration:
         required:
@@ -52,11 +52,11 @@ registry:
               type: "string"
               secret: true
         optional:
-            - name: "THINGS_FASTMCP_HOST"
+            - name: "THINGS_MCP_HOST"
               description: "Server bind address (default: 127.0.0.1, use 0.0.0.0 to expose to network)"
               type: "string"
               default: "127.0.0.1"
-            - name: "THINGS_FASTMCP_PORT"
+            - name: "THINGS_MCP_PORT"
               description: "Server port (default: 8009)"
               type: "integer"
               default: 8009

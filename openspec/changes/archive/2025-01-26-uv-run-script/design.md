@@ -30,7 +30,7 @@ The current FastMCP server uses a bash script (`run_things_fastmcp.sh`) to handl
 
 ### Decision: Maintain Environment Variable Interface
 
-**What**: Keep `THINGS_FASTMCP_HOST` and `THINGS_FASTMCP_PORT` environment variables (already implemented in FastMCP server)
+**What**: Keep `THINGS_MCP_HOST` and `THINGS_MCP_PORT` environment variables (already implemented in FastMCP server)
 **Why**: The FastMCP server already reads these environment variables directly, so no changes needed to preserve existing user workflows
 **Alternatives considered**: Command-line arguments only (rejected - environment variables are more convenient for configuration)
 

@@ -28,7 +28,7 @@ class TestServerStartup:
 
         project_root = Path(__file__).parent.parent
         env = os.environ.copy()
-        env["THINGS_FASTMCP_PORT"] = "8010"
+        env["THINGS_MCP_PORT"] = "8010"
         process = subprocess.Popen(
             [sys.executable, "-m", "things_mcp.things_fast_server"],
             stdout=subprocess.PIPE,

@@ -16,7 +16,7 @@
 
 - [x] 3.1 Add dotenv loading to FastMCP server startup
 - [x] 3.2 Create `.env.example` file with default configuration values
-- [x] 3.3 Verify `THINGS_FASTMCP_HOST` and `THINGS_FASTMCP_PORT` work with UV scripts and .env files
+- [x] 3.3 Verify `THINGS_MCP_HOST` and `THINGS_MCP_PORT` work with UV scripts and .env files
 - [x] 3.4 Test environment variable overrides with UV scripts
 - [x] 3.5 Verify default values (127.0.0.1:8009) are maintained
 

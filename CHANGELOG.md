@@ -153,7 +153,7 @@ If upgrading from 1.x:
 ### Changed
 
 - Rebranded to "Things 3 Enhanced MCP" for clear differentiation
-- Updated package name to `things3-enhanced-mcp`
+- Updated package name to `mcp_things`
 - Improved configuration token handling
 - Enhanced URL scheme operations with better error recovery
 
@@ -167,4 +167,4 @@ If upgrading from 1.x:
 
 Based on the original [things-mcp](https://github.com/hald/things-mcp) by Harald Lindstrøm
 
-[1.0.0]: https://github.com/CaseyRo/things-fastmcp/releases/tag/v1.0.0
+[1.0.0]: https://github.com/CaseyRo/mcp-things/releases/tag/v1.0.0

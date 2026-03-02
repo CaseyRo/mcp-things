@@ -343,8 +343,6 @@ async def create_mcp_client(base_url: Optional[str] = None) -> MCPClient:
     """
     if base_url is None:
         settings = get_settings()
-        base_url = (
-            f"http://{settings.things_fastmcp_host}:{settings.things_fastmcp_port}"
-        )
+        base_url = f"http://{settings.things_mcp_host}:{settings.things_mcp_port}"
 
     return MCPClient(base_url)

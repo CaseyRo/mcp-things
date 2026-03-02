@@ -13,8 +13,8 @@ Things MCP is a Model Context Protocol server for Things 3 (macOS task managemen
 
 ```bash
 # Clone and install
-git clone https://github.com/CaseyRo/things-fastmcp.git
-cd things-fastmcp
+git clone https://github.com/CaseyRo/mcp-things.git
+cd mcp_things
 uv pip install -e .
 
 # Configure authentication token
@@ -90,8 +90,8 @@ src/things_mcp/
 ## Environment Variables
 
 ```bash
-THINGS_FASTMCP_HOST=127.0.0.1    # Server bind address (default: localhost)
-THINGS_FASTMCP_PORT=8009         # Server port
+THINGS_MCP_HOST=127.0.0.1    # Server bind address (default: localhost)
+THINGS_MCP_PORT=8009         # Server port
 THINGS_MCP_TRANSPORT=streamable-http  # Transport: "streamable-http" (default, SSE removed)
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
 THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (default: INFO only)

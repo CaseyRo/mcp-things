@@ -1,7 +1,7 @@
 
 # AGENTS
 
-This file tracks the agent's thoughts, ideas, and work flow for the `things-fastmcp` repository.
+This file tracks the agent's thoughts, ideas, and work flow for the `mcp_things` repository.
 
 ## Instructions
 
@@ -68,7 +68,7 @@ This file tracks the agent's thoughts, ideas, and work flow for the `things-fast
 - Updated smithery.yaml to align with improved documentation:
   - Refreshed descriptions to match new README
   - Added all 19 tools (was only 10)
-  - Added THINGS_FASTMCP_HOST and THINGS_FASTMCP_PORT config options
+  - Added THINGS_MCP_HOST and THINGS_MCP_PORT config options
   - Updated tags for better discoverability
 
 ### 2025-10-11

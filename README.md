@@ -56,8 +56,8 @@ Contributions and ideas welcome.
 
 ```bash
 # Clone and install
-git clone https://github.com/CaseyRo/things-fastmcp.git
-cd things-fastmcp
+git clone https://github.com/CaseyRo/mcp-things.git
+cd mcp_things
 uv pip install -e .
 
 # Configure Things 3 authentication token
@@ -212,7 +212,7 @@ MIT License — see [LICENSE](LICENSE).
 
 ## Links
 
-- [GitHub Issues](https://github.com/CaseyRo/things-fastmcp/issues)
+- [GitHub Issues](https://github.com/CaseyRo/mcp-things/issues)
 - [FastMCP Documentation](https://gofastmcp.com)
 - [Things 3 URL Scheme](https://culturedcode.com/things/support/articles/2803573/)
 - [GTD Methodology](https://gettingthingsdone.com/)
