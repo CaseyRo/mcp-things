@@ -83,8 +83,8 @@ TOOL_ANNOTATIONS = {
 ### Installation
 
 ```bash
-git clone https://github.com/CaseyRo/things-fastmcp.git
-cd things-fastmcp
+git clone https://github.com/CaseyRo/mcp-things.git
+cd mcp_things
 uv pip install -e .
 
 # Configure authentication token
@@ -103,8 +103,8 @@ Key variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `THINGS_FASTMCP_HOST` | `127.0.0.1` | Server bind address |
-| `THINGS_FASTMCP_PORT` | `8009` | Server port |
+| `THINGS_MCP_HOST` | `127.0.0.1` | Server bind address |
+| `THINGS_MCP_PORT` | `8009` | Server port |
 | `THINGS_MCP_TRANSPORT` | `streamable-http` | Transport protocol (streamable-http only) |
 | `THINGS_AUTH_TOKEN` | (required) | Things URL scheme auth token |
 | `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | unset | Show Things in foreground for debugging |

@@ -1,1 +1,1 @@
-"""Tests package for things-fastmcp."""
+"""Tests package for mcp_things."""

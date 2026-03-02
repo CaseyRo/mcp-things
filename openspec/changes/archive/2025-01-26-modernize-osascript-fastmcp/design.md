@@ -80,7 +80,7 @@ end tell
 **Rationale**:
 
 - Provides a way to debug issues by allowing Things to activate (useful for troubleshooting)
-- Follows existing pattern of using environment variables for configuration (e.g., `THINGS_FASTMCP_HOST`, `THINGS_FASTMCP_PORT`)
+- Follows existing pattern of using environment variables for configuration (e.g., `THINGS_MCP_HOST`, `THINGS_MCP_PORT`)
 - Defaults to background execution enabled (False), maintaining the improved UX as default
 - Simple boolean flag - set to any non-empty value to disable background execution
 

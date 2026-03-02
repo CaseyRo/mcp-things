@@ -11,12 +11,12 @@ The system SHALL provide UV script-based execution for the FastMCP server, allow
 
 #### Scenario: Custom host and port configuration
 
-- **WHEN** user sets environment variables `THINGS_FASTMCP_HOST` and `THINGS_FASTMCP_PORT`
+- **WHEN** user sets environment variables `THINGS_MCP_HOST` and `THINGS_MCP_PORT`
 - **THEN** UV script execution respects these configuration values (same as current bash script behavior)
 
 #### Scenario: Configuration via .env file
 
-- **WHEN** user creates a `.env` file with `THINGS_FASTMCP_HOST` and `THINGS_FASTMCP_PORT` values
+- **WHEN** user creates a `.env` file with `THINGS_MCP_HOST` and `THINGS_MCP_PORT` values
 - **THEN** the server automatically loads these values at startup
 
 #### Scenario: Development mode execution
@@ -37,7 +37,7 @@ The server execution interface SHALL use UV scripts instead of bash script wrapp
 
 #### Scenario: Environment variable support
 
-- **WHEN** user sets `THINGS_FASTMCP_HOST=0.0.0.0` and `THINGS_FASTMCP_PORT=9000`
+- **WHEN** user sets `THINGS_MCP_HOST=0.0.0.0` and `THINGS_MCP_PORT=9000`
 - **THEN** the server starts on the specified host and port
 
 ## REMOVED Requirements

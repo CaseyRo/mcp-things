@@ -105,15 +105,15 @@ INSTRUCTIONS_TEXT = (
     "- Requires Things 3 for macOS with scripting permissions\n"
     "- Local data only; attachments unavailable\n"
     "- Some operations take a few seconds via URL scheme\n\n"
-    "**Support**: https://github.com/CaseyRo/things-fastmcp/issues\n"
+    "**Support**: https://github.com/CaseyRo/mcp-things/issues\n"
 )
 
-WEBSITE_URL = "https://github.com/CaseyRo/things-fastmcp"
+WEBSITE_URL = "https://github.com/CaseyRo/mcp-things"
 
 # Default values for documentation purposes
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8009
-HOST_ENV_VAR = "THINGS_FASTMCP_HOST"
+HOST_ENV_VAR = "THINGS_MCP_HOST"
 
 # Type alias supporting both newer FastMCP installs (with mcp.types.Icon)
 # and older releases that still expect simple dictionaries for icon metadata.
@@ -156,12 +156,12 @@ def _error_result(message: str):
 
 def get_binding_host() -> str:
     """Return the host for the FastMCP server from settings."""
-    return get_settings().things_fastmcp_host
+    return get_settings().things_mcp_host
 
 
 def get_binding_port() -> int:
     """Return the port for the FastMCP server from settings."""
-    return get_settings().things_fastmcp_port
+    return get_settings().things_mcp_port
 
 
 def _flatten_anyof_for_n8n(schema: dict) -> dict:

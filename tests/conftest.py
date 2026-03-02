@@ -500,7 +500,7 @@ async def mcp_client(mcp_server_process):
 
     # Wait and verify server is accessible
     settings = get_settings()
-    base_url = f"http://{settings.things_fastmcp_host}:{settings.things_fastmcp_port}"
+    base_url = f"http://{settings.things_mcp_host}:{settings.things_mcp_port}"
 
     # Try to connect with retries
     max_retries = 10

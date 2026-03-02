@@ -10,7 +10,7 @@ The current bash script (`run_things_fastmcp.sh`) adds unnecessary complexity an
 - **ADDED**: `.env.example` file with default configuration values
 - **MODIFIED**: Documentation to reflect new UV-based execution approach
 - **SIMPLIFIED**: Server startup process - users can now run `uv run server` instead of `./run_things_fastmcp.sh`
-- **NOTE**: Port configuration via `THINGS_FASTMCP_HOST` and `THINGS_FASTMCP_PORT` environment variables continues to work unchanged
+- **NOTE**: Port configuration via `THINGS_MCP_HOST` and `THINGS_MCP_PORT` environment variables continues to work unchanged
 
 ## Impact
 

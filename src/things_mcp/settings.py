@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     )
 
     # Server configuration
-    things_fastmcp_host: str = Field(
+    things_mcp_host: str = Field(
         default="127.0.0.1",
         description="Host address for the MCP server to bind to",
     )
-    things_fastmcp_port: int = Field(
+    things_mcp_port: int = Field(
         default=8009,
         ge=1,
         le=65535,
@@ -112,7 +112,7 @@ def get_host() -> str:
     Returns:
         str: The host address to bind to.
     """
-    return get_settings().things_fastmcp_host
+    return get_settings().things_mcp_host
 
 
 def get_port() -> int:
@@ -121,7 +121,7 @@ def get_port() -> int:
     Returns:
         int: The port number to listen on.
     """
-    return get_settings().things_fastmcp_port
+    return get_settings().things_mcp_port
 
 
 def get_transport() -> Literal["streamable-http"]:

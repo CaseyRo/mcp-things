@@ -67,7 +67,7 @@ If you were previously using the bash script (`./run_things_fastmcp.sh`):
 
 ```bash
 uv run server
-THINGS_FASTMCP_HOST=0.0.0.0 THINGS_FASTMCP_PORT=9000 uv run server
+THINGS_MCP_HOST=0.0.0.0 THINGS_MCP_PORT=9000 uv run server
 ```
 
 **Benefits:**

@@ -1,5 +1,5 @@
 [project]
-name = "things3-enhanced-mcp"
+name = "mcp-things"
 version = "2.0.0"
 description = "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 readme = "README.md"
@@ -41,9 +41,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/CaseyRo/things-fastmcp"
-"Bug Tracker" = "https://github.com/CaseyRo/things-fastmcp/issues"
-"Documentation" = "https://github.com/CaseyRo/things-fastmcp#readme"
+"Homepage" = "https://github.com/CaseyRo/mcp-things"
+"Bug Tracker" = "https://github.com/CaseyRo/mcp-things/issues"
+"Documentation" = "https://github.com/CaseyRo/mcp-things#readme"
 
 [build-system]
 requires = ["hatchling"]
