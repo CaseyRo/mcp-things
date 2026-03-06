@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def format_todo(todo: dict) -> str:
     """Helper function to format a single todo into a readable string."""
-    logger.debug(f"Formatting todo: {todo}")
+    logger.debug("Formatting todo uuid=%s", todo.get("uuid", "unknown"))
     todo_text = f"Title: {todo['title']}"
 
     # Add UUID for reference

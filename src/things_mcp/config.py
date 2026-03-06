@@ -12,6 +12,7 @@ Priority order for settings:
 
 import json
 import logging
+import stat
 from pathlib import Path
 
 from .settings import get_settings
@@ -44,11 +45,13 @@ def _load_legacy_config() -> dict:
 
 
 def _save_legacy_config(config: dict) -> bool:
-    """Save configuration to legacy config file."""
+    """Save configuration to legacy config file with restrictive permissions."""
     try:
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        CONFIG_DIR.chmod(stat.S_IRWXU)  # 0700
         with open(CONFIG_FILE, "w") as f:
             json.dump(config, f, indent=2)
+        CONFIG_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
         return True
     except Exception as e:
         logger.error(f"Failed to save config file: {e}")

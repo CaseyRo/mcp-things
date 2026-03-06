@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Define the full command
-CMD="/Users/caseyromkes/things-fastmcp/.venv/bin/python /Users/caseyromkes/things-fastmcp/things_fast_server.py"
+# Start Things MCP server via pm2
+# Assumes uv is installed and the project is set up
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$SCRIPT_DIR" || exit 1
 
-# Start using pm2 with a name
-pm2 start "$CMD" --interpreter none --name things-fastmcp
+pm2 start "uv run server" --interpreter none --name things-mcp

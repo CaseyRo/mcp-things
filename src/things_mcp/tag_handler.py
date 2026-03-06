@@ -6,7 +6,7 @@ Ensures tags exist before applying them.
 
 import logging
 from typing import List
-from .applescript_bridge import run_applescript
+from .applescript_bridge import run_applescript, escape_applescript_string
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ def ensure_tags_exist(tags: List[str]) -> bool:
         script_lines = ['tell application "Things3"']
 
         for tag in tags:
-            # Escape quotes in tag name
-            escaped_tag = tag.replace('"', '\\"')
+            # Escape quotes using AppleScript convention (doubled quotes)
+            escaped_tag = escape_applescript_string(tag)
 
             # Check if tag exists, create if not
             script_lines.extend(

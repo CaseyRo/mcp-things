@@ -2,6 +2,7 @@ import json
 import logging
 import platform
 import random
+import re
 import subprocess
 import time
 import urllib.parse
@@ -10,6 +11,11 @@ from typing import Any, Dict, Optional, Union
 from .utils import circuit_breaker, rate_limiter, is_things_running
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_url_for_logging(url: str) -> str:
+    """Remove auth-token value from URL before logging."""
+    return re.sub(r"(auth-token=)[^&\"]+", r"\1[REDACTED]", url)
 
 
 def launch_things() -> bool:
@@ -36,33 +42,30 @@ def launch_things() -> bool:
 
 
 def _open_url_background(url: str) -> bool:
-    """Attempt to open a URL without bringing the browser to the foreground.
+    """Open a URL in the background using ``open -g`` on macOS.
 
-    Uses ``osascript`` on macOS to execute ``open -g`` so the URL is handled in
-    the background. Returns ``True`` if the AppleScript command succeeded,
-    otherwise ``False``.
+    Uses a direct subprocess call (no shell interpretation) to avoid
+    injection risks.
     """
     if platform.system() != "Darwin":
         return False
 
     try:
-        # Use open -g to avoid stealing focus from the foreground application
-        script = f'do shell script "open -g \\"{url}\\""'
         result = subprocess.run(
-            ["osascript", "-e", script],
+            ["open", "-g", url],
             capture_output=True,
             text=True,
             check=False,
         )
         if result.returncode != 0:
-            logger.error(f"osascript error: {result.stderr}")
+            logger.error("open -g failed (exit %d)", result.returncode)
             return False
         return True
     except FileNotFoundError:
-        logger.warning("osascript not found; falling back to webbrowser")
+        logger.warning("'open' command not found; falling back to webbrowser")
         return False
     except Exception as e:
-        logger.error(f"Error running osascript: {str(e)}")
+        logger.error("Error running open -g: %s", type(e).__name__)
         return False
 
 
@@ -74,7 +77,7 @@ def execute_url(url: str) -> bool:
     url = url.replace("+", "%20")
 
     # Log the URL for debugging
-    logger.debug(f"Executing URL: {url}")
+    logger.debug("Executing URL: %s", _sanitize_url_for_logging(url))
 
     # Apply rate limiting
     rate_limiter.wait_if_needed()
@@ -100,7 +103,7 @@ def execute_url(url: str) -> bool:
 
         if not result:
             circuit_breaker.record_failure()
-            logger.error(f"Failed to open URL: {url}")
+            logger.error("Failed to open URL: %s", _sanitize_url_for_logging(url))
             return False
 
         # Add a small delay to allow Things time to process the command
@@ -110,8 +113,8 @@ def execute_url(url: str) -> bool:
 
         circuit_breaker.record_success()
         return True
-    except Exception as e:
-        logger.error(f"Failed to execute URL: {url}, Error: {str(e)}")
+    except Exception:
+        logger.error("Failed to execute URL: %s", _sanitize_url_for_logging(url))
         circuit_breaker.record_failure()
         return False
 
@@ -139,8 +142,7 @@ def execute_xcallback_url(action: str, params: Dict[str, Any]) -> bool:
     # Construct URL - action is part of the path (not a separate query parameter)
     url = f"{base_url}{action}?{urllib.parse.urlencode(callback_params)}"
 
-    # Log the URL for debugging
-    logger.debug(f"Executing URL: {url}")
+    logger.debug("Executing xcallback URL: %s", _sanitize_url_for_logging(url))
 
     return execute_url(url)
 
@@ -223,7 +225,7 @@ def construct_url(command: str, params: Dict[str, Any]) -> str:
 
         url += "?" + "&".join(encoded_params)
 
-    logger.debug(f"Constructed Things URL: {url}")
+    logger.debug("Constructed Things URL: %s", _sanitize_url_for_logging(url))
     return url
 
 

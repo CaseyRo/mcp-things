@@ -106,8 +106,5 @@ def escape_applescript_string(text: str) -> str:
     if not text:
         return ""
 
-    # Replace any "+" with spaces first
-    text = text.replace("+", " ")
-
     # Escape quotes by doubling them (AppleScript style)
     return text.replace('"', '""')
