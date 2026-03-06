@@ -300,9 +300,9 @@ def run_things_mcp_server():
             HOST_ENV_VAR,
         )
     else:
-        logger.info(
-            "FastMCP binding override detected: %s=%s",
-            HOST_ENV_VAR,
+        logger.warning(
+            "SECURITY WARNING: Server is binding to %s with no authentication. "
+            "All MCP tools are publicly accessible. Only do this on trusted networks.",
             host,
         )
 

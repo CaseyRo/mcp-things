@@ -79,6 +79,7 @@ def _redact_message_text(message: str) -> str:
         (r"(notes\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
         (r"(tags\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
         (r"(params\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
+        (r"(auth-token=)([^&\"]+)", r"\1" + REDACTION_TOKEN),
     ]
     redacted = message
     for pattern, repl in patterns:

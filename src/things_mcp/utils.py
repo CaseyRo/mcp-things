@@ -8,8 +8,11 @@ import logging
 import os
 import platform
 import subprocess
+from pathlib import Path
 import mcp.types as types
 from typing import Optional
+
+_DEFAULT_DLQ_FILE = Path.home() / ".things-mcp" / "things_dlq.json"
 
 logger = logging.getLogger(__name__)
 
@@ -206,8 +209,9 @@ class CircuitBreaker:
 class DeadLetterQueue:
     """Store persistently failed operations for manual review"""
 
-    def __init__(self, dlq_file="things_dlq.json"):
-        self.dlq_file = dlq_file
+    def __init__(self, dlq_file=None):
+        self.dlq_file = str(Path(dlq_file) if dlq_file else _DEFAULT_DLQ_FILE)
+        Path(self.dlq_file).parent.mkdir(parents=True, exist_ok=True)
         self.queue = self._load_queue()
 
     def _load_queue(self):

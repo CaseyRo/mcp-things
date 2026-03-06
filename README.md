@@ -85,17 +85,41 @@ uv run dev
 
 ### Claude Desktop Integration
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+First, start the server (it must be running for Claude to connect):
+
+```bash
+uv run server
+```
+
+Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "things": {
-      "command": "uv",
-      "args": ["run", "server"]
+      "url": "http://127.0.0.1:8009/mcp"
     }
   }
 }
+```
+
+> **Fallback:** If your Claude Desktop version doesn't support `url`, use the mcp-remote bridge:
+>
+> ```json
+> {
+>   "mcpServers": {
+>     "things": {
+>       "command": "npx",
+>       "args": ["mcp-remote", "http://127.0.0.1:8009/mcp"]
+>     }
+>   }
+> }
+> ```
+
+### Claude Code Integration
+
+```bash
+claude mcp add --transport http things http://127.0.0.1:8009/mcp
 ```
 
 ## GTD Tools

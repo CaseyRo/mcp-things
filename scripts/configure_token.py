@@ -27,7 +27,8 @@ def setup_auth_token():
     # Display current token if any
     current_token = config.get_things_auth_token()
     if current_token:
-        print(f"\nCurrent token: {current_token}")
+        masked = current_token[:4] + "*" * (len(current_token) - 4)
+        print(f"\nToken configured: {masked}")
     else:
         print("\nNo token currently configured.")
 
