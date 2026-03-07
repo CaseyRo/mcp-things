@@ -60,6 +60,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`modify-task` now supports moving tasks to projects and areas** — new `project` and `area` parameters resolve names or UUIDs and use the Things URL scheme `list-id` parameter. Previously required raw URL scheme workarounds.
+- **`update_todo()` now supports `list_id` parameter** — wires up the Things URL scheme `list-id` field for moving tasks between projects/areas
+- **`format_todo()` now includes created date** — all task displays (process-inbox, get-tasks, search-tasks, etc.) now show when tasks were created
+- **`process-inbox` decision tree references correct tool name** — changed `update-todo` to `modify-task` in the GTD decision tree guidance
 - **convert-to-project now preserves checklist items and deadline**
   - Checklist items from the original task are converted to project tasks
   - Task deadline is preserved on the project (not on child tasks)

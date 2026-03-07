@@ -30,6 +30,45 @@ def _error_result(message: str):
     raise ToolError(message)
 
 
+def _resolve_list_id(name_or_uuid: str, list_type: str) -> str:
+    """Resolve a project/area name or UUID to a UUID.
+
+    Args:
+        name_or_uuid: Project/area name or UUID
+        list_type: "project" or "area"
+
+    Returns:
+        UUID string
+
+    Raises:
+        ToolError if not found or ambiguous
+    """
+    # If it looks like a UUID (long alphanumeric), try direct lookup first
+    item = things.get(name_or_uuid)
+    if item:
+        return name_or_uuid
+
+    # Search by name
+    if list_type == "project":
+        items = things.projects()
+    else:
+        items = things.areas()
+
+    matches = [
+        i for i in (items or []) if i.get("title", "").lower() == name_or_uuid.lower()
+    ]
+
+    if len(matches) == 1:
+        return matches[0]["uuid"]
+    elif len(matches) > 1:
+        raise ToolError(
+            f"Multiple {list_type}s match '{name_or_uuid}'. "
+            f"Use UUID instead: {', '.join(m['uuid'] for m in matches)}"
+        )
+    else:
+        raise ToolError(f"{list_type.capitalize()} not found: {name_or_uuid}")
+
+
 def register_gtd_organize_tools(mcp: FastMCP):
     """Register GTD Organize stage tools with the MCP server."""
 
@@ -370,6 +409,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
         add_tags: Optional[List[str]] = None,
         checklist: Optional[List[str]] = None,
         add_checklist: Optional[List[str]] = None,
+        project: Optional[str] = None,
+        area: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
         """General task modification for updates not covered by specific tools.
@@ -389,6 +430,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
             add_tags: Tags to add (preserves existing)
             checklist: New checklist items (replaces existing)
             add_checklist: Checklist items to append (preserves existing)
+            project: Project name or UUID to move task to
+            area: Area name or UUID to move task to
         """
         if ctx:
             await ctx.info("Updating task...")
@@ -404,6 +447,13 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if all_tags:
                 ensure_tags_exist(all_tags)
 
+            # Resolve project/area name to UUID if needed
+            list_id = None
+            if project:
+                list_id = _resolve_list_id(project, "project")
+            elif area:
+                list_id = _resolve_list_id(area, "area")
+
             # Build URL
             url = update_todo(
                 id=task_id,
@@ -416,15 +466,22 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 add_tags=add_tags,
                 checklist_items=checklist,
                 append_checklist_items=add_checklist,
+                list_id=list_id,
             )
 
             success = execute_url(url)
             if not success:
                 _error_result("Failed to update task")
 
-            invalidate_caches_for(["get-tasks"])
+            invalidate_caches_for(["get-tasks", "get-projects"])
 
-            return "Task updated successfully."
+            result = "Task updated successfully."
+            if project:
+                result += f" Moved to project: {project}"
+            elif area:
+                result += f" Moved to area: {area}"
+
+            return result
 
         except ToolError:
             raise
