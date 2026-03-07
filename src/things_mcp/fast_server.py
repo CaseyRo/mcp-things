@@ -36,6 +36,7 @@ from .settings import get_transport, is_debug_enabled
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
+from .config import ensure_auth_token
 from .logging_config import setup_logging, get_logger
 
 # Import tool registration functions
@@ -291,6 +292,13 @@ def run_things_mcp_server():
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+    # Ensure auth token is configured before starting
+    token = ensure_auth_token()
+    if not token:
+        logger.error(
+            "No auth token configured. Server will start but write operations will fail."
+        )
 
     host = get_binding_host()
     if host == DEFAULT_HOST:
