@@ -489,7 +489,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             output += "\n\n---\n\n"
             output += "**GTD Decision Tree:**\n\n"
             output += "1. **Is this actionable?**\n"
-            output += "   - No, trash it -> Use update-todo with canceled=true\n"
+            output += "   - No, trash it -> Use modify-task with canceled=true\n"
             output += "   - No, maybe later -> Use defer-task with defer_to='someday'\n"
             output += "   - No, reference -> Add to notes elsewhere\n"
             output += "   - **Yes, it's actionable ->** Continue...\n\n"

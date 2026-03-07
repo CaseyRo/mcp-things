@@ -324,6 +324,7 @@ def update_todo(
     checklist_items: Optional[list[str]] = None,
     prepend_checklist_items: Optional[list[str]] = None,
     append_checklist_items: Optional[list[str]] = None,
+    list_id: Optional[str] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None,
 ) -> str:
@@ -342,6 +343,7 @@ def update_todo(
         checklist_items: Checklist items (replaces existing)
         prepend_checklist_items: Items to add at beginning of checklist
         append_checklist_items: Items to add at end of checklist
+        list_id: UUID of project or area to move the task to
         completed: Mark as completed
         canceled: Mark as canceled
     """
@@ -362,6 +364,7 @@ def update_todo(
         "append-checklist-items": "\n".join(append_checklist_items)
         if append_checklist_items
         else None,
+        "list-id": list_id,
         "completed": completed,
         "canceled": canceled,
     }
