@@ -12,7 +12,9 @@ Priority order for settings:
 
 import json
 import logging
+import os
 import stat
+import sys
 from pathlib import Path
 
 from .settings import get_settings
@@ -136,3 +138,102 @@ def load_config() -> dict:
 def save_config() -> bool:
     """Save current config to file (legacy compatibility)."""
     return _save_legacy_config(get_config())
+
+
+def _find_env_file() -> Path:
+    """Find the .env file, searching from the working directory upward."""
+    # Check common locations
+    candidates = [
+        Path.cwd() / ".env",
+        Path(__file__).parent.parent.parent / ".env",  # project root
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    # Default to project root
+    return Path(__file__).parent.parent.parent / ".env"
+
+
+def _write_token_to_env(token: str) -> bool:
+    """Write or update THINGS_AUTH_TOKEN in the .env file."""
+    env_path = _find_env_file()
+    try:
+        if env_path.exists():
+            content = env_path.read_text()
+            # Replace existing token line
+            lines = content.splitlines(keepends=True)
+            found = False
+            for i, line in enumerate(lines):
+                if line.startswith("THINGS_AUTH_TOKEN="):
+                    lines[i] = f"THINGS_AUTH_TOKEN={token}\n"
+                    found = True
+                    break
+            if not found:
+                # Add a newline separator only if the file doesn't already end with one
+                prefix = "" if lines and lines[-1].endswith("\n") else "\n"
+                lines.append(f"{prefix}THINGS_AUTH_TOKEN={token}\n")
+            env_path.write_text("".join(lines))
+        else:
+            env_path.write_text(f"THINGS_AUTH_TOKEN={token}\n")
+        env_path.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
+        return True
+    except Exception as e:
+        logger.error(f"Failed to write token to .env: {e}")
+        return False
+
+
+def ensure_auth_token() -> str:
+    """Check for auth token at startup; prompt interactively if missing.
+
+    Returns the token, or exits if none provided and stdin is a terminal.
+    If stdin is not a terminal (e.g. running as a service), logs an error
+    and returns empty string to let the caller decide.
+    """
+    token = get_things_auth_token()
+    if token:
+        return token
+
+    # Non-interactive: can't prompt
+    if not sys.stdin.isatty():
+        logger.error(
+            "No THINGS_AUTH_TOKEN configured. "
+            "Set it in .env or run: python scripts/configure_token.py"
+        )
+        return ""
+
+    # Interactive prompt
+    print("\n" + "=" * 50)
+    print("  Things MCP - Auth Token Required")
+    print("=" * 50)
+    print("\nNo authentication token found.")
+    print("Find it in: Things 3 → Settings → General → Enable Things URLs")
+    print("\nPaste your token (or Ctrl+C to quit):")
+
+    try:
+        new_token = input("> ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print("\nAborted.")
+        sys.exit(1)
+
+    if not new_token:
+        print("\nNo token provided. Server cannot start without it.")
+        sys.exit(1)
+
+    # Reject tokens with newlines/carriage returns to prevent env var injection
+    if "\n" in new_token or "\r" in new_token:
+        print("\nInvalid token (contains newline characters).")
+        sys.exit(1)
+
+    # Save to .env
+    env_path = _find_env_file()
+    if _write_token_to_env(new_token):
+        print(f"Token saved to {env_path}")
+    else:
+        print("Warning: Could not save to .env, using token for this session only.")
+
+    # Update the environment so pydantic-settings picks it up
+    os.environ["THINGS_AUTH_TOKEN"] = new_token
+    get_settings.cache_clear()
+
+    print("Continuing startup...\n")
+    return new_token
