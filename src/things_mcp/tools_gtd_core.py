@@ -568,13 +568,18 @@ def register_gtd_core_tools(mcp: FastMCP):
                 if item.get("status") != "completed":
                     tasks.append({"title": item.get("title", ""), "when": "anytime"})
 
+            # Ensure tags exist before creating the project
+            project_tags = task.get("tags")
+            if project_tags:
+                ensure_tags_exist(project_tags)
+
             # Use JSON API for atomic creation
             url = add_project_with_tasks(
                 title=project_title,
                 tasks=tasks,
                 notes=project_notes,
                 deadline=project_deadline,
-                tags=task.get("tags"),
+                tags=project_tags,
                 area=task.get("area_title"),
             )
             success = execute_url(url)
