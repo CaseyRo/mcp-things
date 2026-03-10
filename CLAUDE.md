@@ -49,9 +49,11 @@ src/things_mcp/
 ├── client_compat.py         # Client compatibility: Accept header patches, transport middleware
 ├── tool_annotations.py      # Shared TOOL_ANNOTATIONS dict
 ├── tools_gtd_core.py        # GTD Engage/Capture/Clarify tools (6 tools)
-├── tools_gtd_organize.py    # GTD Organize stage tools (5 tools)
+├── tools_gtd_organize.py    # GTD Organize stage tools (6 tools)
 ├── tools_gtd_reflect.py     # GTD Reflect stage tools (2 tools)
-├── tools_utility.py         # Utility tools: search, list, cache stats (6 tools)
+├── tools_utility.py         # Utility tools: search, list, cache stats (7 tools)
+├── triage_tracker.py        # Triage action tracking, categorization, trend analysis
+├── dashboard.html           # GTD Health Dashboard (served at /dashboard)
 ├── url_scheme.py            # Things URL scheme builders + execution (things:///)
 ├── applescript_bridge.py    # AppleScript execution (run_applescript())
 ├── formatters.py            # Output formatting for todos/projects/areas
@@ -62,14 +64,14 @@ src/things_mcp/
 └── config.py                # Configuration management
 ```
 
-**Tool Organization by GTD Stage (19 tools total):**
+**Tool Organization by GTD Stage (21 tools total):**
 
 - **Engage** (3): get-tasks, focus-mode, complete-task
 - **Capture** (1): capture-task
 - **Clarify** (2): process-inbox, convert-to-project
-- **Organize** (5): schedule-task, delegate-task, defer-task, plan-project, modify-task
+- **Organize** (6): schedule-task, delegate-task, defer-task, plan-project, modify-task, create-area
 - **Reflect** (2): daily-review, weekly-review
-- **Utility** (6): search-tasks, get-projects, get-areas, get-tags, show-in-app, get-cache-stats
+- **Utility** (7): search-tasks, get-projects, get-areas, get-tags, show-in-app, get-cache-stats, triage-insights
 
 **Data Flow:**
 

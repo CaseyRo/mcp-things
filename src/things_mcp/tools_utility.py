@@ -15,6 +15,7 @@ from .url_scheme import show, launch_things
 from .logging_config import get_logger
 from .cache import get_cache_stats
 from .tool_annotations import TOOL_ANNOTATIONS
+from .triage_tracker import triage_tracker
 
 logger = get_logger(__name__)
 
@@ -198,3 +199,126 @@ def register_utility_tools(mcp: FastMCP):
 - Cache misses: {stats["misses"]}
 - Hit rate: {stats["hit_rate"]}
 - Total requests: {stats["total_requests"]}"""
+
+    @mcp.tool(
+        name="triage-insights",
+        annotations=TOOL_ANNOTATIONS["triage-insights"],
+        timeout=5,
+    )
+    async def triage_insights(
+        days: int = 7,
+        category: Optional[str] = None,
+        action: Optional[str] = None,
+        show_trends: bool = False,
+        ctx: Context = None,
+    ) -> str:
+        """Get insights into your inbox triage patterns.
+
+        GTD Stage: Reflect
+        Use when: Understanding capture and processing habits.
+
+        Args:
+            days: Number of days to analyze (default 7, 0 for all time)
+            category: Filter by category (repo-research, vague-capture, client-person, etc.)
+            action: Filter by action (completed, canceled, deferred-someday, delegated, etc.)
+            show_trends: Show week-over-week trends (4 weeks)
+        """
+        if ctx:
+            await ctx.info("Analyzing triage patterns...")
+
+        try:
+            summary = triage_tracker.get_summary(days=days)
+
+            if summary["total"] == 0:
+                period = f"last {days} days" if days > 0 else "all time"
+                return (
+                    f"No triage activity recorded in the {period}.\n\n"
+                    "Triage actions are tracked automatically when you process "
+                    "inbox items using complete-task, modify-task, defer-task, etc."
+                )
+
+            # Header
+            period = f"last {days} days" if days > 0 else "all time"
+            total = summary["total"]
+            avg = summary["avg_per_day"]
+            sessions = summary["sessions"]
+            output = f"# Triage Insights ({period})\n\n"
+            output += f"**{total} items triaged**"
+            if sessions:
+                output += f" across {sessions} session{'s' if sessions != 1 else ''}"
+            output += f" | {avg}/day avg"
+            if summary["busiest_day"]:
+                output += f" | Busiest: {summary['busiest_day']}"
+            output += "\n\n"
+
+            # Action breakdown
+            actions = summary["actions"]
+            if actions:
+                output += "## Actions\n\n"
+                for act, count in sorted(actions.items(), key=lambda x: -x[1]):
+                    pct = int(count / total * 100)
+                    output += f"- {act}: {count} ({pct}%)\n"
+                output += "\n"
+
+            # Category breakdown
+            categories = summary["categories"]
+            if categories:
+                output += "## Categories\n\n"
+                for cat, count in sorted(categories.items(), key=lambda x: -x[1]):
+                    pct = int(count / total * 100)
+                    output += f"- {cat}: {count} ({pct}%)\n"
+                output += "\n"
+
+            # Actionable insights
+            insights = []
+            cancel_rate = summary["no_context_cancel_rate"]
+            if cancel_rate > 0.3:
+                pct = int(cancel_rate * 100)
+                insights.append(
+                    f"{pct}% of canceled items had no context at capture. "
+                    "Adding notes when capturing could save triage time."
+                )
+
+            vague_count = categories.get("vague-capture", 0)
+            if vague_count > 0 and total > 0:
+                vague_pct = int(vague_count / total * 100)
+                if vague_pct > 25:
+                    insights.append(
+                        f"{vague_pct}% of captures were vague (short title, no notes). "
+                        "Try adding context when capturing to speed up future triage."
+                    )
+
+            delegated = actions.get("delegated", 0)
+            if total > 10 and delegated == 0:
+                insights.append(
+                    "Nothing was delegated this period. "
+                    "GTD recommends delegating tasks others can do."
+                )
+
+            if insights:
+                output += "## Insights\n\n"
+                for insight in insights:
+                    output += f"- {insight}\n"
+                output += "\n"
+
+            # Trends
+            if show_trends:
+                trends = triage_tracker.get_trends(weeks=4)
+                if trends:
+                    output += "## Weekly Trends\n\n"
+                    for i, week in enumerate(trends):
+                        arrow = ""
+                        if i < len(trends) - 1:
+                            prev = trends[i + 1]["total"]
+                            curr = week["total"]
+                            if curr > prev:
+                                arrow = " ^"
+                            elif curr < prev:
+                                arrow = " v"
+                        output += f"- Week of {week['week_start']}: {week['total']} items{arrow}\n"
+
+            return output
+
+        except Exception as e:
+            logger.error(f"Error in triage insights: {str(e)}")
+            _error_result(f"Error analyzing triage patterns: {str(e)}")

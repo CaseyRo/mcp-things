@@ -21,6 +21,8 @@ from .logging_config import get_logger
 from .cache import invalidate_caches_for
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS
+from .applescript_bridge import run_applescript, escape_applescript_string
+from .triage_tracker import triage_tracker
 
 logger = get_logger(__name__)
 
@@ -116,6 +118,13 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if tags:
                 ensure_tags_exist(tags)
 
+            # Resolve project or area to list_id/list_title
+            list_id = None
+            list_title = project  # project name passed directly
+            if area:
+                list_id = _resolve_list_id(area, "area")
+                list_title = None  # area uses list_id, not list_title
+
             # Build URL
             url = add_todo(
                 title=title,
@@ -124,7 +133,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 deadline=deadline,
                 tags=tags,
                 checklist_items=checklist,
-                list_title=project,  # project name
+                list_id=list_id,
+                list_title=list_title,
             )
 
             success = execute_url(url)
@@ -218,6 +228,19 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-tasks"])
 
+            # Track triage action
+            try:
+                triage_tracker.record(
+                    task_id=task_id,
+                    task_title=task.get("title", ""),
+                    task_notes=task.get("notes"),
+                    task_tags=task.get("tags"),
+                    action="delegated",
+                    action_details={"delegated_to": delegated_to},
+                )
+            except Exception:
+                logger.debug("Triage tracking failed (non-critical)")
+
             result = f"Delegated to {delegated_to}: {original_title}\n"
             result += "- Tagged: waiting-for\n"
             if follow_up_date:
@@ -257,6 +280,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
             await ctx.info(f"Deferring task to {defer_to}...")
 
         try:
+            # Fetch task data before update (needed for categorization)
+            task_data = things.get(task_id) or {}
+
             # Ensure Things app is running
             if not app_state.update_app_state():
                 if not launch_things():
@@ -301,6 +327,22 @@ def register_gtd_organize_tools(mcp: FastMCP):
             invalidate_caches_for(
                 ["get-tasks", "get-today", "get-upcoming", "get-someday"]
             )
+
+            # Track triage action
+            try:
+                action = (
+                    "deferred-someday" if defer_to == "someday" else "deferred-date"
+                )
+                triage_tracker.record(
+                    task_id=task_id,
+                    task_title=task_data.get("title", ""),
+                    task_notes=task_data.get("notes"),
+                    task_tags=task_data.get("tags"),
+                    action=action,
+                    action_details={"defer_to": defer_to},
+                )
+            except Exception:
+                logger.debug("Triage tracking failed (non-critical)")
 
             if defer_to == "someday":
                 return (
@@ -411,6 +453,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         add_checklist: Optional[List[str]] = None,
         project: Optional[str] = None,
         area: Optional[str] = None,
+        canceled: Optional[bool] = None,
         ctx: Context = None,
     ) -> str:
         """General task modification for updates not covered by specific tools.
@@ -432,6 +475,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
             add_checklist: Checklist items to append (preserves existing)
             project: Project name or UUID to move task to
             area: Area name or UUID to move task to
+            canceled: Set to true to trash/cancel the task
         """
         if ctx:
             await ctx.info("Updating task...")
@@ -467,16 +511,42 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 checklist_items=checklist,
                 append_checklist_items=add_checklist,
                 list_id=list_id,
+                canceled=canceled,
             )
 
             success = execute_url(url)
             if not success:
                 _error_result("Failed to update task")
 
-            invalidate_caches_for(["get-tasks", "get-projects"])
+            invalidate_caches_for(["get-tasks", "get-projects", "get-inbox"])
+
+            # Track triage action
+            try:
+                task_data = things.get(task_id) or {}
+                action = "canceled" if canceled else "modified"
+                triage_tracker.record(
+                    task_id=task_id,
+                    task_title=task_data.get("title", ""),
+                    task_notes=task_data.get("notes"),
+                    task_tags=task_data.get("tags"),
+                    action=action,
+                    action_details={
+                        k: v
+                        for k, v in {
+                            "moved_to_project": project,
+                            "moved_to_area": area,
+                            "scheduled": when,
+                        }.items()
+                        if v
+                    },
+                )
+            except Exception:
+                logger.debug("Triage tracking failed (non-critical)")
 
             result = "Task updated successfully."
-            if project:
+            if canceled:
+                result = "Task canceled."
+            elif project:
                 result += f" Moved to project: {project}"
             elif area:
                 result += f" Moved to area: {area}"
@@ -488,3 +558,70 @@ def register_gtd_organize_tools(mcp: FastMCP):
         except Exception as e:
             logger.error(f"Error updating task: {str(e)}")
             _error_result(f"Error updating task: {str(e)}")
+
+    @mcp.tool(
+        name="create-area", annotations=TOOL_ANNOTATIONS["create-area"], timeout=30
+    )
+    async def create_area(
+        name: str,
+        tags: Optional[List[str]] = None,
+        ctx: Context = None,
+    ) -> str:
+        """Create a new area in Things.
+
+        GTD Stage: Organize
+        Use when: Setting up a new area of responsibility (e.g., Health, Finance, Work).
+        Areas are not created via the URL scheme — this uses AppleScript.
+
+        Args:
+            name: Area name (e.g., "Health", "Side Projects")
+            tags: Optional tags to assign to the area
+        """
+        if ctx:
+            await ctx.info(f"Creating area: {name}...")
+
+        try:
+            # Ensure Things app is running
+            if not app_state.update_app_state():
+                if not launch_things():
+                    _error_result("Unable to launch Things app")
+
+            # Check if area already exists
+            existing_areas = things.areas()
+            if any(
+                a.get("title", "").lower() == name.lower()
+                for a in (existing_areas or [])
+            ):
+                _error_result(f"Area already exists: {name}")
+
+            # Build AppleScript to create the area
+            escaped_name = escape_applescript_string(name)
+            if tags:
+                ensure_tags_exist(tags)
+                escaped_tags = ", ".join(escape_applescript_string(t) for t in tags)
+                script = (
+                    f'tell application "Things3"\n'
+                    f'  make new area with properties {{name:"{escaped_name}", tag names:"{escaped_tags}"}}\n'
+                    f"end tell"
+                )
+            else:
+                script = (
+                    f'tell application "Things3"\n'
+                    f'  make new area with properties {{name:"{escaped_name}"}}\n'
+                    f"end tell"
+                )
+
+            result = run_applescript(script)
+
+            if result is False:
+                _error_result(f"Failed to create area: {name}")
+
+            invalidate_caches_for(["get-areas"])
+
+            return f"Created area: {name}"
+
+        except ToolError:
+            raise
+        except Exception as e:
+            logger.error(f"Error creating area: {str(e)}")
+            _error_result(f"Error creating area: {str(e)}")

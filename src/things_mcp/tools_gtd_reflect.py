@@ -9,6 +9,7 @@ from fastmcp.exceptions import ToolError
 
 from .logging_config import get_logger
 from .tool_annotations import TOOL_ANNOTATIONS
+from .triage_tracker import triage_tracker
 
 logger = get_logger(__name__)
 
@@ -205,6 +206,51 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                     output += f"- ~~{c.get('title')}~~\n"
                 if len(completed) > 5:
                     output += f"- ...and {len(completed) - 5} more\n"
+
+            # 6. Triage activity this week
+            try:
+                triage_summary = triage_tracker.get_summary(days=7)
+                if triage_summary["total"] > 0:
+                    output += "\n## Triage Activity This Week\n\n"
+                    total = triage_summary["total"]
+                    sessions = triage_summary["sessions"]
+                    avg = triage_summary["avg_per_day"]
+
+                    output += f"You triaged {total} item{'s' if total != 1 else ''}"
+                    if sessions:
+                        output += (
+                            f" across {sessions} session{'s' if sessions != 1 else ''}"
+                        )
+                    output += f" ({avg}/day avg).\n\n"
+
+                    # Action breakdown — plain language
+                    actions = triage_summary["actions"]
+                    if actions:
+                        parts = []
+                        for action, count in sorted(
+                            actions.items(), key=lambda x: -x[1]
+                        ):
+                            parts.append(f"{count} {action}")
+                        output += "**Actions:** " + ", ".join(parts) + "\n\n"
+
+                    # Top categories
+                    categories = triage_summary["categories"]
+                    if categories:
+                        top = sorted(categories.items(), key=lambda x: -x[1])[:3]
+                        parts = [f"{cat} ({count})" for cat, count in top]
+                        output += "**Top categories:** " + ", ".join(parts) + "\n\n"
+
+                    # Actionable insight: no-context cancellation rate
+                    cancel_rate = triage_summary["no_context_cancel_rate"]
+                    if cancel_rate > 0.3:
+                        pct = int(cancel_rate * 100)
+                        output += (
+                            f"**Insight:** {pct}% of canceled items had no context "
+                            "at capture. Adding notes when capturing could save "
+                            "triage time.\n"
+                        )
+            except Exception:
+                logger.debug("Triage summary in weekly review failed (non-critical)")
 
             return output
 
