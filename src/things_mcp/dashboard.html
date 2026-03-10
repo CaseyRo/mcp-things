@@ -1116,14 +1116,231 @@
     (function () {
       "use strict";
 
-      // Period selector toggle
+      // Data injected by server (or use demo data if opened as static file)
+      var DATA = window.__TRIAGE_DATA__ || null;
+
+      // Color maps
+      var ACTION_COLORS = {
+        completed: "var(--positive)",
+        canceled: "var(--negative)",
+        "deferred-someday": "var(--warning)",
+        "deferred-date": "var(--warning)",
+        modified: "var(--accent)",
+        delegated: "#8b5cf6",
+        "converted-to-project": "var(--info)",
+        scheduled: "var(--accent)"
+      };
+      var CATEGORY_COLORS = {
+        "repo-research": "var(--accent)",
+        "web-reference": "var(--positive)",
+        "client-person": "#8b5cf6",
+        "follow-up": "var(--negative)",
+        "purchase": "var(--warning)",
+        "delegation": "var(--info)",
+        "vague-capture": "var(--muted-foreground)",
+        "general": "var(--secondary-foreground)"
+      };
+      var CATEGORY_LABELS = {
+        "repo-research": "Repo Research",
+        "web-reference": "Web Reference",
+        "client-person": "Client / Person",
+        "follow-up": "Follow-up",
+        "purchase": "Purchase",
+        "delegation": "Delegation",
+        "vague-capture": "Vague Capture",
+        "general": "General"
+      };
+      var ACTION_LABELS = {
+        completed: "Completed",
+        canceled: "Canceled",
+        "deferred-someday": "Deferred (Someday)",
+        "deferred-date": "Deferred (Date)",
+        modified: "Modified",
+        delegated: "Delegated",
+        "converted-to-project": "Converted to Project",
+        scheduled: "Scheduled"
+      };
+
+      function renderDashboard(data) {
+        if (!data || !data.summary) return;
+        var s = data.summary;
+        var trends = data.trends || [];
+
+        // KPIs
+        setText("kpi-total", s.total);
+        setText("kpi-sessions", s.sessions);
+        setText("kpi-avg", s.avg_per_day);
+        var vagueCount = (s.categories || {})["vague-capture"] || 0;
+        var vaguePct = s.total > 0 ? Math.round((vagueCount / s.total) * 100) : 0;
+        setText("kpi-vague", vaguePct + "%");
+
+        // Action breakdown
+        renderBreakdown("action-breakdown", s.actions || {}, s.total, ACTION_COLORS, ACTION_LABELS);
+
+        // Category breakdown
+        renderBreakdown("category-breakdown", s.categories || {}, s.total, CATEGORY_COLORS, CATEGORY_LABELS);
+
+        // Trend chart
+        renderTrendChart(trends);
+
+        // Insights
+        renderInsights(s);
+      }
+
+      function setText(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
+      function renderBreakdown(containerId, items, total, colorMap, labelMap) {
+        var container = document.getElementById(containerId);
+        if (!container || !total) return;
+
+        var sorted = Object.entries(items).sort(function(a, b) { return b[1] - a[1]; });
+        var maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+        var html = "";
+
+        sorted.forEach(function(entry) {
+          var key = entry[0], count = entry[1];
+          var pct = Math.round((count / maxCount) * 100);
+          var color = colorMap[key] || "var(--muted-foreground)";
+          var label = labelMap[key] || key.replace(/-/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+
+          html += '<li class="breakdown-item">'
+            + '<span class="breakdown-item__label">'
+            + '<span class="breakdown-item__dot" style="background:' + color + ';" aria-hidden="true"></span>'
+            + label
+            + '</span>'
+            + '<span class="breakdown-item__bar-wrap" aria-hidden="true">'
+            + '<span class="breakdown-item__bar" style="width:' + pct + '%;background:' + color + ';"></span>'
+            + '</span>'
+            + '<span class="breakdown-item__count">' + count + '</span>'
+            + '</li>';
+        });
+
+        container.innerHTML = html;
+      }
+
+      function renderTrendChart(trends) {
+        var barsEl = document.querySelector(".chart__bars");
+        var labelsEl = document.querySelector(".chart__labels");
+        if (!barsEl || !labelsEl || !trends.length) return;
+
+        // Trends come newest-first from the API, reverse for chronological display
+        var chronological = trends.slice().reverse();
+        var maxVal = Math.max.apply(null, chronological.map(function(w) { return w.total; })) || 1;
+
+        var barsHtml = "";
+        var labelsHtml = "";
+        var highestIdx = 0;
+        chronological.forEach(function(week, i) {
+          if (week.total > chronological[highestIdx].total) highestIdx = i;
+        });
+
+        chronological.forEach(function(week, i) {
+          var pct = Math.round((week.total / maxVal) * 100);
+          var highlight = i === highestIdx ? " chart__bar--highlight" : "";
+          var dateLabel = formatWeekLabel(week.week_start);
+
+          barsHtml += '<div class="chart__col">'
+            + '<span class="chart__bar-value">' + week.total + '</span>'
+            + '<div class="chart__bar' + highlight + '" style="height:' + Math.max(pct, 2) + '%;" aria-hidden="true"></div>'
+            + '</div>';
+          labelsHtml += '<span class="chart__label">' + dateLabel + '</span>';
+        });
+
+        barsEl.innerHTML = barsHtml;
+        labelsEl.innerHTML = labelsHtml;
+      }
+
+      function formatWeekLabel(isoDate) {
+        if (!isoDate) return "";
+        var parts = isoDate.split("-");
+        var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        return months[parseInt(parts[1], 10) - 1] + " " + parseInt(parts[2], 10);
+      }
+
+      function renderInsights(summary) {
+        var container = document.querySelector(".insight-list");
+        if (!container) return;
+
+        var insights = [];
+        var total = summary.total;
+        var actions = summary.actions || {};
+        var categories = summary.categories || {};
+        var cancelRate = summary.no_context_cancel_rate || 0;
+
+        // Completion rate insight
+        var completedPct = total > 0 ? Math.round(((actions.completed || 0) / total) * 100) : 0;
+        if (completedPct >= 40) {
+          insights.push({ type: "positive", icon: "&#9650;", heading: "Strong completion rate", body: completedPct + "% of triaged items were completed. Your clarify-to-action pipeline is working well." });
+        } else if (completedPct > 0) {
+          insights.push({ type: "warning", icon: "&#9679;", heading: "Low completion rate", body: "Only " + completedPct + "% completed. Consider whether items need clearer next actions at capture time." });
+        }
+
+        // Vague capture insight
+        var vagueCount = categories["vague-capture"] || 0;
+        var vaguePct = total > 0 ? Math.round((vagueCount / total) * 100) : 0;
+        if (vaguePct > 25) {
+          insights.push({ type: "warning", icon: "&#9679;", heading: "Many vague captures", body: vaguePct + "% of items had no context. Adding a note when capturing saves significant triage time." });
+        } else if (total > 0) {
+          insights.push({ type: "info", icon: "&#9733;", heading: "Good capture quality", body: "Only " + vaguePct + "% vague captures. Items are entering your inbox with clear context." });
+        }
+
+        // No-context cancel rate
+        if (cancelRate > 0.3) {
+          insights.push({ type: "negative", icon: "&#9660;", heading: "Canceling vague items", body: Math.round(cancelRate * 100) + "% of canceled items had no context at capture. Better notes could prevent unnecessary captures." });
+        }
+
+        // Deferred items
+        var deferred = (actions["deferred-someday"] || 0) + (actions["deferred-date"] || 0);
+        if (deferred > total * 0.25) {
+          insights.push({ type: "warning", icon: "&#9679;", heading: "Heavy deferral", body: deferred + " items deferred. Use weekly review to convert stale deferrals into actions or cancellations." });
+        }
+
+        // Empty state
+        if (insights.length === 0 && total === 0) {
+          insights.push({ type: "info", icon: "&#9733;", heading: "No data yet", body: "Start triaging your inbox to see insights here. Use process-inbox to begin." });
+        }
+
+        var html = "";
+        insights.slice(0, 3).forEach(function(insight) {
+          html += '<li class="insight-card insight-card--' + insight.type + '">'
+            + '<span class="insight-card__icon" aria-hidden="true">' + insight.icon + '</span>'
+            + '<p class="insight-card__heading">' + insight.heading + '</p>'
+            + '<p class="insight-card__body">' + insight.body + '</p>'
+            + '</li>';
+        });
+        container.innerHTML = html;
+      }
+
+      // Period selector toggle + data reload
       var buttons = document.querySelectorAll(".period-selector__btn");
+      var periods = { "7 Days": 7, "30 Days": 30, "90 Days": 90, "All Time": 0 };
+
       buttons.forEach(function (btn) {
         btn.addEventListener("click", function () {
           buttons.forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
           btn.setAttribute("aria-pressed", "true");
+
+          var days = periods[btn.textContent.trim()] || 30;
+          fetchAndRender(days);
         });
       });
+
+      function fetchAndRender(days) {
+        // Only fetch if served by the MCP server (data was injected)
+        if (!window.__TRIAGE_DATA__) return;
+        fetch("/dashboard/data?days=" + days, { headers: { "Accept": "application/json" } })
+          .then(function(r) { return r.json(); })
+          .then(function(data) { renderDashboard(data); })
+          .catch(function() { /* silently fail */ });
+      }
+
+      // Initial render
+      if (DATA) {
+        renderDashboard(DATA);
+      }
     })();
   </script>
 

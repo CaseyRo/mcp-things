@@ -137,6 +137,8 @@ The server uses streamable-http transport (SSE transport removed as deprecated):
 | Endpoint | Transport | Clients | Use Case |
 |----------|-----------|---------|----------|
 | `/mcp` | Streamable-HTTP | Claude Desktop, n8n, ChatGPT | All MCP clients |
+| `/dashboard` | HTTP | Browser | GTD Health Dashboard (triage insights) |
+| `/dashboard/data` | HTTP/JSON | Browser JS | Dashboard data API (period switching) |
 
 **Transport Configuration:**
 
