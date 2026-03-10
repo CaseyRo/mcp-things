@@ -507,7 +507,9 @@ def register_gtd_core_tools(mcp: FastMCP):
                         inbox_zero_msg += f"\n\n*This week: {total} items triaged"
                         if top_action:
                             inbox_zero_msg += f", mostly {top_action}"
-                        inbox_zero_msg += ".*"
+                        inbox_zero_msg += (
+                            ". View trends at http://localhost:8009/dashboard*"
+                        )
                 except Exception:
                     pass
                 return inbox_zero_msg

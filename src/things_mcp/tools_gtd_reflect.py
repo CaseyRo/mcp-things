@@ -249,6 +249,8 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                             "at capture. Adding notes when capturing could save "
                             "triage time.\n"
                         )
+
+                    output += "\nSee full dashboard: http://localhost:8009/dashboard\n"
             except Exception:
                 logger.debug("Triage summary in weekly review failed (non-critical)")
 

@@ -317,6 +317,8 @@ def register_utility_tools(mcp: FastMCP):
                                 arrow = " v"
                         output += f"- Week of {week['week_start']}: {week['total']} items{arrow}\n"
 
+            output += "\nFull dashboard: http://localhost:8009/dashboard\n"
+
             return output
 
         except Exception as e:
