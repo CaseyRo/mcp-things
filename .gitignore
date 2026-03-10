@@ -195,5 +195,9 @@ test-results/*.md
 test-results/*.json
 !test-results/.gitkeep
 
+# WebReel output
+videos/
+.webreel/
+
 # Runtime data files
 things_dlq.json

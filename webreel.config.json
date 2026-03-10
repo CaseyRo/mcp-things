@@ -1,0 +1,46 @@
+{
+  "$schema": "https://webreel.dev/schema/v1.json",
+  "outDir": "./videos",
+  "defaultDelay": 400,
+  "videos": {
+    "dashboard-demo": {
+      "url": "./src/things_mcp/dashboard.html",
+      "viewport": { "width": 1920, "height": 1080 },
+      "steps": [
+        { "action": "pause", "ms": 1500 },
+        { "action": "scroll", "y": 400 },
+        { "action": "pause", "ms": 1200 },
+        { "action": "scroll", "y": 400 },
+        { "action": "pause", "ms": 1200 },
+        { "action": "scroll", "y": 400 },
+        { "action": "pause", "ms": 1200 },
+        { "action": "scroll", "y": 300 },
+        { "action": "pause", "ms": 1000 },
+        { "action": "scroll", "y": -1500 },
+        { "action": "pause", "ms": 800 },
+        { "action": "click", "selector": ".period-selector__btn:nth-child(1)" },
+        { "action": "pause", "ms": 600 },
+        { "action": "click", "selector": ".period-selector__btn:nth-child(3)" },
+        { "action": "pause", "ms": 600 },
+        { "action": "click", "selector": ".period-selector__btn:nth-child(2)" },
+        { "action": "pause", "ms": 1000 },
+        { "action": "hover", "selector": ".kpi-card:nth-child(1)" },
+        { "action": "pause", "ms": 500 },
+        { "action": "hover", "selector": ".kpi-card:nth-child(2)" },
+        { "action": "pause", "ms": 500 },
+        { "action": "hover", "selector": ".kpi-card:nth-child(3)" },
+        { "action": "pause", "ms": 500 },
+        { "action": "hover", "selector": ".kpi-card:nth-child(4)" },
+        { "action": "pause", "ms": 1000 }
+      ]
+    },
+    "dashboard-screenshot": {
+      "url": "./src/things_mcp/dashboard.html",
+      "viewport": { "width": 1920, "height": 3000 },
+      "steps": [
+        { "action": "pause", "ms": 1000 },
+        { "action": "screenshot", "output": "./videos/dashboard-full.png" }
+      ]
+    }
+  }
+}
