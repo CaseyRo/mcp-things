@@ -5,6 +5,8 @@ A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.co
 [![PyPI](https://img.shields.io/pypi/v/mcp-things)](https://pypi.org/project/mcp-things/)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/caseyberlin)
 
+![GTD Health Dashboard Demo](docs/images/dashboard-demo.gif)
+
 ## Installation
 
 ```bash
@@ -124,7 +126,7 @@ claude mcp add --transport http things http://127.0.0.1:8009/mcp
 
 ## GTD Tools
 
-The server provides **12 GTD-native tools** organized by methodology stage:
+The server provides **21 GTD-native tools** organized by methodology stage:
 
 ### Capture
 
@@ -146,14 +148,17 @@ The server provides **12 GTD-native tools** organized by methodology stage:
 | `schedule-task` | Create organized tasks with context, dates, projects |
 | `delegate-task` | Mark task as "Waiting For" with person and follow-up |
 | `defer-task` | Move to Someday/Maybe or schedule for future date |
+| `modify-task` | Update task properties (title, notes, tags, cancel) |
 | `plan-project` | Create project with initial tasks atomically |
+| `create-area` | Create a new area of responsibility |
 
 ### Reflect
 
 | Tool | Purpose |
 |------|---------|
 | `daily-review` | Today's tasks, overdue items, inbox status |
-| `weekly-review` | Stalled projects, waiting-for items, someday review |
+| `weekly-review` | Stalled projects, waiting-for items, triage activity |
+| `triage-insights` | Analyze triage patterns and trends |
 
 ### Engage
 
@@ -163,7 +168,24 @@ The server provides **12 GTD-native tools** organized by methodology stage:
 | `focus-mode` | Get single most important task for current context |
 | `complete-task` | Mark task done by ID or fuzzy title match |
 
-Plus `search-tasks` for full-text and filtered search.
+Plus `search-tasks`, `triage-insights`, `create-area`, `get-projects`, `get-areas`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+
+## GTD Health Dashboard
+
+The server includes a built-in dashboard at `/dashboard` that tracks your inbox triage patterns over time.
+
+![GTD Health Dashboard](docs/images/dashboard-full.png)
+
+**Features:**
+
+- KPI cards: total triaged, sessions, avg/day, vague capture rate
+- Action breakdown: completed, canceled, deferred, delegated
+- Category breakdown: repo-research, web-reference, client-person, and more
+- Weekly trend chart
+- Actionable insights based on your triage behavior
+- Period selector (7 days, 30 days, 90 days, all time)
+
+Access it at `http://<host>:<port>/dashboard` when the server is running.
 
 ### GTD Context Tags
 
@@ -195,7 +217,14 @@ People:   @person-name (for agenda items)
 
 ```
 src/things_mcp/
-├── fast_server.py        # FastMCP server + 12 GTD tool definitions
+├── fast_server.py        # Entry point, ASGI app, dashboard endpoint
+├── server_core.py        # Server factory, client middleware, schema transforms
+├── tools_gtd_core.py     # Engage/Capture/Clarify tools
+├── tools_gtd_organize.py # Organize stage tools
+├── tools_gtd_reflect.py  # Reflect stage tools
+├── tools_utility.py      # Utility tools (search, list, insights)
+├── triage_tracker.py     # Triage action recording and analytics
+├── dashboard.html        # GTD Health Dashboard (Cultured Code style)
 ├── url_scheme.py         # Things URL scheme builders (write operations)
 ├── applescript_bridge.py # AppleScript execution layer
 ├── formatters.py         # Output formatting for responses
