@@ -43,6 +43,7 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "defer-task": UPDATE_ANNOTATIONS,
     "plan-project": ADD_ANNOTATIONS,
     "modify-task": UPDATE_ANNOTATIONS,
+    "create-area": ADD_ANNOTATIONS,
     # === GTD Reflect Tools ===
     "daily-review": READ_ONLY_ANNOTATIONS,
     "weekly-review": READ_ONLY_ANNOTATIONS,
@@ -53,4 +54,5 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "get-tags": READ_ONLY_ANNOTATIONS,
     "show-in-app": READ_ONLY_ANNOTATIONS,
     "get-cache-stats": READ_ONLY_ANNOTATIONS,
+    "triage-insights": READ_ONLY_ANNOTATIONS,
 }

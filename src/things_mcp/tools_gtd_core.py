@@ -25,6 +25,7 @@ from .logging_config import get_logger
 from .cache import invalidate_caches_for
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS
+from .triage_tracker import triage_tracker
 
 logger = get_logger(__name__)
 
@@ -385,6 +386,20 @@ def register_gtd_core_tools(mcp: FastMCP):
                 ["get-tasks", "get-today", "get-inbox", "get-anytime"]
             )
 
+            # Track triage action
+            try:
+                task_data = things.get(task_id) or {}
+                triage_tracker.record(
+                    task_id=task_id,
+                    task_title=task_data.get("title", task_title or ""),
+                    task_notes=task_data.get("notes"),
+                    task_tags=task_data.get("tags"),
+                    action="completed",
+                    action_details={"completion_notes": bool(completion_notes)},
+                )
+            except Exception:
+                logger.debug("Triage tracking failed (non-critical)")
+
             return "Task completed successfully. Keep up the momentum!"
 
         except ToolError:
@@ -475,10 +490,27 @@ def register_gtd_core_tools(mcp: FastMCP):
             inbox_items = things.inbox()
 
             if not inbox_items:
-                return (
+                # Surface triage insights at inbox-zero moment
+                inbox_zero_msg = (
                     "**Inbox is clear!** GTD: Mind like water achieved.\n\n"
                     "Your inbox is empty. Use capture-task when new items come up."
                 )
+                try:
+                    summary = triage_tracker.get_summary(days=7)
+                    if summary["total"] > 0:
+                        total = summary["total"]
+                        top_action = (
+                            max(summary["actions"], key=summary["actions"].get)
+                            if summary["actions"]
+                            else None
+                        )
+                        inbox_zero_msg += f"\n\n*This week: {total} items triaged"
+                        if top_action:
+                            inbox_zero_msg += f", mostly {top_action}"
+                        inbox_zero_msg += ".*"
+                except Exception:
+                    pass
+                return inbox_zero_msg
 
             # Get oldest item (first in list, Things orders by creation)
             item = inbox_items[0]
@@ -500,6 +532,12 @@ def register_gtd_core_tools(mcp: FastMCP):
             output += "   - Yes -> **Do it now!** Then complete-task\n"
             output += "   - No, delegate -> Use delegate-task\n"
             output += "   - No, schedule -> Use schedule-task\n"
+
+            # Track inbox view for source detection
+            try:
+                triage_tracker.record_inbox_view()
+            except Exception:
+                logger.debug("Triage inbox view tracking failed (non-critical)")
 
             return output
 
@@ -592,6 +630,19 @@ def register_gtd_core_tools(mcp: FastMCP):
             execute_url(cancel_url)
 
             invalidate_caches_for(["get-inbox", "get-projects", "get-tasks"])
+
+            # Track triage action
+            try:
+                triage_tracker.record(
+                    task_id=task_id,
+                    task_title=task.get("title", ""),
+                    task_notes=task.get("notes"),
+                    task_tags=task.get("tags"),
+                    action="converted-to-project",
+                    action_details={"first_action": bool(first_action)},
+                )
+            except Exception:
+                logger.debug("Triage tracking failed (non-critical)")
 
             # Build result message
             result = f"Converted '{project_title}' to project."
