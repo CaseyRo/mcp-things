@@ -10,6 +10,7 @@ from fastmcp.exceptions import ToolError
 from .logging_config import get_logger
 from .tool_annotations import TOOL_ANNOTATIONS
 from .triage_tracker import triage_tracker
+from .settings import get_dashboard_url
 
 logger = get_logger(__name__)
 
@@ -250,7 +251,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                             "triage time.\n"
                         )
 
-                    output += "\nSee full dashboard: http://localhost:8009/dashboard\n"
+                    output += f"\nSee full dashboard: {get_dashboard_url()}\n"
             except Exception:
                 logger.debug("Triage summary in weekly review failed (non-critical)")
 

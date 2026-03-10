@@ -16,6 +16,7 @@ from .logging_config import get_logger
 from .cache import get_cache_stats
 from .tool_annotations import TOOL_ANNOTATIONS
 from .triage_tracker import triage_tracker
+from .settings import get_dashboard_url
 
 logger = get_logger(__name__)
 
@@ -317,7 +318,7 @@ def register_utility_tools(mcp: FastMCP):
                                 arrow = " v"
                         output += f"- Week of {week['week_start']}: {week['total']} items{arrow}\n"
 
-            output += "\nFull dashboard: http://localhost:8009/dashboard\n"
+            output += f"\nFull dashboard: {get_dashboard_url()}\n"
 
             return output
 
