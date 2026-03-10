@@ -26,6 +26,7 @@ from .cache import invalidate_caches_for
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS
 from .triage_tracker import triage_tracker
+from .settings import get_dashboard_url
 
 logger = get_logger(__name__)
 
@@ -507,9 +508,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                         inbox_zero_msg += f"\n\n*This week: {total} items triaged"
                         if top_action:
                             inbox_zero_msg += f", mostly {top_action}"
-                        inbox_zero_msg += (
-                            ". View trends at http://localhost:8009/dashboard*"
-                        )
+                        inbox_zero_msg += f". View trends at {get_dashboard_url()}*"
                 except Exception:
                     pass
                 return inbox_zero_msg

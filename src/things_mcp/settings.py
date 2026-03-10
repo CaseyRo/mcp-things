@@ -133,6 +133,13 @@ def get_transport() -> Literal["streamable-http"]:
     return get_settings().things_mcp_transport
 
 
+def get_dashboard_url() -> str:
+    """Get the full dashboard URL based on current host/port settings."""
+    host = get_settings().things_mcp_host
+    port = get_settings().things_mcp_port
+    return f"http://{host}:{port}/dashboard"
+
+
 def is_debug_enabled() -> bool:
     """Check if debug logging is enabled.
 
