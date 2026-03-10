@@ -244,9 +244,41 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         ASGI application with streamable-http transport endpoint.
     """
     from starlette.applications import Starlette
-    from starlette.routing import Mount
+    from starlette.routing import Mount, Route
+    from starlette.responses import HTMLResponse, JSONResponse
 
-    routes = []
+    from .triage_tracker import triage_tracker
+    from pathlib import Path
+    import json
+
+    # Dashboard template path (co-located in package)
+    _dashboard_path = Path(__file__).parent / "dashboard.html"
+
+    async def dashboard_page(request):
+        """Serve the GTD Health Dashboard with live triage data."""
+        days = int(request.query_params.get("days", 30))
+        data = _build_dashboard_data(triage_tracker, days)
+
+        template = _dashboard_path.read_text()
+        # Inject data as a global JS variable before the closing </head>
+        data_script = (
+            "<script>window.__TRIAGE_DATA__ = "
+            + json.dumps(data)
+            + ";</script>\n</head>"
+        )
+        html = template.replace("</head>", data_script, 1)
+        return HTMLResponse(html)
+
+    async def dashboard_data(request):
+        """Return triage data as JSON (for period switching via JS)."""
+        days = int(request.query_params.get("days", 30))
+        data = _build_dashboard_data(triage_tracker, days)
+        return JSONResponse(data)
+
+    routes = [
+        Route("/dashboard", dashboard_page),
+        Route("/dashboard/data", dashboard_data),
+    ]
 
     # Apply Accept header patch for streamable-http transport
     patch_accept_headers()
@@ -273,6 +305,17 @@ def _create_combined_app(mcp_instance, transport_mode: str):
 
     # Wrap with middleware to silently normalize /mcp to /mcp/ (avoids 307 redirects)
     return _TrailingSlashMiddleware(app)
+
+
+def _build_dashboard_data(tracker, days: int) -> dict:
+    """Build the data payload for the dashboard."""
+    summary = tracker.get_summary(days=days)
+    trends = tracker.get_trends(weeks=max(days // 7, 4) if days > 0 else 12)
+    return {
+        "days": days,
+        "summary": summary,
+        "trends": trends,
+    }
 
 
 def run_things_mcp_server():
@@ -347,6 +390,7 @@ def run_things_mcp_server():
     port = get_binding_port()
     logger.info("Server endpoints:")
     logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")
+    logger.info(f"  - Dashboard:            http://{host}:{port}/dashboard")
 
     # Use wsproto to avoid deprecation warnings from websockets 14+
     # See: https://github.com/python-websockets/websockets/issues/975
