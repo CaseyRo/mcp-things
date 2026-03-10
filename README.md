@@ -5,8 +5,6 @@ A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.co
 [![PyPI](https://img.shields.io/pypi/v/mcp-things)](https://pypi.org/project/mcp-things/)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/caseyberlin)
 
-![GTD Health Dashboard Demo](docs/images/dashboard-demo.gif)
-
 ## Installation
 
 ```bash
@@ -32,6 +30,8 @@ The goal isn't to expose database operations to an AI. It's to give AI assistant
 - **Organize** tasks by context, energy, and time available
 - **Reflect** with daily and weekly reviews that surface stalled projects
 - **Engage** by finding the right task for your current context
+
+![GTD Health Dashboard Demo](docs/images/dashboard-demo.gif)
 
 ## History
 
