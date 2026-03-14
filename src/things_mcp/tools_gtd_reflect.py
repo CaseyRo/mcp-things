@@ -77,6 +77,25 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                     output += f"- ...and {len(overdue) - 5} more\n"
                 output += "\n"
 
+            # Overdue projects (convenience feature — GTD doesn't prescribe a daily review)
+            overdue_projects = [
+                p
+                for p in (things.projects() or [])
+                if p.get("status") == "incomplete"
+                and p.get("deadline")
+                and p.get("deadline") < today_str
+            ]
+            if overdue_projects:
+                output += "## Overdue Projects\n\n"
+                for p in overdue_projects[:5]:
+                    output += (
+                        f"- **{p.get('title')}** (deadline: {p.get('deadline')}) "
+                        "— use `modify-project` to extend or close\n"
+                    )
+                if len(overdue_projects) > 5:
+                    output += f"- ...and {len(overdue_projects) - 5} more\n"
+                output += "\n"
+
             # Today's tasks
             output += "## Today's Tasks\n\n"
             if today_tasks:
@@ -172,6 +191,26 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 output += "\n"
             else:
                 output += "## All Projects Have Next Actions\n\n"
+
+            # 2b. Unassigned projects (no area of focus)
+            # Note: this is a tool feature — Allen's weekly review does not
+            # check project-to-area alignment (that's a higher-horizon exercise)
+            unassigned = [
+                p
+                for p in (projects or [])
+                if p.get("status") == "incomplete" and not p.get("area")
+            ]
+            if unassigned:
+                output += f"## Unassigned Projects: {len(unassigned)}\n"
+                output += "These projects have no area of focus:\n\n"
+                for p in unassigned[:5]:
+                    output += (
+                        f"- **{p.get('title')}** — assign with "
+                        f"`modify-project(area=...)`\n"
+                    )
+                if len(unassigned) > 5:
+                    output += f"- ...and {len(unassigned) - 5} more\n"
+                output += "\n"
 
             # 3. Waiting-for items
             waiting = things.todos(tag="waiting-for", status="incomplete")

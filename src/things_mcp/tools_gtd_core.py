@@ -537,6 +537,10 @@ def register_gtd_core_tools(mcp: FastMCP):
             output += "   - Yes -> **Do it now!** Then complete-task\n"
             output += "   - No, delegate -> Use delegate-task\n"
             output += "   - No, schedule -> Use schedule-task\n"
+            output += (
+                "\n*Organize tip: If this is a next action for an existing project, "
+            )
+            output += "use `schedule-task` with `project=` to add it directly.*\n"
 
             # Track inbox view for source detection
             try:
@@ -667,6 +671,11 @@ def register_gtd_core_tools(mcp: FastMCP):
                 result += f"\nConverted {checklist_count} checklist items to tasks."
             else:
                 result += "\n\n**Warning:** Project has no next action. GTD requires every project to have a clear next step. Use schedule-task to add one."
+
+            # Post-conversion guidance
+            result += "\n\nUse `modify-project` to assign an area, set a deadline, or edit properties."
+            if not task.get("area_title"):
+                result += "\nThis project has no area of focus — consider assigning one with `modify-project`."
 
             return result
 

@@ -147,6 +147,7 @@ def mock_things(monkeypatch):
     monkeypatch.setattr("things_mcp.tools_gtd_organize.things", mock_things_module)
     monkeypatch.setattr("things_mcp.tools_gtd_reflect.things", mock_things_module)
     monkeypatch.setattr("things_mcp.tools_utility.things", mock_things_module)
+    monkeypatch.setattr("things_mcp.resolvers.things", mock_things_module)
 
     return mock_things_module
 

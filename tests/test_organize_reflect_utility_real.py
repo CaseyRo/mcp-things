@@ -89,6 +89,13 @@ end tell'''
 # Tool references
 # ============================================================================
 
+get_project = _get_tool_fn("get-project")
+get_area = _get_tool_fn("get-area")
+modify_project = _get_tool_fn("modify-project")
+modify_area = _get_tool_fn("modify-area")
+delete_area = _get_tool_fn("delete-area")
+merge_areas = _get_tool_fn("merge-areas")
+create_area = _get_tool_fn("create-area")
 schedule_task = _get_tool_fn("schedule-task")
 delegate_task = _get_tool_fn("delegate-task")
 defer_task = _get_tool_fn("defer-task")
@@ -113,6 +120,7 @@ get_cache_stats = _get_tool_fn("get-cache-stats")
 results: list[tuple[str, str, bool, str]] = []  # (phase, name, passed, detail)
 cleanup_todos: list[str] = []
 cleanup_projects: list[str] = []
+cleanup_areas: list[str] = []
 
 
 def record(phase: str, name: str, passed: bool, detail: str = ""):
@@ -589,6 +597,172 @@ async def phase3_utility():
 # ============================================================================
 
 
+async def phase4_crud():
+    """Phase 4: Project/Area CRUD tools."""
+    print("\n" + "=" * 60)
+    print("PHASE 4: Project/Area CRUD Tools")
+    print("=" * 60)
+
+    # --- get-project ---
+    proj_title = gen_title("CRUD-PROJ")
+    result = await plan_project(title=proj_title, tasks=[{"title": "Step 1"}])
+    time.sleep(1)
+    pid = find_project(proj_title)
+    if pid:
+        cleanup_projects.append(pid)
+
+    try:
+        result = await get_project(name_or_uuid=proj_title)
+        record("crud", "get-project by name", proj_title in result, result[:100])
+    except Exception as e:
+        record("crud", "get-project by name", False, str(e))
+
+    try:
+        if pid:
+            result = await get_project(name_or_uuid=pid)
+            record("crud", "get-project by UUID", pid in result, result[:100])
+        else:
+            record(
+                "crud", "get-project by UUID", False, "project not found for UUID test"
+            )
+    except Exception as e:
+        record("crud", "get-project by UUID", False, str(e))
+
+    try:
+        await get_project(name_or_uuid="NONEXISTENT-CRUD-PROJECT-XYZ")
+        record("crud", "get-project not found", False, "should have raised")
+    except ToolError:
+        record("crud", "get-project not found", True)
+    except Exception as e:
+        record("crud", "get-project not found", False, str(e))
+
+    # --- modify-project ---
+    new_title = gen_title("CRUD-PROJ-RENAMED")
+    try:
+        if pid:
+            result = await modify_project(name_or_uuid=pid, title=new_title)
+            record(
+                "crud", "modify-project rename", "title updated" in result, result[:100]
+            )
+        else:
+            record("crud", "modify-project rename", False, "no project to modify")
+    except Exception as e:
+        record("crud", "modify-project rename", False, str(e))
+
+    # --- get-area / modify-area ---
+    area_title = gen_title("CRUD-AREA")
+    try:
+        result = await create_area(name=area_title)
+        time.sleep(1)
+        # Find area UUID
+        area_uuid = None
+        for a in things.areas() or []:
+            if a.get("title") == area_title:
+                area_uuid = a["uuid"]
+                cleanup_areas.append(area_uuid)
+                break
+        record("crud", "create-area for CRUD", area_uuid is not None, result[:100])
+    except Exception as e:
+        record("crud", "create-area for CRUD", False, str(e))
+        area_uuid = None
+
+    if area_uuid:
+        try:
+            result = await get_area(name_or_uuid=area_title)
+            record("crud", "get-area by name", area_title in result, result[:100])
+        except Exception as e:
+            record("crud", "get-area by name", False, str(e))
+
+        new_area_name = gen_title("CRUD-AREA-RENAMED")
+        try:
+            result = await modify_area(name_or_uuid=area_uuid, new_name=new_area_name)
+            record("crud", "modify-area rename", "renamed" in result, result[:100])
+        except Exception as e:
+            record("crud", "modify-area rename", False, str(e))
+
+    # --- merge-areas ---
+    src_title = gen_title("CRUD-SRC")
+    tgt_title = gen_title("CRUD-TGT")
+    src_uuid = tgt_uuid = None
+    try:
+        await create_area(name=src_title)
+        await create_area(name=tgt_title)
+        time.sleep(1)
+        for a in things.areas() or []:
+            if a.get("title") == src_title:
+                src_uuid = a["uuid"]
+                cleanup_areas.append(src_uuid)
+            if a.get("title") == tgt_title:
+                tgt_uuid = a["uuid"]
+                cleanup_areas.append(tgt_uuid)
+    except Exception as e:
+        record("crud", "merge-areas setup", False, str(e))
+
+    if src_uuid and tgt_uuid:
+        try:
+            result = await merge_areas(source=src_title, target=tgt_title)
+            # Source should be deleted, so remove from cleanup
+            if src_uuid in cleanup_areas:
+                cleanup_areas.remove(src_uuid)
+            record(
+                "crud", "merge-areas empty", "deleted" in result.lower(), result[:100]
+            )
+        except Exception as e:
+            record("crud", "merge-areas empty", False, str(e))
+
+    # --- delete-area ---
+    del_title = gen_title("CRUD-DEL")
+    try:
+        await create_area(name=del_title)
+        time.sleep(1)
+        del_uuid = None
+        for a in things.areas() or []:
+            if a.get("title") == del_title:
+                del_uuid = a["uuid"]
+                break
+        if del_uuid:
+            result = await delete_area(name_or_uuid=del_uuid)
+            record("crud", "delete-area empty", "Deleted" in result, result[:100])
+        else:
+            record("crud", "delete-area empty", False, "area not found after create")
+    except Exception as e:
+        record("crud", "delete-area empty", False, str(e))
+
+    # --- delete-area blocked by loose todos ---
+    block_title = gen_title("CRUD-BLOCK")
+    try:
+        await create_area(name=block_title)
+        time.sleep(1)
+        block_uuid = None
+        for a in things.areas() or []:
+            if a.get("title") == block_title:
+                block_uuid = a["uuid"]
+                cleanup_areas.append(block_uuid)
+                break
+        if block_uuid:
+            # Add a loose todo to this area
+            todo_title = gen_title("CRUD-BLOCK-TODO")
+            await schedule_task(title=todo_title, when="anytime", area=block_title)
+            time.sleep(1)
+            tid = find_todo(todo_title)
+            if tid:
+                cleanup_todos.append(tid)
+            try:
+                await delete_area(name_or_uuid=block_uuid)
+                record("crud", "delete-area blocked", False, "should have raised")
+            except ToolError as te:
+                record(
+                    "crud",
+                    "delete-area blocked",
+                    "merge-areas" in str(te),
+                    str(te)[:100],
+                )
+        else:
+            record("crud", "delete-area blocked", False, "area not found")
+    except Exception as e:
+        record("crud", "delete-area blocked", False, str(e))
+
+
 def cleanup():
     print("\n" + "=" * 60)
     print("CLEANUP")
@@ -602,6 +776,18 @@ def cleanup():
     for pid in cleanup_projects:
         delete_item(pid, "project")
     print(f"  Deleted {len(cleanup_projects)} tracked projects")
+
+    for aid in cleanup_areas:
+        try:
+            script = f'''tell application "Things3"
+    try
+        delete (first area whose id is "{aid}")
+    end try
+end tell'''
+            run_applescript(script)
+        except Exception as e:
+            print(f"  [area cleanup warning: {e}]")
+    print(f"  Deleted {len(cleanup_areas)} tracked areas")
 
     # Bulk cleanup any remaining MCP-TEST-* items
     try:
@@ -639,6 +825,16 @@ def cleanup():
             delete (project id projectId)
             set deletedCount to deletedCount + 1
         end try
+    end repeat
+
+    -- Clean up areas
+    repeat with theArea in (every area)
+        if name of theArea starts with "MCP-TEST-" then
+            try
+                delete theArea
+                set deletedCount to deletedCount + 1
+            end try
+        end if
     end repeat
 
     return deletedCount
@@ -700,6 +896,7 @@ async def main():
         await phase1_organize()
         await phase2_reflect()
         await phase3_utility()
+        await phase4_crud()
     finally:
         cleanup()
 

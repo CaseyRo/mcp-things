@@ -381,6 +381,7 @@ def update_project(
     deadline: Optional[str] = None,
     tags: Optional[Union[list[str], str]] = None,
     add_tags: Optional[Union[list[str], str]] = None,
+    area_id: Optional[str] = None,
     completed: Optional[bool] = None,
     canceled: Optional[bool] = None,
 ) -> str:
@@ -396,6 +397,7 @@ def update_project(
         deadline: Deadline date
         tags: Tags to set (replaces existing)
         add_tags: Tags to add without replacing existing ones
+        area_id: UUID of area to move the project to
         completed: Mark as completed
         canceled: Mark as canceled
     """
@@ -409,6 +411,7 @@ def update_project(
         "deadline": deadline,
         "tags": tags,
         "add-tags": add_tags,
+        "area-id": area_id,
         "completed": completed,
         "canceled": canceled,
     }

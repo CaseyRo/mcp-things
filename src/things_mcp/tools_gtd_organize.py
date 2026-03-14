@@ -13,6 +13,7 @@ from .utils import app_state
 from .url_scheme import (
     add_todo,
     update_todo,
+    update_project,
     execute_url,
     launch_things,
     add_project_with_tasks,
@@ -23,7 +24,8 @@ from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS
 from .applescript_bridge import run_applescript, escape_applescript_string
 from .triage_tracker import triage_tracker
-from .input_validation import validate_tag_names
+from .input_validation import validate_tag_names, validate_name, validate_notes_length
+from .resolvers import resolve_list_id
 
 logger = get_logger(__name__)
 
@@ -31,45 +33,6 @@ logger = get_logger(__name__)
 def _error_result(message: str):
     """Raise a ToolError for standardized MCP error handling."""
     raise ToolError(message)
-
-
-def _resolve_list_id(name_or_uuid: str, list_type: str) -> str:
-    """Resolve a project/area name or UUID to a UUID.
-
-    Args:
-        name_or_uuid: Project/area name or UUID
-        list_type: "project" or "area"
-
-    Returns:
-        UUID string
-
-    Raises:
-        ToolError if not found or ambiguous
-    """
-    # If it looks like a UUID (long alphanumeric), try direct lookup first
-    item = things.get(name_or_uuid)
-    if item:
-        return name_or_uuid
-
-    # Search by name
-    if list_type == "project":
-        items = things.projects()
-    else:
-        items = things.areas()
-
-    matches = [
-        i for i in (items or []) if i.get("title", "").lower() == name_or_uuid.lower()
-    ]
-
-    if len(matches) == 1:
-        return matches[0]["uuid"]
-    elif len(matches) > 1:
-        raise ToolError(
-            f"Multiple {list_type}s match '{name_or_uuid}'. "
-            f"Use UUID instead: {', '.join(m['uuid'] for m in matches)}"
-        )
-    else:
-        raise ToolError(f"{list_type.capitalize()} not found: {name_or_uuid}")
 
 
 def register_gtd_organize_tools(mcp: FastMCP):
@@ -123,7 +86,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
             list_id = None
             list_title = project  # project name passed directly
             if area:
-                list_id = _resolve_list_id(area, "area")
+                list_id = resolve_list_id(area, "area")
                 list_title = None  # area uses list_id, not list_title
 
             # Build URL
@@ -396,6 +359,11 @@ def register_gtd_organize_tools(mcp: FastMCP):
             await ctx.info(f"Creating project: {title}...")
 
         try:
+            # Validate inputs
+            validate_name(title, "title")
+            if notes:
+                validate_notes_length(notes)
+
             # Ensure Things app is running
             if not app_state.update_app_state():
                 if not launch_things():
@@ -495,9 +463,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
             # Resolve project/area name to UUID if needed
             list_id = None
             if project:
-                list_id = _resolve_list_id(project, "project")
+                list_id = resolve_list_id(project, "project")
             elif area:
-                list_id = _resolve_list_id(area, "area")
+                list_id = resolve_list_id(area, "area")
 
             # Build URL
             url = update_todo(
@@ -566,9 +534,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
     async def create_area(
         name: str,
         tags: Optional[List[str]] = None,
+        projects: Optional[List[str]] = None,
         ctx: Context = None,
     ) -> str:
-        """Create a new area in Things.
+        """Create a new area in Things, optionally with initial projects.
 
         GTD Stage: Organize
         Use when: Setting up a new area of responsibility (e.g., Health, Finance, Work).
@@ -577,11 +546,17 @@ def register_gtd_organize_tools(mcp: FastMCP):
         Args:
             name: Area name (e.g., "Health", "Side Projects")
             tags: Optional tags to assign to the area
+            projects: Optional list of project names to create within the area
         """
         if ctx:
             await ctx.info(f"Creating area: {name}...")
 
         try:
+            validate_name(name, "name")
+            if projects:
+                for p_name in projects:
+                    validate_name(p_name, "project name")
+
             # Ensure Things app is running
             if not app_state.update_app_state():
                 if not launch_things():
@@ -626,10 +601,486 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-areas"])
 
-            return f"Created area: {name}"
+            # Create initial projects if requested
+            created_projects = []
+            if projects:
+                for p_name in projects:
+                    p_url = add_project_with_tasks(title=p_name, tasks=[], area=name)
+                    if execute_url(p_url):
+                        created_projects.append(p_name)
+                invalidate_caches_for(["get-projects"])
+
+            result = f"Created area: {name}"
+            if created_projects:
+                result += f"\nCreated {len(created_projects)} project(s): {', '.join(created_projects)}"
+                result += (
+                    "\n\nThese projects have no tasks yet — they will appear as "
+                    "stalled in weekly review until you add next actions "
+                    "(GTD: every project needs a next action)."
+                )
+            return result
 
         except ToolError:
             raise
         except Exception:
             logger.error("Error creating area", exc_info=True)
             _error_result("Failed to create area. Check server logs for details.")
+
+    # === Project/Area CRUD Tools ===
+
+    @mcp.tool(
+        name="modify-project",
+        annotations=TOOL_ANNOTATIONS["modify-project"],
+        timeout=30,
+    )
+    async def modify_project(
+        name_or_uuid: str,
+        title: Optional[str] = None,
+        notes: Optional[str] = None,
+        prepend_notes: Optional[str] = None,
+        append_notes: Optional[str] = None,
+        when: Optional[str] = None,
+        deadline: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        add_tags: Optional[List[str]] = None,
+        area: Optional[str] = None,
+        completed: Optional[bool] = None,
+        canceled: Optional[bool] = None,
+        ctx: Context = None,
+    ) -> str:
+        """Update a project's properties.
+
+        Use when: Renaming, rescheduling, reassigning to an area, adding notes,
+        or closing a project.
+
+        Things 3 notes: `completed` and `canceled` are Things 3 features.
+        In GTD, a project you finish is simply removed from the active list.
+        A project you decide not to pursue goes to Someday/Maybe or is removed.
+
+        Args:
+            name_or_uuid: Project name (case-insensitive) or UUID
+            title: New title
+            notes: New notes (replaces existing)
+            prepend_notes: Text to add before existing notes
+            append_notes: Text to add after existing notes
+            when: Schedule date (today, tomorrow, evening, anytime, someday, YYYY-MM-DD)
+            deadline: Deadline date (YYYY-MM-DD)
+            tags: Tags to set (replaces existing)
+            add_tags: Tags to add without replacing
+            area: Area name or UUID to move project to
+            completed: Mark as completed (Things 3 feature)
+            canceled: Mark as canceled (Things 3 feature)
+        """
+        if ctx:
+            await ctx.info("Modifying project...")
+
+        try:
+            # Ensure Things app is running
+            if not app_state.update_app_state():
+                if not launch_things():
+                    _error_result("Unable to launch Things app")
+
+            # Resolve project name to UUID
+            project_uuid = resolve_list_id(name_or_uuid, "project")
+
+            # Validate inputs
+            if title:
+                validate_name(title, "title")
+            if notes:
+                validate_notes_length(notes)
+            if prepend_notes:
+                validate_notes_length(prepend_notes)
+            if append_notes:
+                validate_notes_length(append_notes)
+            if tags:
+                validate_tag_names(tags)
+                ensure_tags_exist(tags)
+            if add_tags:
+                validate_tag_names(add_tags)
+                ensure_tags_exist(add_tags)
+
+            # Resolve area name to UUID if provided
+            area_id = None
+            if area:
+                area_id = resolve_list_id(area, "area")
+
+            # Check for incomplete tasks if completing
+            completion_note = ""
+            if completed:
+                incomplete = things.todos(project=project_uuid, status="incomplete")
+                if incomplete:
+                    completion_note = (
+                        f"\nNote: this project had {len(incomplete)} incomplete "
+                        "tasks which are now also completed."
+                    )
+
+            # Build and execute URL
+            url = update_project(
+                id=project_uuid,
+                title=title,
+                notes=notes,
+                prepend_notes=prepend_notes,
+                append_notes=append_notes,
+                when=when,
+                deadline=deadline,
+                tags=tags,
+                add_tags=add_tags,
+                area_id=area_id,
+                completed=completed,
+                canceled=canceled,
+            )
+            if not execute_url(url):
+                _error_result("Failed to modify project")
+
+            invalidate_caches_for(["get-projects", "get-tasks", "get-areas"])
+
+            # Build result message
+            changes = []
+            if title:
+                changes.append("title updated")
+            if notes or prepend_notes or append_notes:
+                changes.append("notes updated")
+            if when:
+                changes.append(f"scheduled: {when}")
+            if deadline:
+                changes.append(f"deadline: {deadline}")
+            if tags or add_tags:
+                changes.append("tags updated")
+            if area:
+                changes.append(f"moved to area: {area}")
+            if completed:
+                changes.append("marked completed")
+            if canceled:
+                changes.append("marked canceled")
+
+            result = f"Modified project. Changes: {', '.join(changes)}."
+            result += completion_note
+
+            return result
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error modifying project", exc_info=True)
+            _error_result("Failed to modify project. Check server logs for details.")
+
+    @mcp.tool(
+        name="modify-area",
+        annotations=TOOL_ANNOTATIONS["modify-area"],
+        timeout=30,
+    )
+    async def modify_area(
+        name_or_uuid: str,
+        new_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        ctx: Context = None,
+    ) -> str:
+        """Rename an area or update its tags.
+
+        Use when: Renaming an area of focus/responsibility or changing its tags.
+
+        Args:
+            name_or_uuid: Current area name (case-insensitive) or UUID
+            new_name: New name for the area
+            tags: Tags to set on the area
+        """
+        if ctx:
+            await ctx.info("Modifying area...")
+
+        try:
+            if not app_state.update_app_state():
+                if not launch_things():
+                    _error_result("Unable to launch Things app")
+
+            # Resolve to UUID first (never use user name as AppleScript lookup)
+            area_uuid = resolve_list_id(name_or_uuid, "area")
+
+            if not new_name and not tags:
+                _error_result("Provide at least one change: new_name or tags")
+
+            # Validate new name
+            if new_name:
+                validate_name(new_name, "new_name")
+                # Check for duplicate
+                existing_areas = things.areas()
+                if any(
+                    a.get("title", "").lower() == new_name.lower()
+                    and a.get("uuid") != area_uuid
+                    for a in (existing_areas or [])
+                ):
+                    _error_result(f"Area name already taken: {new_name}")
+
+            # Build AppleScript using UUID lookup (safe from injection)
+            script_parts = [
+                'tell application "Things3"',
+                f'  set targetArea to first area whose id is "{area_uuid}"',
+            ]
+
+            if new_name:
+                escaped_name = escape_applescript_string(new_name)
+                script_parts.append(f'  set name of targetArea to "{escaped_name}"')
+
+            if tags:
+                validate_tag_names(tags)
+                ensure_tags_exist(tags)
+                tag_list = (
+                    "{"
+                    + ", ".join(f'"{escape_applescript_string(t)}"' for t in tags)
+                    + "}"
+                )
+                script_parts.append(f"  set tag names of targetArea to {tag_list}")
+
+            script_parts.append("end tell")
+            script = "\n".join(script_parts)
+
+            result = run_applescript(script)
+            if result is False:
+                _error_result("Failed to modify area")
+
+            invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
+
+            changes = []
+            if new_name:
+                changes.append(f"renamed to '{new_name}'")
+            if tags:
+                changes.append(f"tags: {', '.join(tags)}")
+
+            return f"Modified area. Changes: {', '.join(changes)}."
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error modifying area", exc_info=True)
+            _error_result("Failed to modify area. Check server logs for details.")
+
+    @mcp.tool(
+        name="delete-area",
+        annotations=TOOL_ANNOTATIONS["delete-area"],
+        timeout=30,
+    )
+    async def delete_area(
+        name_or_uuid: str,
+        ctx: Context = None,
+    ) -> str:
+        """Delete an area. Refuses if loose to-dos exist (Things trashes them).
+
+        Use when: Removing an area of responsibility that is no longer relevant.
+        Projects in the area will become unassigned (safe). Loose to-dos would be
+        trashed by Things, so they must be moved first.
+
+        If blocked, use merge-areas to safely move everything to another area first.
+
+        Args:
+            name_or_uuid: Area name (case-insensitive) or UUID
+        """
+        if ctx:
+            await ctx.info("Checking area contents...")
+
+        try:
+            if not app_state.update_app_state():
+                if not launch_things():
+                    _error_result("Unable to launch Things app")
+
+            area_uuid = resolve_list_id(name_or_uuid, "area")
+
+            # Dry-run: scan contents
+            projects = [
+                p for p in (things.projects() or []) if p.get("area") == area_uuid
+            ]
+            loose_todos = [
+                t for t in (things.todos(area=area_uuid) or []) if not t.get("project")
+            ]
+
+            # Block if loose to-dos exist
+            if loose_todos:
+                todo_list = "\n".join(f"  - {t['title']}" for t in loose_todos[:10])
+                if len(loose_todos) > 10:
+                    todo_list += f"\n  ... and {len(loose_todos) - 10} more"
+                _error_result(
+                    f"Cannot delete area: {len(loose_todos)} loose to-do(s) "
+                    "would be trashed by Things.\n\n"
+                    f"{todo_list}\n\n"
+                    "**Recommended:** Use `merge-areas` to move everything "
+                    "to another area first, then delete.\n"
+                    "Alternatives: move to-dos into a project, complete them, "
+                    "or cancel them."
+                )
+
+            # Report projects that will become unassigned
+            warning = ""
+            if projects:
+                proj_list = ", ".join(p["title"] for p in projects[:5])
+                if len(projects) > 5:
+                    proj_list += f" (+{len(projects) - 5} more)"
+                warning = (
+                    f"\n{len(projects)} project(s) are now unassigned: "
+                    f"{proj_list}. Use `modify-project(area=...)` to reassign."
+                )
+
+            # TOCTOU guard: re-check immediately before deletion
+            recheck_todos = [
+                t for t in (things.todos(area=area_uuid) or []) if not t.get("project")
+            ]
+            if recheck_todos:
+                _error_result(
+                    "New to-dos appeared in this area since the check. "
+                    "Aborting to prevent data loss. Please retry."
+                )
+
+            # Delete via AppleScript using UUID
+            script = (
+                f'tell application "Things3"\n'
+                f'  delete (first area whose id is "{area_uuid}")\n'
+                f"end tell"
+            )
+            result = run_applescript(script)
+            if result is False:
+                _error_result("Failed to delete area")
+
+            invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
+
+            return f"Deleted area.{warning}"
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error deleting area", exc_info=True)
+            _error_result("Failed to delete area. Check server logs for details.")
+
+    @mcp.tool(
+        name="merge-areas",
+        annotations=TOOL_ANNOTATIONS["merge-areas"],
+        timeout=60,
+    )
+    async def merge_areas(
+        source: str,
+        target: str,
+        ctx: Context = None,
+    ) -> str:
+        """Move all contents from source area to target area, then delete source.
+
+        Use when: Two areas of responsibility are converging (e.g., merging
+        "Side Projects" into "Work"). Safely moves all to-dos and projects
+        before deleting the source.
+
+        Args:
+            source: Source area name or UUID (will be deleted)
+            target: Target area name or UUID (will receive all items)
+        """
+        if ctx:
+            await ctx.info("Preparing area merge...")
+
+        try:
+            if not app_state.update_app_state():
+                if not launch_things():
+                    _error_result("Unable to launch Things app")
+
+            # Resolve both to UUIDs
+            source_uuid = resolve_list_id(source, "area")
+            target_uuid = resolve_list_id(target, "area")
+
+            # Self-merge guard (compare UUIDs, not input strings)
+            if source_uuid == target_uuid:
+                _error_result("Source and target areas are the same")
+
+            # Scan source contents
+            source_projects = [
+                p for p in (things.projects() or []) if p.get("area") == source_uuid
+            ]
+            source_todos = [
+                t
+                for t in (things.todos(area=source_uuid) or [])
+                if not t.get("project")
+            ]
+
+            moved_todos = []
+            moved_projects = []
+
+            # Move to-dos first (most vulnerable to data loss)
+            for todo in source_todos:
+                script = (
+                    f'tell application "Things3"\n'
+                    f'  set t to first to do whose id is "{todo["uuid"]}"\n'
+                    f'  set a to first area whose id is "{target_uuid}"\n'
+                    f"  move t to a\n"
+                    f"end tell"
+                )
+                result = run_applescript(script)
+                if result is False:
+                    # Partial failure — report state
+                    _error_result(
+                        f"Move failed for to-do. "
+                        f"Moved so far: {len(moved_todos)} to-do(s), "
+                        f"{len(moved_projects)} project(s). "
+                        f"Remaining in source: "
+                        f"{len(source_todos) - len(moved_todos)} to-do(s), "
+                        f"{len(source_projects)} project(s). "
+                        "Re-running merge-areas is safe — already-moved items "
+                        "are in the target."
+                    )
+                moved_todos.append(todo)
+
+            # Move projects
+            for proj in source_projects:
+                script = (
+                    f'tell application "Things3"\n'
+                    f'  set p to first project whose id is "{proj["uuid"]}"\n'
+                    f'  set a to first area whose id is "{target_uuid}"\n'
+                    f"  move p to a\n"
+                    f"end tell"
+                )
+                result = run_applescript(script)
+                if result is False:
+                    _error_result(
+                        f"Move failed for project. "
+                        f"Moved so far: {len(moved_todos)} to-do(s), "
+                        f"{len(moved_projects)} project(s). "
+                        f"Remaining in source: "
+                        f"{len(source_projects) - len(moved_projects)} project(s). "
+                        "Re-running merge-areas is safe."
+                    )
+                moved_projects.append(proj)
+
+            # Re-read source to confirm empty before deletion
+            remaining_todos = [
+                t
+                for t in (things.todos(area=source_uuid) or [])
+                if not t.get("project")
+            ]
+            remaining_projects = [
+                p for p in (things.projects() or []) if p.get("area") == source_uuid
+            ]
+            if remaining_todos or remaining_projects:
+                _error_result(
+                    "Source area is not empty after moves. "
+                    f"Remaining: {len(remaining_todos)} to-do(s), "
+                    f"{len(remaining_projects)} project(s). "
+                    "Not deleting source. Re-run merge-areas to retry."
+                )
+
+            # Delete empty source area
+            script = (
+                f'tell application "Things3"\n'
+                f'  delete (first area whose id is "{source_uuid}")\n'
+                f"end tell"
+            )
+            result = run_applescript(script)
+            if result is False:
+                _error_result(
+                    "All items moved successfully but failed to delete source area. "
+                    "Delete it manually or retry."
+                )
+
+            invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
+
+            return (
+                f"Merged areas. Moved {len(moved_todos)} to-do(s) and "
+                f"{len(moved_projects)} project(s) to target. "
+                "Source area deleted."
+            )
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error merging areas", exc_info=True)
+            _error_result("Failed to merge areas. Check server logs for details.")

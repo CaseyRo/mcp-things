@@ -303,14 +303,14 @@ class TestDelegateTask:
 
 
 class TestResolveListId:
-    """Test _resolve_list_id helper."""
+    """Test resolve_list_id helper."""
 
     @pytest.fixture(autouse=True)
     def setup(self, mock_things):
         self.things = mock_things
-        from things_mcp.tools_gtd_organize import _resolve_list_id
+        from things_mcp.resolvers import resolve_list_id
 
-        self.resolve = _resolve_list_id
+        self.resolve = resolve_list_id
 
     def test_direct_uuid_lookup(self):
         self.things.get.return_value = create_mock_project(uuid_str="proj-123")
