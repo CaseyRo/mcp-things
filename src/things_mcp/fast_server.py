@@ -52,7 +52,7 @@ setup_logging(console_level=_console_level, file_level="DEBUG", structured_logs=
 logger = get_logger(__name__)
 
 # Ensure API key exists before creating server (so auth provider gets it)
-_api_key = ensure_api_key()
+_api_key, _api_key_is_new = ensure_api_key()
 
 # Enforce secure file permissions on startup
 enforce_file_permissions()
@@ -384,15 +384,23 @@ def run_things_mcp_server():
                 host,
             )
 
-    # Display API key for client configuration
+    # Display API key info for client configuration
     if _api_key:
         masked = _api_key[:9] + "..." + _api_key[-4:]
-        logger.warning(
-            "API key active: %s — clients must send: Authorization: Bearer <key>",
-            masked,
-        )
-        print(f"\n  API Key: {_api_key}")
-        print("  Configure MCP clients with: Authorization: Bearer <key>\n")
+        if _api_key_is_new:
+            # First run: show full key so user can configure clients
+            logger.warning(
+                "NEW API key generated: %s — save this for your MCP client config",
+                _api_key,
+            )
+            print(f"\n  NEW API Key: {_api_key}")
+            print("  Configure MCP clients with: Authorization: Bearer <key>")
+            print("  Stored in: .env (THINGS_MCP_API_KEY)\n")
+        else:
+            logger.info(
+                "API key active: %s — clients must send: Authorization: Bearer <key>",
+                masked,
+            )
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
     # which detects the client type and applies transforms accordingly:
