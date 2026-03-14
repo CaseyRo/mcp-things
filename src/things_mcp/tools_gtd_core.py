@@ -183,6 +183,8 @@ def register_gtd_core_tools(mcp: FastMCP):
             formatted_todos = [format_todo(todo) for todo in todos]
             return summary + "\n\n---\n\n".join(formatted_todos)
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error in get-tasks", exc_info=True)
             _error_result("Failed to fetch tasks. Check server logs for details.")
@@ -307,6 +309,8 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             return output
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error in focus-mode", exc_info=True)
             _error_result("Failed to find focus task. Check server logs for details.")
@@ -542,6 +546,8 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             return output
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error processing inbox", exc_info=True)
             _error_result("Failed to process inbox. Check server logs for details.")

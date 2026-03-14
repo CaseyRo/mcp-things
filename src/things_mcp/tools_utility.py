@@ -91,6 +91,8 @@ def register_utility_tools(mcp: FastMCP):
 
             return result
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error searching tasks", exc_info=True)
             _error_result("Failed to search tasks. Check server logs for details.")
@@ -325,6 +327,8 @@ def register_utility_tools(mcp: FastMCP):
 
             return output
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error in triage insights", exc_info=True)
             _error_result(
