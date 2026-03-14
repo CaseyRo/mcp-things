@@ -1119,6 +1119,11 @@
       // Data injected by server (or use demo data if opened as static file)
       var DATA = window.__TRIAGE_DATA__ || null;
 
+      // HTML escaping for dynamic text to prevent XSS
+      function esc(s) {
+        return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+
       // Color maps
       var ACTION_COLORS = {
         completed: "var(--positive)",
@@ -1208,13 +1213,13 @@
 
           html += '<li class="breakdown-item">'
             + '<span class="breakdown-item__label">'
-            + '<span class="breakdown-item__dot" style="background:' + color + ';" aria-hidden="true"></span>'
-            + label
+            + '<span class="breakdown-item__dot" style="background:' + esc(color) + ';" aria-hidden="true"></span>'
+            + esc(label)
             + '</span>'
             + '<span class="breakdown-item__bar-wrap" aria-hidden="true">'
-            + '<span class="breakdown-item__bar" style="width:' + pct + '%;background:' + color + ';"></span>'
+            + '<span class="breakdown-item__bar" style="width:' + pct + '%;background:' + esc(color) + ';"></span>'
             + '</span>'
-            + '<span class="breakdown-item__count">' + count + '</span>'
+            + '<span class="breakdown-item__count">' + esc(count) + '</span>'
             + '</li>';
         });
 
@@ -1243,10 +1248,10 @@
           var dateLabel = formatWeekLabel(week.week_start);
 
           barsHtml += '<div class="chart__col">'
-            + '<span class="chart__bar-value">' + week.total + '</span>'
+            + '<span class="chart__bar-value">' + esc(week.total) + '</span>'
             + '<div class="chart__bar' + highlight + '" style="height:' + Math.max(pct, 2) + '%;" aria-hidden="true"></div>'
             + '</div>';
-          labelsHtml += '<span class="chart__label">' + dateLabel + '</span>';
+          labelsHtml += '<span class="chart__label">' + esc(dateLabel) + '</span>';
         });
 
         barsEl.innerHTML = barsHtml;
@@ -1305,10 +1310,10 @@
 
         var html = "";
         insights.slice(0, 3).forEach(function(insight) {
-          html += '<li class="insight-card insight-card--' + insight.type + '">'
+          html += '<li class="insight-card insight-card--' + esc(insight.type) + '">'
             + '<span class="insight-card__icon" aria-hidden="true">' + insight.icon + '</span>'
-            + '<p class="insight-card__heading">' + insight.heading + '</p>'
-            + '<p class="insight-card__body">' + insight.body + '</p>'
+            + '<p class="insight-card__heading">' + esc(insight.heading) + '</p>'
+            + '<p class="insight-card__body">' + esc(insight.body) + '</p>'
             + '</li>';
         });
         container.innerHTML = html;

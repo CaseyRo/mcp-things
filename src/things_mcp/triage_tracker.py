@@ -141,12 +141,17 @@ class TriageTracker:
             if elapsed < 60:
                 source = "process-inbox"
 
+        # Redact PII from action_details before storage
+        safe_details = dict(action_details or {})
+        if "delegated_to" in safe_details:
+            safe_details["delegated_to"] = "[redacted]"
+
         record = {
             "record_id": str(uuid.uuid4()),
             "timestamp": now.isoformat(),
             "task_id": task_id,
             "action": action,
-            "action_details": action_details or {},
+            "action_details": safe_details,
             "category": category,
             "category_confidence": confidence,
             "source": source,

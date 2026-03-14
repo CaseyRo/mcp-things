@@ -23,6 +23,7 @@ from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS
 from .applescript_bridge import run_applescript, escape_applescript_string
 from .triage_tracker import triage_tracker
+from .input_validation import validate_tag_names
 
 logger = get_logger(__name__)
 
@@ -158,9 +159,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error scheduling task: {str(e)}")
-            _error_result(f"Error scheduling task: {str(e)}")
+        except Exception:
+            logger.error("Error scheduling task", exc_info=True)
+            _error_result("Failed to schedule task. Check server logs for details.")
 
     @mcp.tool(
         name="delegate-task", annotations=TOOL_ANNOTATIONS["delegate-task"], timeout=30
@@ -252,9 +253,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error delegating task: {str(e)}")
-            _error_result(f"Error delegating task: {str(e)}")
+        except Exception:
+            logger.error("Error delegating task", exc_info=True)
+            _error_result("Failed to delegate task. Check server logs for details.")
 
     @mcp.tool(name="defer-task", annotations=TOOL_ANNOTATIONS["defer-task"], timeout=30)
     async def defer_task(
@@ -354,9 +355,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error deferring task: {str(e)}")
-            _error_result(f"Error deferring task: {str(e)}")
+        except Exception:
+            logger.error("Error deferring task", exc_info=True)
+            _error_result("Failed to defer task. Check server logs for details.")
 
     @mcp.tool(
         name="plan-project", annotations=TOOL_ANNOTATIONS["plan-project"], timeout=30
@@ -433,9 +434,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating project: {str(e)}")
-            _error_result(f"Error creating project: {str(e)}")
+        except Exception:
+            logger.error("Error creating project", exc_info=True)
+            _error_result("Failed to create project. Check server logs for details.")
 
     @mcp.tool(
         name="modify-task", annotations=TOOL_ANNOTATIONS["modify-task"], timeout=30
@@ -555,9 +556,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error updating task: {str(e)}")
-            _error_result(f"Error updating task: {str(e)}")
+        except Exception:
+            logger.error("Error updating task", exc_info=True)
+            _error_result("Failed to update task. Check server logs for details.")
 
     @mcp.tool(
         name="create-area", annotations=TOOL_ANNOTATIONS["create-area"], timeout=30
@@ -597,11 +598,18 @@ def register_gtd_organize_tools(mcp: FastMCP):
             # Build AppleScript to create the area
             escaped_name = escape_applescript_string(name)
             if tags:
+                validate_tag_names(tags)
                 ensure_tags_exist(tags)
-                escaped_tags = ", ".join(escape_applescript_string(t) for t in tags)
+                # Use proper AppleScript list construction to prevent injection
+                tag_list = (
+                    "{"
+                    + ", ".join(f'"{escape_applescript_string(t)}"' for t in tags)
+                    + "}"
+                )
                 script = (
                     f'tell application "Things3"\n'
-                    f'  make new area with properties {{name:"{escaped_name}", tag names:"{escaped_tags}"}}\n'
+                    f"  make new area with properties "
+                    f'{{name:"{escaped_name}", tag names:{tag_list}}}\n'
                     f"end tell"
                 )
             else:
@@ -622,6 +630,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error creating area: {str(e)}")
-            _error_result(f"Error creating area: {str(e)}")
+        except Exception:
+            logger.error("Error creating area", exc_info=True)
+            _error_result("Failed to create area. Check server logs for details.")

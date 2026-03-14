@@ -183,9 +183,9 @@ def register_gtd_core_tools(mcp: FastMCP):
             formatted_todos = [format_todo(todo) for todo in todos]
             return summary + "\n\n---\n\n".join(formatted_todos)
 
-        except Exception as e:
-            logger.error(f"Error in get-tasks: {str(e)}")
-            _error_result(f"Error fetching tasks: {str(e)}")
+        except Exception:
+            logger.error("Error in get-tasks", exc_info=True)
+            _error_result("Failed to fetch tasks. Check server logs for details.")
 
     @mcp.tool(name="focus-mode", annotations=TOOL_ANNOTATIONS["focus-mode"], timeout=5)
     async def focus_mode(
@@ -307,9 +307,9 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             return output
 
-        except Exception as e:
-            logger.error(f"Error in focus-mode: {str(e)}")
-            _error_result(f"Error finding focus task: {str(e)}")
+        except Exception:
+            logger.error("Error in focus-mode", exc_info=True)
+            _error_result("Failed to find focus task. Check server logs for details.")
 
     @mcp.tool(
         name="complete-task", annotations=TOOL_ANNOTATIONS["complete-task"], timeout=30
@@ -405,9 +405,9 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error completing task: {str(e)}")
-            _error_result(f"Error completing task: {str(e)}")
+        except Exception:
+            logger.error("Error completing task", exc_info=True)
+            _error_result("Failed to complete task. Check server logs for details.")
 
     # --- GTD CAPTURE STAGE ---
 
@@ -460,9 +460,9 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error capturing task: {str(e)}")
-            _error_result(f"Error capturing task: {str(e)}")
+        except Exception:
+            logger.error("Error capturing task", exc_info=True)
+            _error_result("Failed to capture task. Check server logs for details.")
 
     # --- GTD CLARIFY STAGE ---
 
@@ -542,9 +542,9 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             return output
 
-        except Exception as e:
-            logger.error(f"Error processing inbox: {str(e)}")
-            _error_result(f"Error processing inbox: {str(e)}")
+        except Exception:
+            logger.error("Error processing inbox", exc_info=True)
+            _error_result("Failed to process inbox. Check server logs for details.")
 
     @mcp.tool(
         name="convert-to-project",
@@ -666,6 +666,8 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error converting to project: {str(e)}")
-            _error_result(f"Error converting to project: {str(e)}")
+        except Exception:
+            logger.error("Error converting to project", exc_info=True)
+            _error_result(
+                "Failed to convert to project. Check server logs for details."
+            )

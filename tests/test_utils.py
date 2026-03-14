@@ -182,7 +182,7 @@ class TestDeadLetterQueue:
         assert len(dlq.queue) == 1
         entry = dlq.queue[0]
         assert entry["operation"] == "add"
-        assert entry["params"] == {"title": "Test"}
+        assert entry["params"] == {"title": "[REDACTED]"}
         assert entry["error"] == "Connection error"
         assert entry["attempts"] == 1
 
