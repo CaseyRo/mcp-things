@@ -94,7 +94,7 @@ On first startup, the server auto-generates a secure API key and saves it to `.e
 
 ### Authentication
 
-All MCP endpoints require bearer token authentication. The API key is managed automatically:
+All MCP endpoints require bearer token authentication (`THINGS_MCP_API_KEY`). Write operations additionally require `THINGS_AUTH_TOKEN` (Things app URL scheme token). The API key is managed automatically:
 
 - **First run:** A `tmcp_`-prefixed key is generated and saved to `.env` as `THINGS_MCP_API_KEY`
 - **Subsequent runs:** The existing key is loaded from `.env`
@@ -147,7 +147,7 @@ claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key-he
 
 ## GTD Tools
 
-The server provides **21 GTD-native tools** organized by methodology stage:
+The server provides **27 GTD-native tools** organized by methodology stage:
 
 ### Capture
 
@@ -170,15 +170,19 @@ The server provides **21 GTD-native tools** organized by methodology stage:
 | `delegate-task` | Mark task as "Waiting For" with person and follow-up |
 | `defer-task` | Move to Someday/Maybe or schedule for future date |
 | `modify-task` | Update task properties (title, notes, tags, cancel) |
+| `modify-project` | Update project properties (title, notes, area, complete/cancel) |
 | `plan-project` | Create project with initial tasks atomically |
-| `create-area` | Create a new area of responsibility |
+| `create-area` | Create a new area of responsibility (optionally with projects) |
+| `modify-area` | Rename an area or update its tags |
+| `delete-area` | Remove an area (safety guard: blocks if loose to-dos exist) |
+| `merge-areas` | Move all contents from one area to another, then delete source |
 
 ### Reflect
 
 | Tool | Purpose |
 |------|---------|
-| `daily-review` | Today's tasks, overdue items, inbox status |
-| `weekly-review` | Stalled projects, waiting-for items, triage activity |
+| `daily-review` | Today's tasks, overdue items/projects, inbox status |
+| `weekly-review` | Stalled projects, unassigned projects, waiting-for items, triage activity |
 | `triage-insights` | Analyze triage patterns and trends |
 
 ### Engage
@@ -189,7 +193,7 @@ The server provides **21 GTD-native tools** organized by methodology stage:
 | `focus-mode` | Get single most important task for current context |
 | `complete-task` | Mark task done by ID or fuzzy title match |
 
-Plus `search-tasks`, `triage-insights`, `create-area`, `get-projects`, `get-areas`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+Plus `search-tasks`, `triage-insights`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
 
 ## GTD Health Dashboard
 
@@ -326,7 +330,7 @@ The following legacy CRUD-style tools have been removed in favor of GTD-native t
 | `add-todo` | `capture-task` or `schedule-task` |
 | `add-project` | `plan-project` |
 | `update-todo` | `modify-task` |
-| `update-project` | `modify-task` |
+| `update-project` | `modify-project` |
 | `show-item` | `show-in-app` |
 
 **Why?** The GTD-native tools are designed around how you actually work with tasks, not database operations. Instead of "add a todo", you "capture a thought" or "schedule a task with context". This matches how AI assistants naturally think about task management.

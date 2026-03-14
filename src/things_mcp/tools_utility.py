@@ -18,6 +18,7 @@ from .tool_annotations import TOOL_ANNOTATIONS
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
 from .input_validation import validate_show_id
+from .resolvers import resolve_item
 
 logger = get_logger(__name__)
 
@@ -134,6 +135,149 @@ def register_utility_tools(mcp: FastMCP):
 
         formatted_areas = [format_area(area, include_items) for area in areas]
         return "\n\n---\n\n".join(formatted_areas)
+
+    @mcp.tool(
+        name="get-project", annotations=TOOL_ANNOTATIONS["get-project"], timeout=5
+    )
+    async def get_project(name_or_uuid: str, ctx: Context = None) -> str:
+        """Get a single project with full detail by name or UUID.
+
+        Use when: You need full detail on a specific project — its tasks, notes,
+        deadline, area, and status. For listing all projects, use get-projects instead.
+
+        Args:
+            name_or_uuid: Project name (case-insensitive) or UUID
+        """
+        if ctx:
+            await ctx.info("Looking up project...")
+
+        try:
+            project = resolve_item(name_or_uuid, "project")
+            uuid = project["uuid"]
+
+            # Build detailed output
+            output = f"**{project.get('title', 'Untitled')}**\n"
+            output += f"UUID: {uuid}\n"
+            output += f"Status: {project.get('status', 'unknown')}\n"
+
+            # Area
+            area_id = project.get("area")
+            if area_id:
+                try:
+                    area = things.get(area_id)
+                    output += f"Area: {area['title']}\n" if area else ""
+                except Exception:
+                    pass
+            else:
+                output += "Area: (none)\n"
+
+            # Dates
+            if project.get("deadline"):
+                output += f"Deadline: {project['deadline']}\n"
+            if project.get("start_date"):
+                output += f"Scheduled: {project['start_date']}\n"
+            if project.get("creation_date"):
+                output += f"Created: {project['creation_date']}\n"
+
+            # Tags
+            tags = project.get("tags")
+            if tags:
+                output += f"Tags: {', '.join(tags)}\n"
+
+            # Notes
+            if project.get("notes"):
+                output += f"\nNotes:\n{project['notes']}\n"
+
+            # Tasks
+            todos = things.todos(project=uuid, status="incomplete")
+            completed = things.todos(project=uuid, status="completed")
+
+            if todos:
+                output += f"\n**Tasks** ({len(todos)} active"
+                if completed:
+                    output += f", {len(completed)} completed"
+                output += "):\n"
+                for t in todos:
+                    output += f"  - [ ] {t['title']}"
+                    if t.get("deadline"):
+                        output += f" (due: {t['deadline']})"
+                    output += "\n"
+            elif completed:
+                output += f"\n**Tasks** (0 active, {len(completed)} completed)\n"
+            else:
+                output += "\n**No tasks** — GTD: every project needs a next action.\n"
+
+            return output
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error getting project", exc_info=True)
+            _error_result("Failed to get project. Check server logs for details.")
+
+    @mcp.tool(name="get-area", annotations=TOOL_ANNOTATIONS["get-area"], timeout=5)
+    async def get_area(
+        name_or_uuid: str,
+        include_items: bool = False,
+        ctx: Context = None,
+    ) -> str:
+        """Get a single area with full detail by name or UUID.
+
+        Use when: Inspecting a specific area before modifying or deleting it,
+        or checking what projects and to-dos belong to it. For listing all areas,
+        use get-areas instead.
+
+        Args:
+            name_or_uuid: Area name (case-insensitive) or UUID
+            include_items: Include full project and to-do listings
+        """
+        if ctx:
+            await ctx.info("Looking up area...")
+
+        try:
+            area = resolve_item(name_or_uuid, "area")
+            uuid = area["uuid"]
+
+            output = f"**{area.get('title', 'Untitled')}**\n"
+            output += f"UUID: {uuid}\n"
+
+            # Tags
+            tags = area.get("tags")
+            if tags:
+                output += f"Tags: {', '.join(tags)}\n"
+
+            # Projects in this area
+            projects = [p for p in (things.projects() or []) if p.get("area") == uuid]
+            # Loose to-dos (in this area but not in a project)
+            loose_todos = [
+                t for t in (things.todos(area=uuid) or []) if not t.get("project")
+            ]
+
+            output += f"\nProjects: {len(projects)}\n"
+            output += f"Loose to-dos: {len(loose_todos)}\n"
+
+            if include_items:
+                if projects:
+                    output += "\n**Projects:**\n"
+                    for p in projects:
+                        status = p.get("status", "")
+                        task_count = len(
+                            things.todos(project=p["uuid"], status="incomplete") or []
+                        )
+                        output += f"  - {p['title']} ({status}, {task_count} tasks)\n"
+
+                if loose_todos:
+                    output += "\n**Loose To-dos:**\n"
+                    for t in loose_todos:
+                        output += f"  - {t['title']}\n"
+
+            return output
+
+        except ToolError:
+            raise
+        except Exception:
+            logger.error("Error getting area", exc_info=True)
+            _error_result("Failed to get area. Check server logs for details.")
 
     @mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"], timeout=5)
     async def get_tags(include_items: bool = False, ctx: Context = None) -> str:

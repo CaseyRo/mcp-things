@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import subprocess
 import logging
 from typing import Dict, Any, Union
@@ -97,14 +98,20 @@ def run_applescript(script: str) -> Union[str, bool]:
 def escape_applescript_string(text: str) -> str:
     """Escape special characters in an AppleScript string.
 
+    Strips control characters (null bytes, newlines, tabs, etc.) that could
+    break AppleScript structure, then escapes quotes by doubling them.
+
     Args:
         text: The string to escape
 
     Returns:
-        The escaped string
+        The escaped string safe for interpolation into AppleScript string literals
     """
     if not text:
         return ""
 
+    # Strip control characters that could break AppleScript structure
+    cleaned = re.sub(r"[\x00-\x1f\x7f]", "", text)
+
     # Escape quotes by doubling them (AppleScript style)
-    return text.replace('"', '""')
+    return cleaned.replace('"', '""')

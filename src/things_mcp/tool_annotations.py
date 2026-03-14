@@ -27,6 +27,13 @@ UPDATE_ANNOTATIONS = types.ToolAnnotations(
     openWorldHint=False,
 )
 
+DESTRUCTIVE_ANNOTATIONS = types.ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=True,
+    idempotentHint=False,
+    openWorldHint=False,
+)
+
 TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     # === GTD Engage Tools ===
     "get-tasks": READ_ONLY_ANNOTATIONS,
@@ -44,6 +51,10 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "plan-project": ADD_ANNOTATIONS,
     "modify-task": UPDATE_ANNOTATIONS,
     "create-area": ADD_ANNOTATIONS,
+    "modify-project": UPDATE_ANNOTATIONS,
+    "modify-area": UPDATE_ANNOTATIONS,
+    "delete-area": DESTRUCTIVE_ANNOTATIONS,
+    "merge-areas": DESTRUCTIVE_ANNOTATIONS,
     # === GTD Reflect Tools ===
     "daily-review": READ_ONLY_ANNOTATIONS,
     "weekly-review": READ_ONLY_ANNOTATIONS,
@@ -51,6 +62,8 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "search-tasks": READ_ONLY_ANNOTATIONS,
     "get-projects": READ_ONLY_ANNOTATIONS,
     "get-areas": READ_ONLY_ANNOTATIONS,
+    "get-project": READ_ONLY_ANNOTATIONS,
+    "get-area": READ_ONLY_ANNOTATIONS,
     "get-tags": READ_ONLY_ANNOTATIONS,
     "show-in-app": READ_ONLY_ANNOTATIONS,
     "get-cache-stats": READ_ONLY_ANNOTATIONS,

@@ -32,6 +32,33 @@ VALID_LIST_NAMES = {
 THINGS_UUID_PATTERN = re.compile(r"^[A-Za-z0-9\-_]{6,40}$")
 
 
+MAX_NAME_LENGTH = 255
+MAX_NOTES_LENGTH = 10_000
+
+
+def validate_name(name: str, field: str = "name") -> None:
+    """Validate a name/title input for use in AppleScript or URL scheme.
+
+    Rejects empty/whitespace-only strings and enforces length limits.
+    Raises ToolError for invalid input.
+    """
+    if not name or not name.strip():
+        raise ToolError(f"{field} cannot be empty or whitespace-only")
+    if len(name) > MAX_NAME_LENGTH:
+        raise ToolError(
+            f"{field} exceeds maximum length of {MAX_NAME_LENGTH} characters"
+        )
+
+
+def validate_notes_length(notes: str) -> None:
+    """Validate notes text length.
+
+    Raises ToolError if notes exceed the maximum length.
+    """
+    if notes and len(notes) > MAX_NOTES_LENGTH:
+        raise ToolError(f"Notes exceed maximum length of {MAX_NOTES_LENGTH} characters")
+
+
 def validate_tag_names(tags: Optional[List[str]]) -> None:
     """Validate tag names against safe character pattern.
 

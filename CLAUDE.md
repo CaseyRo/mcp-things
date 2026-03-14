@@ -49,13 +49,14 @@ src/things_mcp/
 ├── client_compat.py         # Client compatibility: Accept header patches, transport middleware
 ├── tool_annotations.py      # Shared TOOL_ANNOTATIONS dict
 ├── tools_gtd_core.py        # GTD Engage/Capture/Clarify tools (6 tools)
-├── tools_gtd_organize.py    # GTD Organize stage tools (6 tools)
+├── tools_gtd_organize.py    # GTD Organize stage tools (10 tools)
 ├── tools_gtd_reflect.py     # GTD Reflect stage tools (2 tools)
-├── tools_utility.py         # Utility tools: search, list, cache stats (7 tools)
+├── tools_utility.py         # Utility tools: search, list, cache stats (9 tools)
+├── resolvers.py             # Name-to-UUID resolution (shared by tool modules)
 ├── triage_tracker.py        # Triage action tracking, categorization, trend analysis
 ├── dashboard.html           # GTD Health Dashboard (served at /dashboard)
 ├── auth.py                  # Bearer token auth (BearerTokenVerifier for FastMCP)
-├── input_validation.py      # Input validation (tag names, show-in-app IDs)
+├── input_validation.py      # Input validation (tag names, show-in-app IDs, name/notes length)
 ├── url_scheme.py            # Things URL scheme builders + execution (things:///)
 ├── applescript_bridge.py    # AppleScript execution (run_applescript())
 ├── formatters.py            # Output formatting for todos/projects/areas
@@ -66,14 +67,14 @@ src/things_mcp/
 └── config.py                # Configuration management
 ```
 
-**Tool Organization by GTD Stage (21 tools total):**
+**Tool Organization by GTD Stage (27 tools total):**
 
 - **Engage** (3): get-tasks, focus-mode, complete-task
 - **Capture** (1): capture-task
 - **Clarify** (2): process-inbox, convert-to-project
-- **Organize** (6): schedule-task, delegate-task, defer-task, plan-project, modify-task, create-area
+- **Organize** (10): schedule-task, delegate-task, defer-task, plan-project, modify-task, create-area, modify-project, modify-area, delete-area, merge-areas
 - **Reflect** (2): daily-review, weekly-review
-- **Utility** (7): search-tasks, get-projects, get-areas, get-tags, show-in-app, get-cache-stats, triage-insights
+- **Utility** (9): search-tasks, get-projects, get-project, get-areas, get-area, get-tags, show-in-app, get-cache-stats, triage-insights
 
 **Data Flow:**
 
@@ -103,9 +104,9 @@ THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (defa
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
 
-**Important:** The `THINGS_AUTH_TOKEN` is required for all write operations (create, update, delete). Without it, operations will fail silently. Configure via `.env` file or environment variable.
+**Important:** The `THINGS_AUTH_TOKEN` is required for all write operations (create, update, delete, modify, merge). This includes the new CRUD tools: `modify-project`, `modify-area`, `delete-area`, `merge-areas`, and enhanced `create-area`/`plan-project`. Without it, write operations will fail silently. Configure via `.env` file or environment variable.
 
-**Important:** The `THINGS_MCP_API_KEY` is required for all MCP client connections. If not set, one is auto-generated on first startup and saved to `.env`. All clients must send `Authorization: Bearer <key>` header.
+**Important:** The `THINGS_MCP_API_KEY` is required for all MCP client connections (both read and write tools). If not set, one is auto-generated on first startup and saved to `.env`. All clients must send `Authorization: Bearer <key>` header.
 
 ## OpenSpec Workflow
 

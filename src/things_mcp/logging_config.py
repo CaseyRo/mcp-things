@@ -21,6 +21,7 @@ LOGS_DIR.chmod(stat.S_IRWXU)  # 0700
 REDACTION_TOKEN = "[REDACTED]"
 SENSITIVE_FIELDS = {
     "title",
+    "name",
     "notes",
     "tags",
     "params",
