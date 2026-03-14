@@ -8,13 +8,15 @@ import logging
 import logging.handlers
 import json
 import re
+import stat
 from datetime import datetime, UTC
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Create logs directory if it doesn't exist
+# Create logs directory if it doesn't exist, with restrictive permissions
 LOGS_DIR = Path.home() / ".things-mcp" / "logs"
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.chmod(stat.S_IRWXU)  # 0700
 
 REDACTION_TOKEN = "[REDACTED]"
 SENSITIVE_FIELDS = {
@@ -75,11 +77,11 @@ def sanitize_for_logging(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 def _redact_message_text(message: str) -> str:
     """Apply conservative redaction to inline messages."""
     patterns = [
-        (r"(title\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
-        (r"(notes\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
-        (r"(tags\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
-        (r"(params\s*[:=]\s*)([^;,.]+)", r"\1" + REDACTION_TOKEN),
-        (r"(auth-token=)([^&\"]+)", r"\1" + REDACTION_TOKEN),
+        (r"(title\s*[:=]\s*)([^&;\s]+)", r"\1" + REDACTION_TOKEN),
+        (r"(notes\s*[:=]\s*)([^&;\s]+)", r"\1" + REDACTION_TOKEN),
+        (r"(tags\s*[:=]\s*)([^&;\s]+)", r"\1" + REDACTION_TOKEN),
+        (r"(params\s*[:=]\s*)([^&;\s]+)", r"\1" + REDACTION_TOKEN),
+        (r"(auth-token=)([^&\"\s]+)", r"\1" + REDACTION_TOKEN),
     ]
     redacted = message
     for pattern, repl in patterns:
@@ -253,6 +255,14 @@ def setup_logging(
     error_file_handler.addFilter(operation_filter)
     error_file_handler.addFilter(redaction_filter)
     root_logger.addHandler(error_file_handler)
+
+    # Set restrictive permissions on log files
+    for log_file in LOGS_DIR.iterdir():
+        if log_file.is_file():
+            try:
+                log_file.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
+            except OSError:
+                pass
 
     # Log the logging configuration
     logger = logging.getLogger(__name__)

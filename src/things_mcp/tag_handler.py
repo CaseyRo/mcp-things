@@ -7,6 +7,7 @@ Ensures tags exist before applying them.
 import logging
 from typing import List
 from .applescript_bridge import run_applescript, escape_applescript_string
+from .input_validation import validate_tag_names
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ def ensure_tags_exist(tags: List[str]) -> bool:
     """
     if not tags:
         return True
+
+    validate_tag_names(tags)
 
     try:
         # Build AppleScript to check and create tags

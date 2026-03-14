@@ -65,12 +65,14 @@ class TestServerStartup:
 
         try:
             response = httpx.get(url, timeout=5)
-            # 200/404/405 OK; 400 possible in MCP 1.26+ when GET without session
+            # 200/404/405 OK; 400 possible in MCP 1.26+ when GET without session;
+            # 401 expected when auth is enabled (bearer token required)
             assert response.status_code in [
                 200,
                 400,
+                401,
                 404,
                 405,
-            ], f"Expected 200/400/404/405, got {response.status_code}"
+            ], f"Expected 200/400/401/404/405, got {response.status_code}"
         except httpx.ConnectError:
             pytest.skip("Server not accessible")

@@ -46,10 +46,16 @@ class Settings(BaseSettings):
         description="Transport protocol: 'streamable-http' (for Claude Desktop, n8n, ChatGPT)",
     )
 
-    # Things authentication
+    # Things authentication (outbound to Things 3)
     things_auth_token: str = Field(
         default="",
         description="Things 3 authentication token (from Things > Settings > General > Enable Things URLs)",
+    )
+
+    # Server authentication (inbound from MCP clients)
+    things_mcp_api_key: str = Field(
+        default="",
+        description="API key for authenticating MCP clients. Auto-generated on first run if empty.",
     )
 
     # Debug settings
@@ -80,6 +86,11 @@ class Settings(BaseSettings):
     def has_auth_token(self) -> bool:
         """Check if an authentication token is configured."""
         return bool(self.things_auth_token)
+
+    @property
+    def has_api_key(self) -> bool:
+        """Check if a server API key is configured."""
+        return bool(self.things_mcp_api_key)
 
 
 @lru_cache(maxsize=1)
@@ -138,6 +149,11 @@ def get_dashboard_url() -> str:
     host = get_settings().things_mcp_host
     port = get_settings().things_mcp_port
     return f"http://{host}:{port}/dashboard"
+
+
+def get_api_key() -> str:
+    """Get the server API key."""
+    return get_settings().things_mcp_api_key
 
 
 def is_debug_enabled() -> bool:

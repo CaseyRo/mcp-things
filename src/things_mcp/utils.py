@@ -226,18 +226,36 @@ class DeadLetterQueue:
             return []
 
     def _save_queue(self):
-        """Persist queue to disk"""
+        """Persist queue to disk with restrictive permissions."""
+        import stat
+
         try:
             with open(self.dlq_file, "w") as f:
                 json.dump(self.queue, f)
+            os.chmod(self.dlq_file, stat.S_IRUSR | stat.S_IWUSR)  # 0600
         except Exception as e:
             logger.error(f"Error saving DLQ: {str(e)}")
+
+    _SENSITIVE_PARAMS = {
+        "title",
+        "notes",
+        "checklist-items",
+        "prepend-notes",
+        "append-notes",
+    }
+
+    def _sanitize_params(self, params: dict) -> dict:
+        """Strip task content from params before persisting."""
+        return {
+            k: "[REDACTED]" if k in self._SENSITIVE_PARAMS else v
+            for k, v in params.items()
+        }
 
     def add_failed_operation(self, operation, params, error, attempts=1):
         """Add failed operation to dead letter queue"""
         entry = {
             "operation": operation,
-            "params": params,
+            "params": self._sanitize_params(params),
             "error": str(error),
             "attempts": attempts,
             "timestamp": time.time(),

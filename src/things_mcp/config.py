@@ -154,32 +154,94 @@ def _find_env_file() -> Path:
     return Path(__file__).parent.parent.parent / ".env"
 
 
-def _write_token_to_env(token: str) -> bool:
-    """Write or update THINGS_AUTH_TOKEN in the .env file."""
-    env_path = _find_env_file()
+def _write_env_var(env_path: Path, key: str, value: str) -> bool:
+    """Write or update a key=value pair in a .env file."""
     try:
         if env_path.exists():
             content = env_path.read_text()
-            # Replace existing token line
             lines = content.splitlines(keepends=True)
             found = False
             for i, line in enumerate(lines):
-                if line.startswith("THINGS_AUTH_TOKEN="):
-                    lines[i] = f"THINGS_AUTH_TOKEN={token}\n"
+                if line.startswith(f"{key}="):
+                    lines[i] = f"{key}={value}\n"
                     found = True
                     break
             if not found:
-                # Add a newline separator only if the file doesn't already end with one
                 prefix = "" if lines and lines[-1].endswith("\n") else "\n"
-                lines.append(f"{prefix}THINGS_AUTH_TOKEN={token}\n")
+                lines.append(f"{prefix}{key}={value}\n")
             env_path.write_text("".join(lines))
         else:
-            env_path.write_text(f"THINGS_AUTH_TOKEN={token}\n")
+            env_path.write_text(f"{key}={value}\n")
         env_path.chmod(stat.S_IRUSR | stat.S_IWUSR)  # 0600
         return True
     except Exception as e:
-        logger.error(f"Failed to write token to .env: {e}")
+        logger.error(f"Failed to write {key} to {env_path}: {e}")
         return False
+
+
+def _write_token_to_env(token: str) -> bool:
+    """Write or update THINGS_AUTH_TOKEN in the .env file."""
+    return _write_env_var(_find_env_file(), "THINGS_AUTH_TOKEN", token)
+
+
+def ensure_api_key() -> str:
+    """Ensure a server API key exists; generate and save one if not.
+
+    Returns the API key (existing or newly generated).
+    """
+    from .auth import generate_api_key
+
+    settings = get_settings()
+    if settings.has_api_key:
+        return settings.things_mcp_api_key
+
+    new_key = generate_api_key()
+    logger.info("No THINGS_MCP_API_KEY found — generating one automatically")
+
+    env_path = _find_env_file()
+    _write_env_var(env_path, "THINGS_MCP_API_KEY", new_key)
+    logger.info(f"API key saved to {env_path}")
+
+    os.environ["THINGS_MCP_API_KEY"] = new_key
+    get_settings.cache_clear()
+
+    return new_key
+
+
+def enforce_file_permissions() -> None:
+    """Check and fix permissions on sensitive files at startup."""
+    files_0600 = [
+        _find_env_file(),
+        CONFIG_FILE,
+    ]
+    dirs_0700 = [
+        CONFIG_DIR,
+        Path.home() / ".things-mcp" / "logs",
+    ]
+
+    for d in dirs_0700:
+        if d.exists() and (d.stat().st_mode & 0o077) != 0:
+            d.chmod(stat.S_IRWXU)
+            logger.warning("Fixed insecure directory permissions: %s", d)
+
+    for f in files_0600:
+        if f.exists() and (f.stat().st_mode & 0o077) != 0:
+            f.chmod(stat.S_IRUSR | stat.S_IWUSR)
+            logger.warning("Fixed insecure file permissions: %s", f)
+
+    # Fix log files
+    logs_dir = Path.home() / ".things-mcp" / "logs"
+    if logs_dir.exists():
+        for log_file in logs_dir.iterdir():
+            if log_file.is_file() and (log_file.stat().st_mode & 0o077) != 0:
+                log_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
+                logger.warning("Fixed insecure log file permissions: %s", log_file)
+
+    # Fix DLQ file
+    dlq_file = Path.home() / ".things-mcp" / "things_dlq.json"
+    if dlq_file.exists() and (dlq_file.stat().st_mode & 0o077) != 0:
+        dlq_file.chmod(stat.S_IRUSR | stat.S_IWUSR)
+        logger.warning("Fixed insecure DLQ file permissions: %s", dlq_file)
 
 
 def ensure_auth_token() -> str:

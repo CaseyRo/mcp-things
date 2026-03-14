@@ -54,6 +54,8 @@ src/things_mcp/
 ├── tools_utility.py         # Utility tools: search, list, cache stats (7 tools)
 ├── triage_tracker.py        # Triage action tracking, categorization, trend analysis
 ├── dashboard.html           # GTD Health Dashboard (served at /dashboard)
+├── auth.py                  # Bearer token auth (BearerTokenVerifier for FastMCP)
+├── input_validation.py      # Input validation (tag names, show-in-app IDs)
 ├── url_scheme.py            # Things URL scheme builders + execution (things:///)
 ├── applescript_bridge.py    # AppleScript execution (run_applescript())
 ├── formatters.py            # Output formatting for todos/projects/areas
@@ -96,11 +98,14 @@ THINGS_MCP_HOST=127.0.0.1    # Server bind address (default: localhost)
 THINGS_MCP_PORT=8009         # Server port
 THINGS_MCP_TRANSPORT=streamable-http  # Transport: "streamable-http" (default, SSE removed)
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
+THINGS_MCP_API_KEY=tmcp_xxx      # Server API key (auto-generated on first run if empty)
 THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (default: INFO only)
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
 
 **Important:** The `THINGS_AUTH_TOKEN` is required for all write operations (create, update, delete). Without it, operations will fail silently. Configure via `.env` file or environment variable.
+
+**Important:** The `THINGS_MCP_API_KEY` is required for all MCP client connections. If not set, one is auto-generated on first startup and saved to `.env`. All clients must send `Authorization: Bearer <key>` header.
 
 ## OpenSpec Workflow
 
@@ -146,7 +151,7 @@ The server uses streamable-http transport (SSE transport removed as deprecated):
 THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only option)
 ```
 
-**Client Setup:** All clients (ChatGPT, Claude Desktop, n8n) should use `http://localhost:8009/mcp` as the MCP server URL.
+**Client Setup:** All clients (ChatGPT, Claude Desktop, n8n) should use `http://localhost:8009/mcp` as the MCP server URL with the `Authorization: Bearer <api-key>` header. The API key is printed to console on server startup and stored in `.env` as `THINGS_MCP_API_KEY`.
 
 ## Client Compatibility Middleware
 

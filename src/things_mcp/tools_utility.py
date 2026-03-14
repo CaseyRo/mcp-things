@@ -17,6 +17,7 @@ from .cache import get_cache_stats
 from .tool_annotations import TOOL_ANNOTATIONS
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
+from .input_validation import validate_show_id
 
 logger = get_logger(__name__)
 
@@ -90,9 +91,9 @@ def register_utility_tools(mcp: FastMCP):
 
             return result
 
-        except Exception as e:
-            logger.error(f"Error searching tasks: {str(e)}")
-            _error_result(f"Error searching tasks: {str(e)}")
+        except Exception:
+            logger.error("Error searching tasks", exc_info=True)
+            _error_result("Failed to search tasks. Check server logs for details.")
 
     @mcp.tool(
         name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"], timeout=5
@@ -165,6 +166,8 @@ def register_utility_tools(mcp: FastMCP):
         if ctx:
             await ctx.info(f"Opening '{id}' in Things...")
 
+        validate_show_id(id)
+
         try:
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -179,9 +182,9 @@ def register_utility_tools(mcp: FastMCP):
 
         except ToolError:
             raise
-        except Exception as e:
-            logger.error(f"Error showing in app: {str(e)}")
-            _error_result(f"Error showing in app: {str(e)}")
+        except Exception:
+            logger.error("Error showing in app", exc_info=True)
+            _error_result("Failed to show in app. Check server logs for details.")
 
     @mcp.tool(
         name="get-cache-stats",
@@ -322,6 +325,8 @@ def register_utility_tools(mcp: FastMCP):
 
             return output
 
-        except Exception as e:
-            logger.error(f"Error in triage insights: {str(e)}")
-            _error_result(f"Error analyzing triage patterns: {str(e)}")
+        except Exception:
+            logger.error("Error in triage insights", exc_info=True)
+            _error_result(
+                "Failed to analyze triage patterns. Check server logs for details."
+            )

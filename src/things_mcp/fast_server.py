@@ -36,7 +36,7 @@ from .settings import get_transport, is_debug_enabled
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
-from .config import ensure_auth_token
+from .config import ensure_auth_token, ensure_api_key, enforce_file_permissions
 from .logging_config import setup_logging, get_logger
 
 # Import tool registration functions
@@ -51,7 +51,13 @@ _console_level = "DEBUG" if is_debug_enabled() else "INFO"
 setup_logging(console_level=_console_level, file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
 
-# Create the FastMCP server
+# Ensure API key exists before creating server (so auth provider gets it)
+_api_key = ensure_api_key()
+
+# Enforce secure file permissions on startup
+enforce_file_permissions()
+
+# Create the FastMCP server (with auth if API key is configured)
 mcp = create_mcp_server()
 
 # Register all tools organized by GTD stage
@@ -254,9 +260,24 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # Dashboard template path (co-located in package)
     _dashboard_path = Path(__file__).parent / "dashboard.html"
 
+    _security_headers = {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'",
+        "Referrer-Policy": "no-referrer",
+    }
+
+    def _parse_days(request) -> int:
+        """Parse and clamp the 'days' query parameter."""
+        try:
+            days = int(request.query_params.get("days", 30))
+        except (ValueError, TypeError):
+            days = 30
+        return max(0, min(days, 365))
+
     async def dashboard_page(request):
         """Serve the GTD Health Dashboard with live triage data."""
-        days = int(request.query_params.get("days", 30))
+        days = _parse_days(request)
         data = _build_dashboard_data(triage_tracker, days)
 
         template = _dashboard_path.read_text()
@@ -267,13 +288,13 @@ def _create_combined_app(mcp_instance, transport_mode: str):
             + ";</script>\n</head>"
         )
         html = template.replace("</head>", data_script, 1)
-        return HTMLResponse(html)
+        return HTMLResponse(html, headers=_security_headers)
 
     async def dashboard_data(request):
         """Return triage data as JSON (for period switching via JS)."""
-        days = int(request.query_params.get("days", 30))
+        days = _parse_days(request)
         data = _build_dashboard_data(triage_tracker, days)
-        return JSONResponse(data)
+        return JSONResponse(data, headers=_security_headers)
 
     routes = [
         Route("/dashboard", dashboard_page),
@@ -351,11 +372,27 @@ def run_things_mcp_server():
             HOST_ENV_VAR,
         )
     else:
+        if _api_key:
+            logger.info(
+                "Server binding to %s with bearer token authentication enabled.",
+                host,
+            )
+        else:
+            logger.warning(
+                "SECURITY WARNING: Server is binding to %s with no authentication. "
+                "All MCP tools are publicly accessible. Only do this on trusted networks.",
+                host,
+            )
+
+    # Display API key for client configuration
+    if _api_key:
+        masked = _api_key[:9] + "..." + _api_key[-4:]
         logger.warning(
-            "SECURITY WARNING: Server is binding to %s with no authentication. "
-            "All MCP tools are publicly accessible. Only do this on trusted networks.",
-            host,
+            "API key active: %s — clients must send: Authorization: Bearer <key>",
+            masked,
         )
+        print(f"\n  API Key: {_api_key}")
+        print("  Configure MCP clients with: Authorization: Bearer <key>\n")
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
     # which detects the client type and applies transforms accordingly:

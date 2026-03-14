@@ -19,7 +19,7 @@ from fastmcp.server.middleware import Middleware
 import mcp.types as types
 
 from .logging_config import get_logger
-from .settings import get_settings
+from .settings import get_settings, get_api_key
 
 logger = get_logger(__name__)
 
@@ -419,11 +419,17 @@ class ClientCompatibilityMiddleware(Middleware):
 
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server instance."""
+    from .auth import BearerTokenVerifier
+
+    api_key = get_api_key()
+    auth = BearerTokenVerifier(api_key) if api_key else None
+
     server = FastMCP(
         "Things",
         instructions=INSTRUCTIONS_TEXT,
         website_url=WEBSITE_URL,
         icons=ICONS,
+        auth=auth,
     )
 
     # Add client compatibility middleware for n8n and ChatGPT

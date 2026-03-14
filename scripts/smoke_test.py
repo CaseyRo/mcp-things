@@ -60,7 +60,7 @@ async def test_read_inbox():
     """Test reading the inbox via get-tasks."""
     print("Testing: Read inbox...")
     result = await get_tasks(view="inbox")
-    if "Error" in result or "error" in result.lower():
+    if result.startswith("Failed to ") or result.startswith("Error "):
         print(f"FAIL: Could not read inbox: {result}")
         return False
     print("OK: Read inbox successfully")

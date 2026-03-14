@@ -85,6 +85,24 @@ uv run server
 uv run dev
 ```
 
+On first startup, the server auto-generates a secure API key and saves it to `.env`. The key is printed to the console:
+
+```
+  API Key: tmcp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  Configure MCP clients with: Authorization: Bearer <key>
+```
+
+### Authentication
+
+All MCP endpoints require bearer token authentication. The API key is managed automatically:
+
+- **First run:** A `tmcp_`-prefixed key is generated and saved to `.env` as `THINGS_MCP_API_KEY`
+- **Subsequent runs:** The existing key is loaded from `.env`
+- **Regenerate:** Delete the `THINGS_MCP_API_KEY=` line from `.env` and restart — a new key is generated
+- **Manual set:** Set `THINGS_MCP_API_KEY=your-key` in `.env` before starting
+
+The dashboard at `/dashboard` remains accessible without authentication (it contains only anonymized triage statistics).
+
 ### Claude Desktop Integration
 
 First, start the server (it must be running for Claude to connect):
@@ -93,13 +111,16 @@ First, start the server (it must be running for Claude to connect):
 uv run server
 ```
 
-Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Copy the API key from the console output, then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "things": {
-      "url": "http://127.0.0.1:8009/mcp"
+      "url": "http://127.0.0.1:8009/mcp",
+      "headers": {
+        "Authorization": "Bearer tmcp_your-key-here"
+      }
     }
   }
 }
@@ -112,7 +133,7 @@ Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 >   "mcpServers": {
 >     "things": {
 >       "command": "npx",
->       "args": ["mcp-remote", "http://127.0.0.1:8009/mcp"]
+>       "args": ["mcp-remote", "--header", "Authorization: Bearer tmcp_your-key-here", "http://127.0.0.1:8009/mcp"]
 >     }
 >   }
 > }
@@ -121,7 +142,7 @@ Then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ### Claude Code Integration
 
 ```bash
-claude mcp add --transport http things http://127.0.0.1:8009/mcp
+claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key-here" things http://127.0.0.1:8009/mcp
 ```
 
 ## GTD Tools
@@ -219,6 +240,8 @@ People:   @person-name (for agenda items)
 src/things_mcp/
 ├── fast_server.py        # Entry point, ASGI app, dashboard endpoint
 ├── server_core.py        # Server factory, client middleware, schema transforms
+├── auth.py               # Bearer token auth (BearerTokenVerifier for FastMCP)
+├── input_validation.py   # Input validation (tag names, show-in-app IDs)
 ├── tools_gtd_core.py     # Engage/Capture/Clarify tools
 ├── tools_gtd_organize.py # Organize stage tools
 ├── tools_gtd_reflect.py  # Reflect stage tools
