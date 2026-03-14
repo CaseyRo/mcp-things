@@ -100,6 +100,8 @@ def register_gtd_reflect_tools(mcp: FastMCP):
 
             return output
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error in daily review", exc_info=True)
             _error_result("Failed to run daily review. Check server logs for details.")
@@ -257,6 +259,8 @@ def register_gtd_reflect_tools(mcp: FastMCP):
 
             return output
 
+        except ToolError:
+            raise
         except Exception:
             logger.error("Error in weekly review", exc_info=True)
             _error_result("Failed to run weekly review. Check server logs for details.")
