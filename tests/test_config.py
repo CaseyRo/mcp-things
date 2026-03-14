@@ -132,7 +132,9 @@ class TestEnsureApiKey:
             "things_mcp.config.get_settings",
             lambda: mock.Mock(has_api_key=True, things_mcp_api_key="tmcp_existing"),
         )
-        assert ensure_api_key() == "tmcp_existing"
+        key, is_new = ensure_api_key()
+        assert key == "tmcp_existing"
+        assert is_new is False
 
     def test_generates_and_saves_new_key(self, monkeypatch, tmp_path):
         from things_mcp.config import ensure_api_key
@@ -146,8 +148,9 @@ class TestEnsureApiKey:
         )
         monkeypatch.setattr("things_mcp.config._find_env_file", lambda: env_file)
 
-        key = ensure_api_key()
+        key, is_new = ensure_api_key()
         assert key.startswith("tmcp_")
+        assert is_new is True
         assert "THINGS_MCP_API_KEY=" in env_file.read_text()
 
 

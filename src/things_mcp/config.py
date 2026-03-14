@@ -184,16 +184,16 @@ def _write_token_to_env(token: str) -> bool:
     return _write_env_var(_find_env_file(), "THINGS_AUTH_TOKEN", token)
 
 
-def ensure_api_key() -> str:
+def ensure_api_key() -> tuple[str, bool]:
     """Ensure a server API key exists; generate and save one if not.
 
-    Returns the API key (existing or newly generated).
+    Returns (api_key, is_new) — is_new is True only on first generation.
     """
     from .auth import generate_api_key
 
     settings = get_settings()
     if settings.has_api_key:
-        return settings.things_mcp_api_key
+        return settings.things_mcp_api_key, False
 
     new_key = generate_api_key()
     logger.info("No THINGS_MCP_API_KEY found — generating one automatically")
@@ -205,7 +205,7 @@ def ensure_api_key() -> str:
     os.environ["THINGS_MCP_API_KEY"] = new_key
     get_settings.cache_clear()
 
-    return new_key
+    return new_key, True
 
 
 def enforce_file_permissions() -> None:
