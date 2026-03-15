@@ -58,6 +58,16 @@ class Settings(BaseSettings):
         description="API key for authenticating MCP clients. Auto-generated on first run if empty.",
     )
 
+    # OAuth client credentials (for Claude.ai connector)
+    things_mcp_oauth_client_id: str = Field(
+        default="",
+        description="Pre-registered OAuth client ID. Auto-generated on first run if empty.",
+    )
+    things_mcp_oauth_client_secret: str = Field(
+        default="",
+        description="Pre-registered OAuth client secret. Auto-generated on first run if empty.",
+    )
+
     # Debug settings
     things_mcp_debug: bool = Field(
         default=False,
@@ -91,6 +101,13 @@ class Settings(BaseSettings):
     def has_api_key(self) -> bool:
         """Check if a server API key is configured."""
         return bool(self.things_mcp_api_key)
+
+    @property
+    def has_oauth_credentials(self) -> bool:
+        """Check if OAuth client credentials are configured."""
+        return bool(
+            self.things_mcp_oauth_client_id and self.things_mcp_oauth_client_secret
+        )
 
 
 @lru_cache(maxsize=1)
@@ -154,6 +171,16 @@ def get_dashboard_url() -> str:
 def get_api_key() -> str:
     """Get the server API key."""
     return get_settings().things_mcp_api_key
+
+
+def get_oauth_client_id() -> str:
+    """Get the pre-registered OAuth client ID."""
+    return get_settings().things_mcp_oauth_client_id
+
+
+def get_oauth_client_secret() -> str:
+    """Get the pre-registered OAuth client secret."""
+    return get_settings().things_mcp_oauth_client_secret
 
 
 def is_debug_enabled() -> bool:
