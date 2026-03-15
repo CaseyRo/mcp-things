@@ -55,20 +55,19 @@ REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60  # 30 days
 class ThingsOAuthProvider(OAuthProvider):
     """OAuth 2.1 provider for Things MCP.
 
-    Security model (defense in depth):
-    1. Caddy IP allowlist — only Anthropic CIDRs + Tailscale reach the server
-    2. Client secret — generated during dynamic registration, required for
-       token exchange. Only the client that registered can get tokens.
-    3. PKCE — auth codes are bound to the original requester's code_verifier
-    4. Short-lived tokens — access tokens expire after 1 hour
-    5. In-memory storage — server restart invalidates all sessions
+    Security model:
+    - Pre-registered client (client_id + client_secret from .env)
+    - Claude.ai enters these in the connector "Advanced settings" dialog
+    - Claude.ai uses them directly — no dynamic registration needed
+    - Dynamic registration is rejected (only pre-registered client allowed)
+    - Caddy IP allowlist on /mcp as additional layer
     """
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, client_id: str, client_secret: str):
         super().__init__(
             base_url=base_url,
             client_registration_options=ClientRegistrationOptions(
-                enabled=True,
+                enabled=True,  # MCP spec requires the endpoint to exist
                 valid_scopes=["all"],
             ),
             revocation_options=RevocationOptions(enabled=True),
@@ -80,32 +79,31 @@ class ThingsOAuthProvider(OAuthProvider):
         self._access_to_refresh: dict[str, str] = {}
         self._refresh_to_access: dict[str, str] = {}
 
+        # Pre-register the allowed client
+        from pydantic import AnyHttpUrl
+
+        self.clients[client_id] = OAuthClientInformationFull(
+            client_id=client_id,
+            client_secret=client_secret,
+            client_id_issued_at=int(time.time()),
+            redirect_uris=[AnyHttpUrl("https://claude.ai/api/mcp/auth_callback")],
+            grant_types=["authorization_code", "refresh_token"],
+            response_types=["code"],
+            token_endpoint_auth_method="client_secret_post",
+        )
+        logger.info("Pre-registered OAuth client: %s", client_id)
+
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
         return self.clients.get(client_id)
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
-        """Register a new OAuth client. Only one client allowed at a time.
-
-        First registration wins. The registered client can re-register
-        (Claude.ai does this on reconnect), but new clients are rejected.
-        Restart the server to allow a different client.
-        """
-        if client_info.client_id is None:
-            raise ValueError("client_id is required")
-        if self.clients and client_info.client_id not in self.clients:
-            logger.warning(
-                "Rejected client registration: %s — a different client is already registered",
-                client_info.client_id,
-            )
-            raise ValueError(
-                "Registration closed: a client is already registered. "
-                "Restart the server to allow a new registration."
-            )
-        self.clients[client_info.client_id] = client_info
-        logger.info(
-            "Registered OAuth client: %s (%s)",
+        """Reject dynamic registration — only pre-registered client allowed."""
+        logger.warning(
+            "Rejected dynamic registration from: %s — use pre-configured credentials",
             client_info.client_id,
-            client_info.client_name or "unnamed",
+        )
+        raise ValueError(
+            "Dynamic registration disabled. Use pre-configured client credentials."
         )
 
     async def authorize(
@@ -314,19 +312,26 @@ class BearerTokenVerifier(TokenVerifier):
 def create_auth(
     api_key: str | None,
     base_url: str,
-    **_kwargs,
+    oauth_client_id: str = "",
+    oauth_client_secret: str = "",
 ) -> MultiAuth:
     """Create the authentication provider.
 
     Returns a MultiAuth that accepts both:
-    - OAuth 2.1 clients (Claude.ai) via dynamic registration + OAuth flow
+    - OAuth 2.1 clients (Claude.ai) via pre-registered client credentials
     - Bearer token clients (Claude Code, n8n) via static API key
 
     Args:
         api_key: Static API key for bearer token auth (None to skip).
         base_url: Public URL of this server (e.g. https://things.example.com).
+        oauth_client_id: Pre-registered OAuth client ID from .env.
+        oauth_client_secret: Pre-registered OAuth client secret from .env.
     """
-    oauth = ThingsOAuthProvider(base_url=base_url)
+    oauth = ThingsOAuthProvider(
+        base_url=base_url,
+        client_id=oauth_client_id,
+        client_secret=oauth_client_secret,
+    )
 
     if api_key:
         bearer = BearerTokenVerifier(api_key)
