@@ -100,7 +100,7 @@ class ThingsOAuthProvider(OAuthProvider):
             client_id=client_id,
             client_secret=client_secret,
             client_id_issued_at=int(time.time()),
-            redirect_uris=[AnyHttpUrl("https://claude.ai/oauth/callback")],
+            redirect_uris=[AnyHttpUrl("https://claude.ai/api/mcp/auth_callback")],
             grant_types=["authorization_code", "refresh_token"],
             response_types=["code"],
             token_endpoint_auth_method="client_secret_post",
