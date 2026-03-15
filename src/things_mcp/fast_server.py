@@ -320,6 +320,16 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
     )
+    # Mount OAuth/well-known routes at root level (RFC 8414 requires this).
+    # FastMCP bundles OAuth routes inside http_app, but when mounted at /mcp
+    # they become /mcp/.well-known/* which breaks discovery. Extract them
+    # and mount at root per FastMCP docs for "Mounting Authenticated Servers".
+    if mcp_instance.auth:
+        auth_routes = mcp_instance.auth.get_routes("/mcp")
+        routes.extend(auth_routes)
+        route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
+        logger.info("OAuth routes mounted at root: %s", route_paths)
+
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
         "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n/ChatGPT)"
