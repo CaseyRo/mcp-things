@@ -58,6 +58,12 @@ class Settings(BaseSettings):
         description="API key for authenticating MCP clients. Auto-generated on first run if empty.",
     )
 
+    # Public URL (used as OAuth issuer — must be HTTPS for remote clients)
+    things_mcp_public_url: str = Field(
+        default="",
+        description="Public HTTPS URL of this server (e.g. https://things.example.com). Required for OAuth/Claude.ai.",
+    )
+
     # OAuth client credentials (for Claude.ai connector)
     things_mcp_oauth_client_id: str = Field(
         default="",
