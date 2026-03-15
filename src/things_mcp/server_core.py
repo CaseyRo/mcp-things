@@ -423,9 +423,14 @@ def create_mcp_server() -> FastMCP:
     from .settings import get_oauth_client_id, get_oauth_client_secret
 
     api_key = get_api_key()
-    host = get_settings().things_mcp_host
-    port = get_settings().things_mcp_port
-    base_url = f"http://{host}:{port}"
+    settings = get_settings()
+
+    # OAuth issuer URL must be HTTPS (MCP spec requirement).
+    # Use THINGS_MCP_PUBLIC_URL if set, otherwise fall back to local URL.
+    if settings.things_mcp_public_url:
+        base_url = settings.things_mcp_public_url.rstrip("/")
+    else:
+        base_url = f"http://{settings.things_mcp_host}:{settings.things_mcp_port}"
 
     auth = create_auth(
         api_key=api_key if api_key else None,
