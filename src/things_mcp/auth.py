@@ -84,8 +84,22 @@ class ThingsOAuthProvider(OAuthProvider):
         return self.clients.get(client_id)
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
+        """Register a new OAuth client. Only one client allowed at a time.
+
+        First registration wins — subsequent attempts are rejected.
+        Restart the server to allow a new client (clears in-memory store).
+        """
         if client_info.client_id is None:
             raise ValueError("client_id is required")
+        if self.clients:
+            logger.warning(
+                "Rejected client registration: %s — a client is already registered",
+                client_info.client_id,
+            )
+            raise ValueError(
+                "Registration closed: a client is already registered. "
+                "Restart the server to allow a new registration."
+            )
         self.clients[client_info.client_id] = client_info
         logger.info(
             "Registered OAuth client: %s (%s)",
