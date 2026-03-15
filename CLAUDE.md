@@ -99,7 +99,9 @@ THINGS_MCP_HOST=127.0.0.1    # Server bind address (default: localhost)
 THINGS_MCP_PORT=8009         # Server port
 THINGS_MCP_TRANSPORT=streamable-http  # Transport: "streamable-http" (default, SSE removed)
 THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → General → Enable Things URLs
-THINGS_MCP_API_KEY=tmcp_xxx      # Server API key (auto-generated on first run if empty)
+THINGS_MCP_API_KEY=tmcp_xxx      # Server API key for bearer-token clients (auto-generated)
+THINGS_MCP_OAUTH_CLIENT_ID=things-mcp-xxx  # OAuth client ID for Claude.ai connector (auto-generated)
+THINGS_MCP_OAUTH_CLIENT_SECRET=xxx         # OAuth client secret for Claude.ai connector (auto-generated)
 THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (default: INFO only)
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
 ```
@@ -152,7 +154,10 @@ The server uses streamable-http transport (SSE transport removed as deprecated):
 THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only option)
 ```
 
-**Client Setup:** All clients (ChatGPT, Claude Desktop, n8n) should use `http://localhost:8009/mcp` as the MCP server URL with the `Authorization: Bearer <api-key>` header. The API key is printed to console on server startup and stored in `.env` as `THINGS_MCP_API_KEY`.
+**Client Setup:**
+
+- **Claude Code / n8n / ChatGPT**: Use `http://localhost:8009/mcp` with `Authorization: Bearer <api-key>` header. API key is in `.env` as `THINGS_MCP_API_KEY`.
+- **Claude.ai connector**: Add as "Custom connector" with server URL. Enter `THINGS_MCP_OAUTH_CLIENT_ID` and `THINGS_MCP_OAUTH_CLIENT_SECRET` from `.env` in the Advanced settings dialog. Only this pre-registered client is authorized.
 
 ## Client Compatibility Middleware
 

@@ -419,10 +419,20 @@ class ClientCompatibilityMiddleware(Middleware):
 
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server instance."""
-    from .auth import BearerTokenVerifier
+    from .auth import create_auth
+    from .settings import get_oauth_client_id, get_oauth_client_secret
 
     api_key = get_api_key()
-    auth = BearerTokenVerifier(api_key) if api_key else None
+    host = get_settings().things_mcp_host
+    port = get_settings().things_mcp_port
+    base_url = f"http://{host}:{port}"
+
+    auth = create_auth(
+        api_key=api_key if api_key else None,
+        base_url=base_url,
+        oauth_client_id=get_oauth_client_id(),
+        oauth_client_secret=get_oauth_client_secret(),
+    )
 
     server = FastMCP(
         "Things",

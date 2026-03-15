@@ -36,7 +36,12 @@ from .settings import get_transport, is_debug_enabled
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
-from .config import ensure_auth_token, ensure_api_key, enforce_file_permissions
+from .config import (
+    ensure_auth_token,
+    ensure_api_key,
+    ensure_oauth_credentials,
+    enforce_file_permissions,
+)
 from .logging_config import setup_logging, get_logger
 
 # Import tool registration functions
@@ -53,6 +58,9 @@ logger = get_logger(__name__)
 
 # Ensure API key exists before creating server (so auth provider gets it)
 _api_key, _api_key_is_new = ensure_api_key()
+
+# Ensure OAuth client credentials exist (for Claude.ai connector)
+_oauth_id, _oauth_secret, _oauth_is_new = ensure_oauth_credentials()
 
 # Enforce secure file permissions on startup
 enforce_file_permissions()
@@ -400,6 +408,24 @@ def run_things_mcp_server():
             logger.info(
                 "API key active: %s — clients must send: Authorization: Bearer <key>",
                 masked,
+            )
+
+    # Display OAuth credentials for Claude.ai connector setup
+    if _oauth_id and _oauth_secret:
+        if _oauth_is_new:
+            logger.warning(
+                "NEW OAuth credentials generated — enter these in Claude.ai's connector dialog"
+            )
+            print("\n  Claude.ai Connector (Advanced settings):")
+            print(f"  OAuth Client ID:     {_oauth_id}")
+            print(f"  OAuth Client Secret: {_oauth_secret}")
+            print("  Stored in .env — only this client can authorize.\n")
+        else:
+            masked_secret = _oauth_secret[:4] + "..." + _oauth_secret[-4:]
+            logger.info(
+                "OAuth client: id=%s secret=%s — only this client is authorized",
+                _oauth_id,
+                masked_secret,
             )
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
