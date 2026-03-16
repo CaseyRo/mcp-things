@@ -320,7 +320,7 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # Auth routes (e.g. /.well-known/oauth-protected-resource) must live
     # at the root, not under /mcp, so MCP clients can discover them.
     if mcp_instance.auth:
-        auth_routes = mcp_instance.auth.get_routes("/mcp")
+        auth_routes = mcp_instance.auth.get_routes("")
         routes.extend(auth_routes)
         route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
         logger.info("Auth routes mounted at root: %s", route_paths)
