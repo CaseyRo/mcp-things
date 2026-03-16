@@ -6,7 +6,7 @@ Tests that settings are correctly loaded and validated.
 import pytest
 from pydantic import ValidationError
 
-from things_mcp.settings import get_settings, Settings
+from things_mcp.settings import Settings
 
 
 @pytest.mark.unit
@@ -15,7 +15,13 @@ class TestConfiguration:
 
     def test_default_settings(self):
         """Default settings should be valid."""
-        settings = get_settings()
+        # Use Settings() directly to test model defaults, not get_settings()
+        # which reads from .env and may have overridden values.
+        settings = Settings(
+            _env_file=None,
+            things_auth_token="",
+            things_mcp_api_key="",
+        )
         assert settings.things_mcp_host == "127.0.0.1"
         assert settings.things_mcp_port == 8009
         assert settings.things_mcp_transport == "streamable-http"

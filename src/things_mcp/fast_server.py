@@ -32,7 +32,7 @@ from .client_compat import (
     patch_accept_headers,
     get_streamable_http_middleware,
 )
-from .settings import get_transport, is_debug_enabled
+from .settings import get_transport, is_debug_enabled, get_settings
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
@@ -319,11 +319,51 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # Mount well-known routes at root level (RFC 9728 requires this).
     # Auth routes (e.g. /.well-known/oauth-protected-resource) must live
     # at the root, not under /mcp, so MCP clients can discover them.
+    #
+    # IMPORTANT: Only serve OAuth discovery metadata when accessed via the
+    # public URL (Caddy reverse proxy). Direct/Tailscale connections should
+    # NOT see OAuth metadata — they use bearer token auth instead.
+    # Without this filter, Claude Code sees OAuth metadata and follows the
+    # OAuth flow instead of using the configured bearer token header.
     if mcp_instance.auth:
+        from starlette.responses import Response
+
+        public_host = (
+            get_settings().things_mcp_public_url.rstrip("/").split("://")[-1]
+            if get_settings().things_mcp_public_url
+            else None
+        )
+
         auth_routes = mcp_instance.auth.get_routes("")
-        routes.extend(auth_routes)
+        if public_host:
+            filtered_routes = []
+            for route in auth_routes:
+                if hasattr(route, "path") and ".well-known" in route.path:
+                    original_endpoint = route.endpoint
+
+                    def _make_gated_endpoint(original):
+                        async def gated_endpoint(request):
+                            host = request.headers.get("host", "")
+                            if host == public_host or host.startswith(
+                                public_host.split(":")[0]
+                            ):
+                                return await original(request)
+                            return Response(status_code=404)
+
+                        return gated_endpoint
+
+                    route.endpoint = _make_gated_endpoint(original_endpoint)
+                filtered_routes.append(route)
+            routes.extend(filtered_routes)
+        else:
+            routes.extend(auth_routes)
+
         route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
-        logger.info("Auth routes mounted at root: %s", route_paths)
+        logger.info(
+            "Auth routes mounted at root: %s (gated to public host: %s)",
+            route_paths,
+            public_host,
+        )
 
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
