@@ -243,6 +243,56 @@ class _TrailingSlashMiddleware:
         await self.app(scope, receive, send)
 
 
+class _OAuthDiscoveryGateMiddleware:
+    """ASGI middleware that blocks OAuth discovery for non-public-URL requests.
+
+    OAuth metadata (/.well-known/*) should only be served when accessed via
+    the public URL (through Caddy reverse proxy). Direct/Tailscale connections
+    get 404, causing MCP clients like Claude Code to fall back to bearer token
+    auth instead of attempting OAuth with Keycloak.
+
+    This operates at the ASGI level to catch .well-known requests regardless
+    of whether they're served by root-level routes or inside mounted sub-apps.
+    """
+
+    def __init__(self, app, public_host: str):
+        self.app = app
+        self.public_host = public_host
+        # Domain without port for prefix matching
+        self.public_domain = public_host.split(":")[0]
+
+    def __getattr__(self, name):
+        return getattr(self.app, name)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and "/.well-known/" in scope.get("path", ""):
+            # Extract Host header from raw ASGI headers
+            host = ""
+            for key, value in scope.get("headers", []):
+                if key == b"host":
+                    host = value.decode("latin-1")
+                    break
+
+            if host != self.public_host and not host.startswith(self.public_domain):
+                # Not from public URL — return 404 to force bearer token fallback
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 404,
+                        "headers": [(b"content-type", b"text/plain")],
+                    }
+                )
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": b"Not Found",
+                    }
+                )
+                return
+
+        await self.app(scope, receive, send)
+
+
 def _create_combined_app(mcp_instance, transport_mode: str):
     """Create an ASGI app with streamable-http transport support.
 
@@ -319,51 +369,11 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     # Mount well-known routes at root level (RFC 9728 requires this).
     # Auth routes (e.g. /.well-known/oauth-protected-resource) must live
     # at the root, not under /mcp, so MCP clients can discover them.
-    #
-    # IMPORTANT: Only serve OAuth discovery metadata when accessed via the
-    # public URL (Caddy reverse proxy). Direct/Tailscale connections should
-    # NOT see OAuth metadata — they use bearer token auth instead.
-    # Without this filter, Claude Code sees OAuth metadata and follows the
-    # OAuth flow instead of using the configured bearer token header.
     if mcp_instance.auth:
-        from starlette.responses import Response
-
-        public_host = (
-            get_settings().things_mcp_public_url.rstrip("/").split("://")[-1]
-            if get_settings().things_mcp_public_url
-            else None
-        )
-
         auth_routes = mcp_instance.auth.get_routes("")
-        if public_host:
-            filtered_routes = []
-            for route in auth_routes:
-                if hasattr(route, "path") and ".well-known" in route.path:
-                    original_endpoint = route.endpoint
-
-                    def _make_gated_endpoint(original):
-                        async def gated_endpoint(request):
-                            host = request.headers.get("host", "")
-                            if host == public_host or host.startswith(
-                                public_host.split(":")[0]
-                            ):
-                                return await original(request)
-                            return Response(status_code=404)
-
-                        return gated_endpoint
-
-                    route.endpoint = _make_gated_endpoint(original_endpoint)
-                filtered_routes.append(route)
-            routes.extend(filtered_routes)
-        else:
-            routes.extend(auth_routes)
-
+        routes.extend(auth_routes)
         route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
-        logger.info(
-            "Auth routes mounted at root: %s (gated to public host: %s)",
-            route_paths,
-            public_host,
-        )
+        logger.info("Auth routes mounted at root: %s", route_paths)
 
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
@@ -378,7 +388,23 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     app = Starlette(routes=routes, lifespan=http_app.lifespan)
 
     # Wrap with middleware to silently normalize /mcp to /mcp/ (avoids 307 redirects)
-    return _TrailingSlashMiddleware(app)
+    app = _TrailingSlashMiddleware(app)
+
+    # Gate OAuth discovery endpoints to public URL only.
+    # Direct/Tailscale connections get 404 for /.well-known/* paths,
+    # forcing Claude Code to fall back to bearer token auth instead of
+    # attempting OAuth with Keycloak. Caddy connections (public URL host)
+    # still get OAuth metadata for Claude.ai connector.
+    public_url = get_settings().things_mcp_public_url
+    if public_url:
+        public_host = public_url.rstrip("/").split("://")[-1]
+        app = _OAuthDiscoveryGateMiddleware(app, public_host)
+        logger.info(
+            "OAuth discovery gated to public host: %s (direct connections use bearer token)",
+            public_host,
+        )
+
+    return app
 
 
 def _build_dashboard_data(tracker, days: int) -> dict:
