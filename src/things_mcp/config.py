@@ -208,37 +208,6 @@ def ensure_api_key() -> tuple[str, bool]:
     return new_key, True
 
 
-def ensure_oauth_credentials() -> tuple[str, str, bool]:
-    """Ensure OAuth client credentials exist; generate and save if not.
-
-    Returns (client_id, client_secret, is_new).
-    """
-    import secrets as _secrets
-
-    settings = get_settings()
-    if settings.has_oauth_credentials:
-        return (
-            settings.things_mcp_oauth_client_id,
-            settings.things_mcp_oauth_client_secret,
-            False,
-        )
-
-    new_id = f"things-mcp-{_secrets.token_hex(8)}"
-    new_secret = _secrets.token_urlsafe(32)
-    logger.info("No OAuth credentials found — generating automatically")
-
-    env_path = _find_env_file()
-    _write_env_var(env_path, "THINGS_MCP_OAUTH_CLIENT_ID", new_id)
-    _write_env_var(env_path, "THINGS_MCP_OAUTH_CLIENT_SECRET", new_secret)
-    logger.info(f"OAuth credentials saved to {env_path}")
-
-    os.environ["THINGS_MCP_OAUTH_CLIENT_ID"] = new_id
-    os.environ["THINGS_MCP_OAUTH_CLIENT_SECRET"] = new_secret
-    get_settings.cache_clear()
-
-    return new_id, new_secret, True
-
-
 def enforce_file_permissions() -> None:
     """Check and fix permissions on sensitive files at startup."""
     files_0600 = [

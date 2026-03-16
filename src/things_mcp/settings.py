@@ -64,14 +64,14 @@ class Settings(BaseSettings):
         description="Public HTTPS URL of this server (e.g. https://things.example.com). Required for OAuth/Claude.ai.",
     )
 
-    # OAuth client credentials (for Claude.ai connector)
-    things_mcp_oauth_client_id: str = Field(
-        default="",
-        description="Pre-registered OAuth client ID. Auto-generated on first run if empty.",
+    # Keycloak JWT validation
+    keycloak_issuer: str = Field(
+        default="https://auth.cdit-works.de/realms/cdit-mcp",
+        description="Keycloak realm issuer URL for JWT validation.",
     )
-    things_mcp_oauth_client_secret: str = Field(
-        default="",
-        description="Pre-registered OAuth client secret. Auto-generated on first run if empty.",
+    keycloak_audience: str = Field(
+        default="mcp-things",
+        description="Expected audience claim in Keycloak-issued JWTs.",
     )
 
     # Debug settings
@@ -109,11 +109,9 @@ class Settings(BaseSettings):
         return bool(self.things_mcp_api_key)
 
     @property
-    def has_oauth_credentials(self) -> bool:
-        """Check if OAuth client credentials are configured."""
-        return bool(
-            self.things_mcp_oauth_client_id and self.things_mcp_oauth_client_secret
-        )
+    def has_keycloak_config(self) -> bool:
+        """Check if Keycloak JWT validation is configured."""
+        return bool(self.keycloak_issuer)
 
 
 @lru_cache(maxsize=1)
@@ -179,14 +177,14 @@ def get_api_key() -> str:
     return get_settings().things_mcp_api_key
 
 
-def get_oauth_client_id() -> str:
-    """Get the pre-registered OAuth client ID."""
-    return get_settings().things_mcp_oauth_client_id
+def get_keycloak_issuer() -> str:
+    """Get the Keycloak realm issuer URL."""
+    return get_settings().keycloak_issuer
 
 
-def get_oauth_client_secret() -> str:
-    """Get the pre-registered OAuth client secret."""
-    return get_settings().things_mcp_oauth_client_secret
+def get_keycloak_audience() -> str:
+    """Get the expected Keycloak JWT audience."""
+    return get_settings().keycloak_audience
 
 
 def is_debug_enabled() -> bool:
