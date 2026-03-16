@@ -39,7 +39,6 @@ from .url_scheme import launch_things
 from .config import (
     ensure_auth_token,
     ensure_api_key,
-    ensure_oauth_credentials,
     enforce_file_permissions,
 )
 from .logging_config import setup_logging, get_logger
@@ -58,9 +57,6 @@ logger = get_logger(__name__)
 
 # Ensure API key exists before creating server (so auth provider gets it)
 _api_key, _api_key_is_new = ensure_api_key()
-
-# Ensure OAuth client credentials exist (for Claude.ai connector)
-_oauth_id, _oauth_secret, _oauth_is_new = ensure_oauth_credentials()
 
 # Enforce secure file permissions on startup
 enforce_file_permissions()
@@ -320,15 +316,14 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
     )
-    # Mount OAuth/well-known routes at root level (RFC 8414 requires this).
-    # FastMCP bundles OAuth routes inside http_app, but when mounted at /mcp
-    # they become /mcp/.well-known/* which breaks discovery. Extract them
-    # and mount at root per FastMCP docs for "Mounting Authenticated Servers".
+    # Mount well-known routes at root level (RFC 9728 requires this).
+    # Auth routes (e.g. /.well-known/oauth-protected-resource) must live
+    # at the root, not under /mcp, so MCP clients can discover them.
     if mcp_instance.auth:
         auth_routes = mcp_instance.auth.get_routes("/mcp")
         routes.extend(auth_routes)
         route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
-        logger.info("OAuth routes mounted at root: %s", route_paths)
+        logger.info("Auth routes mounted at root: %s", route_paths)
 
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
@@ -420,23 +415,17 @@ def run_things_mcp_server():
                 masked,
             )
 
-    # Display OAuth credentials for Claude.ai connector setup
-    if _oauth_id and _oauth_secret:
-        if _oauth_is_new:
-            logger.warning(
-                "NEW OAuth credentials generated — enter these in Claude.ai's connector dialog"
-            )
-            print("\n  Claude.ai Connector (Advanced settings):")
-            print(f"  OAuth Client ID:     {_oauth_id}")
-            print(f"  OAuth Client Secret: {_oauth_secret}")
-            print("  Stored in .env — only this client can authorize.\n")
-        else:
-            masked_secret = _oauth_secret[:4] + "..." + _oauth_secret[-4:]
-            logger.info(
-                "OAuth client: id=%s secret=%s — only this client is authorized",
-                _oauth_id,
-                masked_secret,
-            )
+    # Display Keycloak JWT validation info
+    from .settings import get_keycloak_issuer, get_keycloak_audience
+
+    kc_issuer = get_keycloak_issuer()
+    kc_audience = get_keycloak_audience()
+    if kc_issuer:
+        logger.info(
+            "Keycloak JWT validation: issuer=%s audience=%s",
+            kc_issuer,
+            kc_audience,
+        )
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
     # which detects the client type and applies transforms accordingly:
