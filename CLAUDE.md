@@ -52,11 +52,12 @@ src/things_mcp/
 ├── tools_gtd_organize.py    # GTD Organize stage tools (10 tools)
 ├── tools_gtd_reflect.py     # GTD Reflect stage tools (2 tools)
 ├── tools_utility.py         # Utility tools: search, list, cache stats (9 tools)
+├── tools_batch.py           # Batch tools: bulk-capture, bulk-complete, bulk-cancel, bulk-modify, bulk-triage (5 tools)
 ├── resolvers.py             # Name-to-UUID resolution (shared by tool modules)
 ├── triage_tracker.py        # Triage action tracking, categorization, trend analysis
 ├── dashboard.html           # GTD Health Dashboard (served at /dashboard)
 ├── auth.py                  # Bearer token auth (BearerTokenVerifier for FastMCP)
-├── input_validation.py      # Input validation (tag names, show-in-app IDs, name/notes length)
+├── input_validation.py      # Input validation (tag names, show-in-app IDs, name/notes length, UUID format)
 ├── url_scheme.py            # Things URL scheme builders + execution (things:///)
 ├── applescript_bridge.py    # AppleScript execution (run_applescript())
 ├── formatters.py            # Output formatting for todos/projects/areas
@@ -67,7 +68,7 @@ src/things_mcp/
 └── config.py                # Configuration management
 ```
 
-**Tool Organization by GTD Stage (27 tools total):**
+**Tool Organization by GTD Stage (32 tools total):**
 
 - **Engage** (3): get-tasks, focus-mode, complete-task
 - **Capture** (1): capture-task
@@ -75,6 +76,7 @@ src/things_mcp/
 - **Organize** (10): schedule-task, delegate-task, defer-task, plan-project, modify-task, create-area, modify-project, modify-area, delete-area, merge-areas
 - **Reflect** (2): daily-review, weekly-review
 - **Utility** (9): search-tasks, get-projects, get-project, get-areas, get-area, get-tags, show-in-app, get-cache-stats, triage-insights
+- **Batch** (5): bulk-capture, bulk-complete, bulk-cancel, bulk-modify, bulk-triage
 
 **Data Flow:**
 
@@ -91,6 +93,7 @@ src/things_mcp/
 - **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
 - **Logging**: Use `get_logger(__name__)`, redact sensitive data (never log task titles/notes)
 - **Tags**: Call `ensure_tags_exist(tags)` before using tags in write operations
+- **Batch tools**: Use `bulk-*` prefix for N-item versions of singular tools. Use Pydantic models for typed input schemas (e.g., `CaptureItem`, `TriageDecision`). Validate UUIDs with `validate_uuid_list()` from `input_validation.py`.
 
 ## Environment Variables
 

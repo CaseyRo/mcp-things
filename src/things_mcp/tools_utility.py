@@ -5,7 +5,7 @@ These tools support general operations not tied to a specific GTD stage.
 
 from typing import Optional
 
-import things
+from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
 
@@ -40,12 +40,14 @@ def register_utility_tools(mcp: FastMCP):
         tag: Optional[str] = None,
         area: Optional[str] = None,
         deadline: Optional[str] = None,
+        limit: int = 20,
         ctx: Context = None,
     ) -> str:
         """Search for tasks by keyword or filters.
 
         GTD Stage: Utility
         Use when: Looking for a specific task or filtering by criteria.
+        Results are capped at `limit` (default 20). Increase limit to see more.
 
         Args:
             query: Search text (matches title and notes)
@@ -53,6 +55,7 @@ def register_utility_tools(mcp: FastMCP):
             tag: Filter by tag (context)
             area: Filter by area
             deadline: Filter by deadline date
+            limit: Maximum results to return (default 20, max 200)
         """
         if ctx:
             await ctx.info("Searching tasks...")
@@ -71,9 +74,9 @@ def register_utility_tools(mcp: FastMCP):
 
             # Get tasks
             if query:
-                todos = things.search(query)
+                todos = db.search(query)
             elif kwargs:
-                todos = things.todos(**kwargs)
+                todos = db.todos(**kwargs)
             else:
                 _error_result(
                     "Provide query or at least one filter (status, tag, area, deadline)"
@@ -82,13 +85,20 @@ def register_utility_tools(mcp: FastMCP):
             if not todos:
                 return "No tasks found matching your criteria."
 
-            # Format results
-            summary = f"**Found {len(todos)} task{'s' if len(todos) != 1 else ''}**\n\n"
-            formatted_todos = [format_todo(todo) for todo in todos[:20]]
+            # Format results with limit
+            effective_limit = min(max(1, limit), 200)
+            total_count = len(todos)
+
+            summary = f"**Found {total_count} task{'s' if total_count != 1 else ''}**"
+            if total_count > effective_limit:
+                summary += f" (showing {effective_limit})"
+            summary += "\n\n"
+
+            formatted_todos = [format_todo(todo) for todo in todos[:effective_limit]]
 
             result = summary + "\n\n---\n\n".join(formatted_todos)
-            if len(todos) > 20:
-                result += f"\n\n*...and {len(todos) - 20} more results*"
+            if total_count > effective_limit:
+                result += f"\n\n*...and {total_count - effective_limit} more results. Use limit= to see more.*"
 
             return result
 
@@ -109,7 +119,7 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching projects...")
-        projects = things.projects()
+        projects = db.projects()
 
         if not projects:
             return "No projects found"
@@ -128,7 +138,7 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching areas...")
-        areas = things.areas()
+        areas = db.areas()
 
         if not areas:
             return "No areas found"
@@ -164,7 +174,7 @@ def register_utility_tools(mcp: FastMCP):
             area_id = project.get("area")
             if area_id:
                 try:
-                    area = things.get(area_id)
+                    area = db.get(area_id)
                     output += f"Area: {area['title']}\n" if area else ""
                 except Exception:
                     pass
@@ -189,8 +199,8 @@ def register_utility_tools(mcp: FastMCP):
                 output += f"\nNotes:\n{project['notes']}\n"
 
             # Tasks
-            todos = things.todos(project=uuid, status="incomplete")
-            completed = things.todos(project=uuid, status="completed")
+            todos = db.todos(project=uuid, status="incomplete")
+            completed = db.todos(project=uuid, status="completed")
 
             if todos:
                 output += f"\n**Tasks** ({len(todos)} active"
@@ -247,10 +257,10 @@ def register_utility_tools(mcp: FastMCP):
                 output += f"Tags: {', '.join(tags)}\n"
 
             # Projects in this area
-            projects = [p for p in (things.projects() or []) if p.get("area") == uuid]
+            projects = [p for p in (db.projects() or []) if p.get("area") == uuid]
             # Loose to-dos (in this area but not in a project)
             loose_todos = [
-                t for t in (things.todos(area=uuid) or []) if not t.get("project")
+                t for t in (db.todos(area=uuid) or []) if not t.get("project")
             ]
 
             output += f"\nProjects: {len(projects)}\n"
@@ -262,7 +272,7 @@ def register_utility_tools(mcp: FastMCP):
                     for p in projects:
                         status = p.get("status", "")
                         task_count = len(
-                            things.todos(project=p["uuid"], status="incomplete") or []
+                            db.todos(project=p["uuid"], status="incomplete") or []
                         )
                         output += f"  - {p['title']} ({status}, {task_count} tasks)\n"
 
@@ -288,7 +298,7 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching tags...")
-        tags = things.tags()
+        tags = db.tags()
 
         if not tags:
             return "No tags found"

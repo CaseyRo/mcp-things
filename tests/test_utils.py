@@ -2,7 +2,6 @@
 
 import time
 import pytest
-import mcp.types as types
 
 
 pytestmark = [pytest.mark.unit]
@@ -222,85 +221,3 @@ class TestDeadLetterQueue:
 
         dlq = DeadLetterQueue(dlq_file=str(dlq_file))
         assert dlq.queue == []
-
-
-class TestValidateToolRegistration:
-    """Tests for validate_tool_registration()."""
-
-    def _make_tool(self, name, description="A valid description for testing"):
-        return types.Tool(
-            name=name,
-            description=description,
-            inputSchema={"type": "object", "properties": {}},
-        )
-
-    def test_all_required_tools_present(self):
-        """Returns True when all required tools are registered."""
-        from things_mcp.utils import validate_tool_registration
-
-        required_names = [
-            "get-inbox",
-            "get-today",
-            "get-upcoming",
-            "get-anytime",
-            "get-someday",
-            "get-logbook",
-            "get-trash",
-            "get-todos",
-            "get-projects",
-            "get-areas",
-            "get-tags",
-            "get-tagged-items",
-            "search-todos",
-            "search-advanced",
-            "get-recent",
-            "add-todo",
-            "search-items",
-            "add-project",
-            "update-todo",
-            "update-project",
-            "show-item",
-        ]
-        tools = [self._make_tool(name) for name in required_names]
-
-        assert validate_tool_registration(tools) is True
-
-    def test_missing_tool(self):
-        """Returns False when required tools are missing."""
-        from things_mcp.utils import validate_tool_registration
-
-        tools = [self._make_tool("get-inbox")]  # Missing most tools
-
-        assert validate_tool_registration(tools) is False
-
-    def test_extra_tools_ok(self):
-        """Extra tools beyond required ones don't cause failure."""
-        from things_mcp.utils import validate_tool_registration
-
-        required_names = [
-            "get-inbox",
-            "get-today",
-            "get-upcoming",
-            "get-anytime",
-            "get-someday",
-            "get-logbook",
-            "get-trash",
-            "get-todos",
-            "get-projects",
-            "get-areas",
-            "get-tags",
-            "get-tagged-items",
-            "search-todos",
-            "search-advanced",
-            "get-recent",
-            "add-todo",
-            "search-items",
-            "add-project",
-            "update-todo",
-            "update-project",
-            "show-item",
-        ]
-        tools = [self._make_tool(name) for name in required_names]
-        tools.append(self._make_tool("bonus-tool"))
-
-        assert validate_tool_registration(tools) is True

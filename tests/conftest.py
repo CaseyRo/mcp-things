@@ -141,13 +141,15 @@ def mock_things(monkeypatch):
     mock_things_module.get = mock.Mock(return_value=None)
     mock_things_module.search = mock.Mock(return_value=[])
 
-    # Patch the things module in all modules that import it
+    # Patch the things module in modules that still import it directly
     monkeypatch.setattr("things_mcp.formatters.things", mock_things_module)
-    monkeypatch.setattr("things_mcp.tools_gtd_core.things", mock_things_module)
     monkeypatch.setattr("things_mcp.tools_gtd_organize.things", mock_things_module)
-    monkeypatch.setattr("things_mcp.tools_gtd_reflect.things", mock_things_module)
-    monkeypatch.setattr("things_mcp.tools_utility.things", mock_things_module)
     monkeypatch.setattr("things_mcp.resolvers.things", mock_things_module)
+
+    # Patch the reader (db) module in tool modules that use it for reads
+    monkeypatch.setattr("things_mcp.tools_gtd_core.db", mock_things_module)
+    monkeypatch.setattr("things_mcp.tools_gtd_reflect.db", mock_things_module)
+    monkeypatch.setattr("things_mcp.tools_utility.db", mock_things_module)
 
     return mock_things_module
 

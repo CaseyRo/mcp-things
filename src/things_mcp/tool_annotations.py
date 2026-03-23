@@ -68,4 +68,10 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
     "show-in-app": READ_ONLY_ANNOTATIONS,
     "get-cache-stats": READ_ONLY_ANNOTATIONS,
     "triage-insights": READ_ONLY_ANNOTATIONS,
+    # === Batch Tools ===
+    "bulk-capture": ADD_ANNOTATIONS,
+    "bulk-complete": UPDATE_ANNOTATIONS,
+    "bulk-cancel": DESTRUCTIVE_ANNOTATIONS,
+    "bulk-modify": UPDATE_ANNOTATIONS,
+    "bulk-triage": UPDATE_ANNOTATIONS,
 }

@@ -9,7 +9,6 @@ import os
 import platform
 import subprocess
 from pathlib import Path
-import mcp.types as types
 from typing import Optional
 
 _DEFAULT_DLQ_FILE = Path.home() / ".things-mcp" / "things_dlq.json"
@@ -96,62 +95,6 @@ class ThingsAppState:
                 return True
             time.sleep(0.5)
         return False
-
-
-def validate_tool_registration(tools: list[types.Tool]) -> bool:
-    """
-    Validate that all required Things MCP tools are properly registered.
-
-    Args:
-        tools: List of registered tools
-
-    Returns:
-        bool: True if all required tools are registered, False otherwise
-    """
-    required_tool_names = [
-        "get-inbox",
-        "get-today",
-        "get-upcoming",
-        "get-anytime",
-        "get-someday",
-        "get-logbook",
-        "get-trash",
-        "get-todos",
-        "get-projects",
-        "get-areas",
-        "get-tags",
-        "get-tagged-items",
-        "search-todos",
-        "search-advanced",
-        "get-recent",
-        "add-todo",
-        "search-items",
-        "add-project",
-        "update-todo",
-        "update-project",
-        "show-item",
-    ]
-
-    registered_tool_names = [tool.name for tool in tools]
-
-    # Check if all required tools are registered
-    missing_tools = [
-        name for name in required_tool_names if name not in registered_tool_names
-    ]
-
-    if missing_tools:
-        logger.error(f"Missing required tool registrations: {missing_tools}")
-        return False
-
-    # Check if all registered tools have proper descriptions and parameters
-    for tool in tools:
-        if not tool.description or len(tool.description) < 10:
-            logger.warning(f"Tool '{tool.name}' has an insufficient description")
-
-        # Basic parameter validation could be added here
-        # This would depend on your tool schema requirements
-
-    return True
 
 
 class CircuitBreaker:

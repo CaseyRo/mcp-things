@@ -77,6 +77,39 @@ def validate_tag_names(tags: Optional[List[str]]) -> None:
             )
 
 
+def validate_uuid(value: str, field: str = "task_id") -> None:
+    """Validate a single Things UUID format.
+
+    Raises ToolError if the value does not match Things UUID pattern.
+    """
+    if not THINGS_UUID_PATTERN.match(value):
+        raise ToolError(
+            f"Invalid {field}: '{value}'. Must be a Things UUID "
+            "(alphanumeric plus hyphens, 6-40 characters)."
+        )
+
+
+def validate_uuid_list(
+    values: List[str], field: str = "task_ids", max_length: int = 50
+) -> None:
+    """Validate a list of Things UUIDs.
+
+    Raises ToolError if the list is empty, exceeds max_length, or contains invalid UUIDs.
+    """
+    if not values:
+        raise ToolError(f"{field} cannot be empty")
+    if len(values) > max_length:
+        raise ToolError(
+            f"{field} contains {len(values)} items, maximum is {max_length}. "
+            "Split into multiple calls."
+        )
+    for i, v in enumerate(values):
+        if not THINGS_UUID_PATTERN.match(v):
+            raise ToolError(
+                f"Invalid UUID at {field}[{i}]: '{v}'. Must be a Things UUID."
+            )
+
+
 def validate_show_id(id: str) -> None:
     """Validate the id parameter for show-in-app.
 
