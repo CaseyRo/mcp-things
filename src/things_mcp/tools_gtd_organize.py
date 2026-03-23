@@ -35,6 +35,27 @@ def _error_result(message: str):
     raise ToolError(message)
 
 
+def _resolve_task_by_title(task_title: str) -> str:
+    """Resolve a task_title to a UUID. Returns UUID or raises ToolError."""
+    matches = things.todos(status="incomplete")
+    matches = [t for t in matches if task_title.lower() in t.get("title", "").lower()]
+    if len(matches) == 0:
+        _error_result(
+            f"No task found matching '{task_title}'.\n"
+            "Use search-tasks to find the correct task."
+        )
+    if len(matches) > 1:
+        result = (
+            f"Found {len(matches)} tasks matching '{task_title}'. Please specify:\n\n"
+        )
+        for t in matches[:5]:
+            result += f"- **{t.get('title')}** (ID: `{t.get('uuid')}`)\n"
+        if len(matches) > 5:
+            result += f"\n...and {len(matches) - 5} more."
+        _error_result(result)
+    return matches[0].get("uuid")
+
+
 def register_gtd_organize_tools(mcp: FastMCP):
     """Register GTD Organize stage tools with the MCP server."""
 
@@ -130,8 +151,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="delegate-task", annotations=TOOL_ANNOTATIONS["delegate-task"], timeout=30
     )
     async def delegate_task(
-        task_id: str,
-        delegated_to: str,
+        task_id: Optional[str] = None,
+        task_title: Optional[str] = None,
+        delegated_to: str = "",
         follow_up_date: Optional[str] = None,
         notes: Optional[str] = None,
         ctx: Context = None,
@@ -145,15 +167,25 @@ def register_gtd_organize_tools(mcp: FastMCP):
         waiting on, and sets an optional follow-up deadline.
 
         Args:
-            task_id: UUID of the task to delegate
-            delegated_to: Person's name you're waiting on
+            task_id: UUID of the task to delegate (preferred if known)
+            task_title: Title to search for (fuzzy match). If multiple match, returns list.
+            delegated_to: Person's name you're waiting on (required)
             follow_up_date: When to follow up (YYYY-MM-DD)
             notes: Notes about the delegation (e.g., "Emailed on Jan 20")
         """
+        if not delegated_to:
+            _error_result("delegated_to is required — who are you handing this off to?")
+
         if ctx:
             await ctx.info(f"Delegating task to {delegated_to}...")
 
+        if not task_id and not task_title:
+            _error_result("Provide either task_id or task_title to identify the task.")
+
         try:
+            if task_title and not task_id:
+                task_id = _resolve_task_by_title(task_title)
+
             # Get the original task
             task = things.get(task_id)
             if not task:
@@ -222,8 +254,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
     @mcp.tool(name="defer-task", annotations=TOOL_ANNOTATIONS["defer-task"], timeout=30)
     async def defer_task(
-        task_id: str,
-        defer_to: str,
+        task_id: Optional[str] = None,
+        task_title: Optional[str] = None,
+        defer_to: str = "",
         reason: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
@@ -236,14 +269,24 @@ def register_gtd_organize_tools(mcp: FastMCP):
         - defer_to=date -> Tickler file (will reappear on that date)
 
         Args:
-            task_id: UUID of the task to defer
-            defer_to: When - "someday", "tomorrow", "next_week", or YYYY-MM-DD
+            task_id: UUID of the task to defer (preferred if known)
+            task_title: Title to search for (fuzzy match). If multiple match, returns list.
+            defer_to: When - "someday", "tomorrow", "next_week", or YYYY-MM-DD (required)
             reason: Why you're deferring (appended to notes)
         """
+        if not defer_to:
+            _error_result("defer_to is required — when should this task reappear?")
+
         if ctx:
             await ctx.info(f"Deferring task to {defer_to}...")
 
+        if not task_id and not task_title:
+            _error_result("Provide either task_id or task_title to identify the task.")
+
         try:
+            if task_title and not task_id:
+                task_id = _resolve_task_by_title(task_title)
+
             # Fetch task data before update (needed for categorization)
             task_data = things.get(task_id) or {}
 
@@ -410,7 +453,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="modify-task", annotations=TOOL_ANNOTATIONS["modify-task"], timeout=30
     )
     async def modify_task(
-        task_id: str,
+        task_id: Optional[str] = None,
+        task_title: Optional[str] = None,
         title: Optional[str] = None,
         notes: Optional[str] = None,
         add_notes: Optional[str] = None,
@@ -432,7 +476,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
                      delegate-task for delegation.
 
         Args:
-            task_id: UUID of the task to update
+            task_id: UUID of the task to update (preferred if known)
+            task_title: Title to search for (fuzzy match). If multiple match, returns list.
             title: New title (replaces existing)
             notes: New notes (replaces existing)
             add_notes: Notes to append (preserves existing)
@@ -446,10 +491,16 @@ def register_gtd_organize_tools(mcp: FastMCP):
             area: Area name or UUID to move task to
             canceled: Set to true to trash/cancel the task
         """
+        if not task_id and not task_title:
+            _error_result("Provide either task_id or task_title to identify the task.")
+
         if ctx:
             await ctx.info("Updating task...")
 
         try:
+            if task_title and not task_id:
+                task_id = _resolve_task_by_title(task_title)
+
             # Ensure Things app is running
             if not app_state.update_app_state():
                 if not launch_things():
@@ -993,53 +1044,39 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 if not t.get("project")
             ]
 
-            moved_todos = []
-            moved_projects = []
+            # Move all items in a single AppleScript block (O(1) subprocess calls)
+            todo_uuids = [t["uuid"] for t in source_todos]
+            project_uuids = [p["uuid"] for p in source_projects]
 
-            # Move to-dos first (most vulnerable to data loss)
-            for todo in source_todos:
-                script = (
-                    f'tell application "Things3"\n'
-                    f'  set t to first to do whose id is "{todo["uuid"]}"\n'
-                    f'  set a to first area whose id is "{target_uuid}"\n'
-                    f"  move t to a\n"
-                    f"end tell"
+            if todo_uuids or project_uuids:
+                # Build a single AppleScript that moves all items
+                lines = ['tell application "Things3"']
+                lines.append(
+                    f'  set targetArea to first area whose id is "{target_uuid}"'
                 )
+
+                for uuid in todo_uuids:
+                    lines.append(
+                        f'  move (first to do whose id is "{uuid}") to targetArea'
+                    )
+
+                for uuid in project_uuids:
+                    lines.append(
+                        f'  move (first project whose id is "{uuid}") to targetArea'
+                    )
+
+                lines.append("end tell")
+                script = "\n".join(lines)
+
                 result = run_applescript(script)
                 if result is False:
-                    # Partial failure — report state
                     _error_result(
-                        f"Move failed for to-do. "
-                        f"Moved so far: {len(moved_todos)} to-do(s), "
-                        f"{len(moved_projects)} project(s). "
-                        f"Remaining in source: "
-                        f"{len(source_todos) - len(moved_todos)} to-do(s), "
-                        f"{len(source_projects)} project(s). "
+                        f"Batch move failed. "
+                        f"Items in source: {len(todo_uuids)} to-do(s), "
+                        f"{len(project_uuids)} project(s). "
                         "Re-running merge-areas is safe — already-moved items "
                         "are in the target."
                     )
-                moved_todos.append(todo)
-
-            # Move projects
-            for proj in source_projects:
-                script = (
-                    f'tell application "Things3"\n'
-                    f'  set p to first project whose id is "{proj["uuid"]}"\n'
-                    f'  set a to first area whose id is "{target_uuid}"\n'
-                    f"  move p to a\n"
-                    f"end tell"
-                )
-                result = run_applescript(script)
-                if result is False:
-                    _error_result(
-                        f"Move failed for project. "
-                        f"Moved so far: {len(moved_todos)} to-do(s), "
-                        f"{len(moved_projects)} project(s). "
-                        f"Remaining in source: "
-                        f"{len(source_projects) - len(moved_projects)} project(s). "
-                        "Re-running merge-areas is safe."
-                    )
-                moved_projects.append(proj)
 
             # Re-read source to confirm empty before deletion
             remaining_todos = [
@@ -1074,8 +1111,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
             invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
 
             return (
-                f"Merged areas. Moved {len(moved_todos)} to-do(s) and "
-                f"{len(moved_projects)} project(s) to target. "
+                f"Merged areas. Moved {len(todo_uuids)} to-do(s) and "
+                f"{len(project_uuids)} project(s) to target. "
                 "Source area deleted."
             )
 

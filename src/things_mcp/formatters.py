@@ -37,8 +37,10 @@ def format_todo(todo: dict) -> str:
     if todo.get("notes"):
         todo_text += f"\nNotes: {todo['notes']}"
 
-    # Add project info if present
-    if todo.get("project"):
+    # Add project info if present (prefer pre-resolved title to avoid N+1 queries)
+    if todo.get("project_title"):
+        todo_text += f"\nProject: {todo['project_title']}"
+    elif todo.get("project"):
         try:
             project = things.get(todo["project"])
             if project:
@@ -46,8 +48,10 @@ def format_todo(todo: dict) -> str:
         except Exception:
             pass
 
-    # Add area info if present
-    if todo.get("area"):
+    # Add area info if present (prefer pre-resolved title to avoid N+1 queries)
+    if todo.get("area_title"):
+        todo_text += f"\nArea: {todo['area_title']}"
+    elif todo.get("area"):
         try:
             area = things.get(todo["area"])
             if area:
@@ -73,7 +77,9 @@ def format_project(project: dict, include_items: bool = False) -> str:
     """Helper function to format a single project."""
     project_text = f"Title: {project['title']}\nUUID: {project['uuid']}"
 
-    if project.get("area"):
+    if project.get("area_title"):
+        project_text += f"\nArea: {project['area_title']}"
+    elif project.get("area"):
         try:
             area = things.get(project["area"])
             if area:

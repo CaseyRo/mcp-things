@@ -8,7 +8,7 @@ These tools form the "input" side of GTD:
 
 from typing import Optional, List, Union
 
-import things
+from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
 
@@ -50,6 +50,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         area: Optional[str] = None,
         project: Optional[str] = None,
         include_completed: bool = False,
+        limit: int = 50,
         ctx: Context = None,
     ) -> str:
         """Get tasks filtered by view, context, energy, and time available.
@@ -68,6 +69,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             area: Filter by area name or UUID
             project: Filter by project name or UUID
             include_completed: Include completed tasks (default False)
+            limit: Maximum number of tasks to return (default 50, max 200)
 
         Examples:
             get_tasks(view="today") - What's scheduled for today?
@@ -81,40 +83,36 @@ def register_gtd_core_tools(mcp: FastMCP):
         try:
             # Build query based on view
             if view == "inbox":
-                todos = things.inbox()
+                todos = db.inbox()
             elif view == "today":
-                todos = things.today()
+                todos = db.today()
             elif view == "tomorrow":
                 # Things doesn't have a direct tomorrow() function
-                todos = things.upcoming()
+                todos = db.upcoming()
                 # Filter to tomorrow only
                 from datetime import date, timedelta
 
                 tomorrow = (date.today() + timedelta(days=1)).isoformat()
                 todos = [t for t in todos if t.get("start_date") == tomorrow]
             elif view == "upcoming":
-                todos = things.upcoming()
+                todos = db.upcoming()
             elif view == "anytime":
-                todos = things.anytime()
+                todos = db.anytime()
             elif view == "someday":
-                todos = things.someday()
+                todos = db.someday()
             elif view == "logbook":
-                todos = (
-                    things.logbook()
-                    if hasattr(things, "logbook")
-                    else things.last("7d", status="completed")
-                )
+                todos = db.logbook()
             elif view == "trash":
-                todos = things.trash()
+                todos = db.trash()
             elif view == "deadlines":
                 # Get tasks with deadlines
-                todos = things.todos(deadline=True)
+                todos = db.todos(deadline=True)
             elif view is None:
                 # No view specified, get all incomplete tasks
                 todos = (
-                    things.todos(status="incomplete")
+                    db.todos(status="incomplete")
                     if not include_completed
-                    else things.todos()
+                    else db.todos()
                 )
             else:
                 _error_result(
@@ -172,16 +170,26 @@ def register_gtd_core_tools(mcp: FastMCP):
                 filter_str = ", ".join(filters) if filters else "no filters"
                 return f"No tasks found ({filter_str}). Try different filters or add tasks with capture-task."
 
+            # Apply limit
+            effective_limit = min(max(1, limit), 200)
+            total_count = len(todos)
+            todos = todos[:effective_limit]
+
             # Format output with summary
-            summary = f"**{len(todos)} task{'s' if len(todos) != 1 else ''}**"
+            summary = f"**{total_count} task{'s' if total_count != 1 else ''}**"
             if view:
                 summary += f" in {view}"
             if context:
                 summary += f" with context {context}"
+            if total_count > effective_limit:
+                summary += f" (showing first {effective_limit})"
             summary += "\n\n"
 
             formatted_todos = [format_todo(todo) for todo in todos]
-            return summary + "\n\n---\n\n".join(formatted_todos)
+            result = summary + "\n\n---\n\n".join(formatted_todos)
+            if total_count > effective_limit:
+                result += f"\n\n*...and {total_count - effective_limit} more tasks. Use limit= to see more.*"
+            return result
 
         except ToolError:
             raise
@@ -223,7 +231,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             selection_reason = ""
 
             # 1. Check for overdue tasks with deadlines
-            all_todos = things.todos(status="incomplete")
+            all_todos = db.todos(status="incomplete")
             overdue = [
                 t
                 for t in all_todos
@@ -249,7 +257,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             # 2. Check today's tasks with deadlines
             if not selected_task:
-                today_tasks = things.today()
+                today_tasks = db.today()
                 today_with_deadline = [
                     t
                     for t in today_tasks
@@ -261,7 +269,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             # 3. Check today's tasks without deadlines
             if not selected_task:
-                today_tasks = things.today()
+                today_tasks = db.today()
                 today_no_deadline = [
                     t
                     for t in today_tasks
@@ -273,7 +281,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             # 4. Check anytime tasks
             if not selected_task:
-                anytime_tasks = things.anytime()
+                anytime_tasks = db.anytime()
                 anytime_filtered = [t for t in anytime_tasks if matches_filters(t)]
                 if anytime_filtered:
                     selected_task = anytime_filtered[0]
@@ -343,7 +351,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         try:
             # If title provided, search for matching task
             if task_title and not task_id:
-                matches = things.todos(status="incomplete")
+                matches = db.todos(status="incomplete")
                 matches = [
                     t
                     for t in matches
@@ -393,7 +401,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             # Track triage action
             try:
-                task_data = things.get(task_id) or {}
+                task_data = db.get(task_id) or {}
                 triage_tracker.record(
                     task_id=task_id,
                     task_title=task_data.get("title", task_title or ""),
@@ -422,6 +430,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         title: str,
         notes: Optional[str] = None,
         tags: Optional[List[str]] = None,
+        when: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
         """Quick capture a task to Inbox for later processing.
@@ -434,6 +443,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             title: What needs to be done (required)
             notes: Additional details (optional)
             tags: Context tags like @computer, @phone (optional)
+            when: Optional schedule (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD). If omitted, goes to inbox.
         """
         if ctx:
             await ctx.info(f"Capturing to inbox: {title[:30]}...")
@@ -448,8 +458,8 @@ def register_gtd_core_tools(mcp: FastMCP):
             if tags:
                 ensure_tags_exist(tags)
 
-            # Create in inbox (no when/list specified = inbox)
-            url = add_todo(title=title, notes=notes, tags=tags)
+            # Create task (no when/list specified = inbox)
+            url = add_todo(title=title, notes=notes, tags=tags, when=when)
             success = execute_url(url)
 
             if not success:
@@ -457,6 +467,11 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-inbox", "get-tasks"])
 
+            if when:
+                return (
+                    f"Captured and scheduled: {title} ({when})\n\n"
+                    "Task is scheduled — no further inbox processing needed."
+                )
             return (
                 f"Captured to Inbox: {title}\n\n"
                 "Use process-inbox or schedule-task to clarify and organize."
@@ -473,26 +488,28 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="process-inbox", annotations=TOOL_ANNOTATIONS["process-inbox"], timeout=5
     )
-    async def process_inbox(ctx: Context = None) -> str:
-        """Process the oldest inbox item using GTD methodology.
+    async def process_inbox(
+        all: bool = False,
+        limit: int = 50,
+        ctx: Context = None,
+    ) -> str:
+        """Process inbox items using GTD methodology.
 
         GTD Stage: Clarify
         Use when: Processing inbox during daily/weekly review.
+        For automated batch triage, call with all=True then pass decisions to bulk-triage.
 
-        Returns the oldest inbox item with GTD decision guidance:
-        1. Is this actionable?
-           - No -> Trash (delete), Someday (defer), or Reference (add notes)
-        2. Is it a single action or multi-step project?
-           - Project -> Use convert-to-project
-        3. Can it be done in <2 minutes?
-           - Yes -> Do it now!
-           - No -> Delegate (delegate-task) or Defer (schedule-task)
+        Args:
+            all: If True, return all inbox items in compact format for bulk-triage. Default: False (one item at a time).
+            limit: Maximum items to return when all=True (default 50, max 200).
+
+        Returns the oldest inbox item with GTD decision guidance (default), or all items in compact format.
         """
         if ctx:
             await ctx.info("Processing inbox...")
 
         try:
-            inbox_items = things.inbox()
+            inbox_items = db.inbox()
 
             if not inbox_items:
                 # Surface triage insights at inbox-zero moment
@@ -517,7 +534,51 @@ def register_gtd_core_tools(mcp: FastMCP):
                     pass
                 return inbox_zero_msg
 
-            # Get oldest item (first in list, Things orders by creation)
+            # Track inbox view for source detection
+            try:
+                triage_tracker.record_inbox_view()
+            except Exception:
+                logger.debug("Triage inbox view tracking failed (non-critical)")
+
+            if all:
+                # Return all items in compact format for bulk-triage
+                effective_limit = min(max(1, limit), 200)
+                total_count = len(inbox_items)
+                items_to_show = inbox_items[:effective_limit]
+
+                output = f"**Inbox: {total_count} items**"
+                if total_count > effective_limit:
+                    output += f" (showing first {effective_limit})"
+                output += (
+                    "\n\nUse `bulk-triage` with decisions for each item below.\n\n"
+                )
+
+                output += "**GTD Decision Tree** (apply to each item):\n"
+                output += (
+                    "- Not actionable: `cancel`, `defer` (someday), or add notes\n"
+                )
+                output += "- Multi-step: `assign` (convert to project)\n"
+                output += "- <2 min: do it, then `complete`\n"
+                output += "- Delegate: `delegate` | Schedule: `schedule` or `defer`\n\n"
+
+                output += "**Items:**\n\n"
+                for i, item in enumerate(items_to_show, 1):
+                    title = item.get("title", "Untitled")
+                    uuid = item.get("uuid", "")
+                    notes_preview = ""
+                    if item.get("notes"):
+                        notes_preview = f" — {item['notes'][:80]}..."
+                    tags_str = ""
+                    if item.get("tags"):
+                        tags_str = f" [{', '.join(item['tags'])}]"
+                    output += f"{i}. **{title}** (`{uuid}`){tags_str}{notes_preview}\n"
+
+                if total_count > effective_limit:
+                    output += f"\n*...and {total_count - effective_limit} more items. Call again with higher limit or process remaining after.*"
+
+                return output
+
+            # Default: one item at a time
             item = inbox_items[0]
             remaining = len(inbox_items) - 1
 
@@ -541,12 +602,6 @@ def register_gtd_core_tools(mcp: FastMCP):
                 "\n*Organize tip: If this is a next action for an existing project, "
             )
             output += "use `schedule-task` with `project=` to add it directly.*\n"
-
-            # Track inbox view for source detection
-            try:
-                triage_tracker.record_inbox_view()
-            except Exception:
-                logger.debug("Triage inbox view tracking failed (non-critical)")
 
             return output
 
@@ -587,7 +642,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         try:
             # Get the original task
-            task = things.get(task_id)
+            task = db.get(task_id)
             if not task:
                 _error_result(f"Task not found: {task_id}")
 
@@ -605,7 +660,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             project_deadline = task.get("deadline")
 
             # Get checklist items from the original task
-            checklist_items = things.checklist_items(task_id)
+            checklist_items = db.checklist_items(task_id)
 
             # Build tasks array for the project
             tasks = []

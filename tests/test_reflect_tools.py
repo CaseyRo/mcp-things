@@ -60,8 +60,8 @@ class TestWeeklyReview:
         self.things.inbox.return_value = []
         self.things.projects.return_value = []
         waiting = [create_mock_todo(title="Waiting on Bob", tags=["waiting-for"])]
-        # First call is for waiting-for items, second for stalled project check
-        self.things.todos.side_effect = [waiting, []]
+        # First call: all incomplete todos (stalled project group-by), second: waiting-for items
+        self.things.todos.side_effect = [[], waiting]
         self.things.someday.return_value = []
         self.things.last.return_value = []
         result = await self.weekly_review()

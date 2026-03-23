@@ -3,7 +3,7 @@
 These tools support the "Reflect" stage of GTD - reviewing and updating your system.
 """
 
-import things
+from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
 
@@ -46,11 +46,11 @@ def register_gtd_reflect_tools(mcp: FastMCP):
             today_str = date.today().isoformat()
 
             # Get data
-            today_tasks = things.today()
-            inbox = things.inbox()
+            today_tasks = db.today()
+            inbox = db.inbox()
 
             # Find overdue tasks
-            all_todos = things.todos(status="incomplete")
+            all_todos = db.todos(status="incomplete")
             overdue = [
                 t
                 for t in all_todos
@@ -80,7 +80,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
             # Overdue projects (convenience feature — GTD doesn't prescribe a daily review)
             overdue_projects = [
                 p
-                for p in (things.projects() or [])
+                for p in (db.projects() or [])
                 if p.get("status") == "incomplete"
                 and p.get("deadline")
                 and p.get("deadline") < today_str
@@ -153,25 +153,35 @@ def register_gtd_reflect_tools(mcp: FastMCP):
             output = "# Weekly Review\n\n"
 
             # 1. Inbox status
-            inbox = things.inbox()
+            inbox = db.inbox()
             if inbox:
                 output += f"## Inbox: {len(inbox)} items\n"
                 output += "**GTD:** Process to zero before finishing review.\n\n"
             else:
                 output += "## Inbox: Clear\n\n"
 
-            # 2. Stalled projects
-            projects = things.projects()
+            # 2. Stalled projects — single query + group-by instead of N queries
+            projects = db.projects()
+            all_incomplete_todos = db.todos(status="incomplete")
+
+            # Group todos by project UUID
+            from collections import defaultdict
+
+            todos_by_project = defaultdict(list)
+            for t in all_incomplete_todos or []:
+                proj_uuid = t.get("project")
+                if proj_uuid:
+                    todos_by_project[proj_uuid].append(t)
+
             stalled = []
             for project in projects or []:
                 if project.get("status") != "incomplete":
                     continue
-                # Get tasks for this project
-                tasks = things.todos(project=project.get("uuid"), status="incomplete")
+                proj_todos = todos_by_project.get(project.get("uuid"), [])
                 # Check if any task is available (anytime or today)
                 available = [
                     t
-                    for t in (tasks or [])
+                    for t in proj_todos
                     if t.get("start") in (None, "Anytime", "Today")
                     or t.get("start_date") is None
                     or t.get("start_date") == today_str
@@ -213,7 +223,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 output += "\n"
 
             # 3. Waiting-for items
-            waiting = things.todos(tag="waiting-for", status="incomplete")
+            waiting = db.todos(tag="waiting-for", status="incomplete")
             if waiting:
                 output += f"## Waiting For: {len(waiting)} items\n\n"
                 overdue_waiting = [
@@ -229,7 +239,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 output += "Review and follow up on delegated items.\n\n"
 
             # 4. Someday/Maybe review
-            someday = things.someday()
+            someday = db.someday()
             if someday:
                 output += f"## Someday/Maybe: {len(someday)} items\n"
                 output += "Consider: Should any of these become active?\n\n"
@@ -240,7 +250,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 output += "\n"
 
             # 5. Completed this week
-            completed = things.last("7d", status="completed")
+            completed = db.last("7d", status="completed")
             if completed:
                 output += f"## Completed This Week: {len(completed)} items\n"
                 output += "Celebrate your accomplishments!\n\n"
