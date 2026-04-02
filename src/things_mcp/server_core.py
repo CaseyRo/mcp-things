@@ -436,12 +436,24 @@ def create_mcp_server() -> FastMCP:
     else:
         base_url = f"http://{settings.things_mcp_host}:{settings.things_mcp_port}"
 
-    auth = create_auth(
-        api_key=api_key if api_key else None,
-        base_url=base_url,
-        keycloak_issuer=get_keycloak_issuer(),
-        keycloak_audience=get_keycloak_audience(),
-    )
+    keycloak_client_id = settings.keycloak_client_id
+    keycloak_client_secret = settings.keycloak_client_secret
+
+    if not keycloak_client_secret:
+        logger.warning(
+            "KEYCLOAK_CLIENT_SECRET not set — OAuth/OIDC auth disabled. "
+            "Only bearer-token auth will work."
+        )
+        auth = None
+    else:
+        auth = create_auth(
+            api_key=api_key if api_key else None,
+            base_url=base_url,
+            keycloak_issuer=get_keycloak_issuer(),
+            keycloak_audience=get_keycloak_audience(),
+            keycloak_client_id=keycloak_client_id,
+            keycloak_client_secret=keycloak_client_secret,
+        )
 
     server = FastMCP(
         "Things",

@@ -73,6 +73,14 @@ class Settings(BaseSettings):
         default="mcp-things",
         description="Expected audience claim in Keycloak-issued JWTs.",
     )
+    keycloak_client_id: str = Field(
+        default="things-mcp",
+        description="Pre-registered Keycloak client ID for OIDCProxy.",
+    )
+    keycloak_client_secret: str = Field(
+        default="",
+        description="Keycloak client secret for OIDCProxy.",
+    )
 
     # Debug settings
     things_mcp_debug: bool = Field(
