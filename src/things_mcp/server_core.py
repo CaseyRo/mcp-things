@@ -145,8 +145,8 @@ def _build_icon(
 
 ICONS: List[IconLike] = [
     _build_icon(
-        src="https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/72x72/1F4DD.png",
-        sizes=["64x64"],
+        src="https://culturedcode.com/things/2024-01-20/images/hero-logo-things-io90.png",
+        mime_type="image/png",
     ),
 ]
 
