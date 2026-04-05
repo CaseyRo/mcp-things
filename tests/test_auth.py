@@ -1,48 +1,38 @@
-"""Tests for bearer token authentication."""
+"""Tests for OIDCProxy authentication."""
 
-import pytest
-
-from things_mcp.auth import BearerTokenVerifier, generate_api_key
+from unittest.mock import patch
 
 
-class TestGenerateApiKey:
-    def test_format(self):
-        key = generate_api_key()
-        assert key.startswith("tmcp_")
-        assert len(key) > 20
-
-    def test_unique(self):
-        keys = {generate_api_key() for _ in range(10)}
-        assert len(keys) == 10
+from things_mcp.auth import create_auth
 
 
-class TestBearerTokenVerifier:
-    @pytest.fixture
-    def verifier(self):
-        return BearerTokenVerifier("tmcp_test_key_12345")
+class TestCreateAuth:
+    @patch("things_mcp.auth.OIDCProxy")
+    def test_returns_oidc_proxy(self, mock_oidc):
+        mock_oidc.return_value = "mock_proxy"
+        result = create_auth(
+            base_url="https://example.com",
+            keycloak_issuer="https://auth.example.com/realms/test",
+            keycloak_client_id="test-client",
+            keycloak_client_secret="secret123",
+        )
+        mock_oidc.assert_called_once_with(
+            config_url="https://auth.example.com/realms/test/.well-known/openid-configuration",
+            client_id="test-client",
+            client_secret="secret123",
+            base_url="https://example.com",
+        )
+        assert result == "mock_proxy"
 
-    @pytest.mark.asyncio
-    async def test_valid_token(self, verifier):
-        result = await verifier.verify_token("tmcp_test_key_12345")
-        assert result is not None
-        assert result.client_id == "things-mcp-client"
-        assert result.scopes == ["all"]
-
-    @pytest.mark.asyncio
-    async def test_invalid_token(self, verifier):
-        result = await verifier.verify_token("wrong_key")
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_empty_token(self, verifier):
-        result = await verifier.verify_token("")
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_timing_safe(self, verifier):
-        """Verify we use hmac.compare_digest (constant-time)."""
-        import things_mcp.auth as auth_module
-        import inspect
-
-        source = inspect.getsource(auth_module.BearerTokenVerifier.verify_token)
-        assert "hmac.compare_digest" in source
+    @patch("things_mcp.auth.OIDCProxy")
+    def test_config_url_construction(self, mock_oidc):
+        create_auth(
+            base_url="https://mcp.example.com",
+            keycloak_issuer="https://auth.cdit-works.de/realms/cdit-mcp",
+            keycloak_client_id="mcp-things",
+            keycloak_client_secret="secret",
+        )
+        call_kwargs = mock_oidc.call_args[1]
+        assert call_kwargs["config_url"] == (
+            "https://auth.cdit-works.de/realms/cdit-mcp/.well-known/openid-configuration"
+        )

@@ -38,7 +38,6 @@ from .utils import app_state
 from .url_scheme import launch_things
 from .config import (
     ensure_auth_token,
-    ensure_api_key,
     enforce_file_permissions,
 )
 from .logging_config import setup_logging, get_logger
@@ -55,9 +54,6 @@ from .tools_batch import register_batch_tools
 _console_level = "DEBUG" if is_debug_enabled() else "INFO"
 setup_logging(console_level=_console_level, file_level="DEBUG", structured_logs=True)
 logger = get_logger(__name__)
-
-# Ensure API key exists before creating server (so auth provider gets it)
-_api_key, _api_key_is_new = ensure_api_key()
 
 # Enforce secure file permissions on startup
 enforce_file_permissions()
@@ -453,9 +449,10 @@ def run_things_mcp_server():
             HOST_ENV_VAR,
         )
     else:
-        if _api_key:
+        settings = get_settings()
+        if settings.keycloak_client_secret:
             logger.info(
-                "Server binding to %s with bearer token authentication enabled.",
+                "Server binding to %s with Keycloak OIDC authentication.",
                 host,
             )
         else:
@@ -465,34 +462,20 @@ def run_things_mcp_server():
                 host,
             )
 
-    # Display API key info for client configuration
-    if _api_key:
-        masked = _api_key[:9] + "..." + _api_key[-4:]
-        if _api_key_is_new:
-            # First run: show full key so user can configure clients
-            logger.warning(
-                "NEW API key generated: %s — save this for your MCP client config",
-                _api_key,
-            )
-            print(f"\n  NEW API Key: {_api_key}")
-            print("  Configure MCP clients with: Authorization: Bearer <key>")
-            print("  Stored in: .env (THINGS_MCP_API_KEY)\n")
-        else:
-            logger.info(
-                "API key active: %s — clients must send: Authorization: Bearer <key>",
-                masked,
-            )
-
-    # Display Keycloak JWT validation info
-    from .settings import get_keycloak_issuer, get_keycloak_audience
+    # Display Keycloak OIDC info
+    from .settings import get_keycloak_issuer
 
     kc_issuer = get_keycloak_issuer()
-    kc_audience = get_keycloak_audience()
-    if kc_issuer:
+    settings = get_settings()
+    if kc_issuer and settings.keycloak_client_secret:
         logger.info(
-            "Keycloak JWT validation: issuer=%s audience=%s",
+            "Keycloak OIDCProxy: issuer=%s client_id=%s",
             kc_issuer,
-            kc_audience,
+            settings.keycloak_client_id,
+        )
+    elif kc_issuer:
+        logger.warning(
+            "Keycloak issuer set but KEYCLOAK_CLIENT_SECRET missing — auth disabled"
         )
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
