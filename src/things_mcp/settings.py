@@ -52,29 +52,19 @@ class Settings(BaseSettings):
         description="Things 3 authentication token (from Things > Settings > General > Enable Things URLs)",
     )
 
-    # Server authentication (inbound from MCP clients)
-    things_mcp_api_key: str = Field(
-        default="",
-        description="API key for authenticating MCP clients. Auto-generated on first run if empty.",
-    )
-
     # Public URL (used as OAuth issuer — must be HTTPS for remote clients)
     things_mcp_public_url: str = Field(
         default="",
         description="Public HTTPS URL of this server (e.g. https://things.example.com). Required for OAuth/Claude.ai.",
     )
 
-    # Keycloak JWT validation
+    # Keycloak OIDC (OIDCProxy for Claude.ai OAuth flow)
     keycloak_issuer: str = Field(
         default="https://auth.cdit-works.de/realms/cdit-mcp",
-        description="Keycloak realm issuer URL for JWT validation.",
-    )
-    keycloak_audience: str = Field(
-        default="mcp-things",
-        description="Expected audience claim in Keycloak-issued JWTs.",
+        description="Keycloak realm issuer URL.",
     )
     keycloak_client_id: str = Field(
-        default="things-mcp",
+        default="mcp-things",
         description="Pre-registered Keycloak client ID for OIDCProxy.",
     )
     keycloak_client_secret: str = Field(
@@ -112,14 +102,9 @@ class Settings(BaseSettings):
         return bool(self.things_auth_token)
 
     @property
-    def has_api_key(self) -> bool:
-        """Check if a server API key is configured."""
-        return bool(self.things_mcp_api_key)
-
-    @property
     def has_keycloak_config(self) -> bool:
-        """Check if Keycloak JWT validation is configured."""
-        return bool(self.keycloak_issuer)
+        """Check if Keycloak OIDC is configured."""
+        return bool(self.keycloak_issuer and self.keycloak_client_secret)
 
 
 @lru_cache(maxsize=1)
@@ -180,19 +165,9 @@ def get_dashboard_url() -> str:
     return f"http://{host}:{port}/dashboard"
 
 
-def get_api_key() -> str:
-    """Get the server API key."""
-    return get_settings().things_mcp_api_key
-
-
 def get_keycloak_issuer() -> str:
     """Get the Keycloak realm issuer URL."""
     return get_settings().keycloak_issuer
-
-
-def get_keycloak_audience() -> str:
-    """Get the expected Keycloak JWT audience."""
-    return get_settings().keycloak_audience
 
 
 def is_debug_enabled() -> bool:

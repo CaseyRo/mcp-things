@@ -122,38 +122,6 @@ class TestGetThingsAuthToken:
         assert get_things_auth_token() == ""
 
 
-class TestEnsureApiKey:
-    """Test API key provisioning."""
-
-    def test_returns_existing_key(self, monkeypatch):
-        from things_mcp.config import ensure_api_key
-
-        monkeypatch.setattr(
-            "things_mcp.config.get_settings",
-            lambda: mock.Mock(has_api_key=True, things_mcp_api_key="tmcp_existing"),
-        )
-        key, is_new = ensure_api_key()
-        assert key == "tmcp_existing"
-        assert is_new is False
-
-    def test_generates_and_saves_new_key(self, monkeypatch, tmp_path):
-        from things_mcp.config import ensure_api_key
-
-        env_file = tmp_path / ".env"
-        env_file.write_text("OTHER=value\n")
-        mock_settings = mock.Mock(has_api_key=False)
-        monkeypatch.setattr(
-            "things_mcp.config.get_settings",
-            mock.Mock(return_value=mock_settings, cache_clear=mock.Mock()),
-        )
-        monkeypatch.setattr("things_mcp.config._find_env_file", lambda: env_file)
-
-        key, is_new = ensure_api_key()
-        assert key.startswith("tmcp_")
-        assert is_new is True
-        assert "THINGS_MCP_API_KEY=" in env_file.read_text()
-
-
 class TestEnforceFilePermissions:
     """Test startup permission enforcement."""
 
