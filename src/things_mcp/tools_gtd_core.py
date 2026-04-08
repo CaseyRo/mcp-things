@@ -53,7 +53,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         limit: int = 50,
         ctx: Context = None,
     ) -> str:
-        """Get tasks filtered by view, context, energy, and time available.
+        """[tasks-gtd] Get tasks filtered by view, context, energy, and time available.
 
         GTD Stage: Engage
         Use when: Choosing what to work on based on current context and constraints.
@@ -204,7 +204,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         time_available: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Get the single most important task to work on right now.
+        """[tasks-gtd] Get the single most important task to work on right now.
 
         GTD Stage: Engage
         Use when: Feeling overwhelmed or asking "what should I do next?"
@@ -332,7 +332,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         completion_notes: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Mark a task as complete.
+        """[tasks-gtd] Mark a task as complete.
 
         GTD Stage: Engage
         Use when: Finishing a task. Provide task_id if known, or task_title to search.
@@ -433,7 +433,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         when: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Quick capture a task to Inbox for later processing.
+        """[tasks-gtd] Quick capture a task to Inbox for later processing.
 
         GTD Stage: Capture
         Use when: Getting something out of your head quickly. Don't organize now.
@@ -493,7 +493,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         limit: int = 50,
         ctx: Context = None,
     ) -> str:
-        """Process inbox items using GTD methodology.
+        """[tasks-gtd] Process inbox items using GTD methodology.
 
         GTD Stage: Clarify
         Use when: Processing inbox during daily/weekly review.
@@ -621,7 +621,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         first_action: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Convert a task into a project when it requires multiple steps.
+        """[tasks-gtd] Convert a task into a project when it requires multiple steps.
 
         GTD Stage: Clarify
         Use when: Realizing a task is actually a multi-step outcome.

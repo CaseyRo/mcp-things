@@ -43,7 +43,7 @@ def register_utility_tools(mcp: FastMCP):
         limit: int = 20,
         ctx: Context = None,
     ) -> str:
-        """Search for tasks by keyword or filters.
+        """[tasks-gtd] Search for tasks by keyword or filters.
 
         GTD Stage: Utility
         Use when: Looking for a specific task or filtering by criteria.
@@ -112,7 +112,7 @@ def register_utility_tools(mcp: FastMCP):
         name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"], timeout=5
     )
     async def get_projects(include_items: bool = False, ctx: Context = None) -> str:
-        """Get all projects from Things.
+        """[tasks-gtd] Get all projects from Things.
 
         Args:
             include_items: Include tasks within projects
@@ -131,7 +131,7 @@ def register_utility_tools(mcp: FastMCP):
 
     @mcp.tool(name="get-areas", annotations=TOOL_ANNOTATIONS["get-areas"], timeout=5)
     async def get_areas(include_items: bool = False, ctx: Context = None) -> str:
-        """Get all areas from Things.
+        """[tasks-gtd] Get all areas from Things.
 
         Args:
             include_items: Include projects and tasks within areas
@@ -150,7 +150,7 @@ def register_utility_tools(mcp: FastMCP):
         name="get-project", annotations=TOOL_ANNOTATIONS["get-project"], timeout=5
     )
     async def get_project(name_or_uuid: str, ctx: Context = None) -> str:
-        """Get a single project with full detail by name or UUID.
+        """[tasks-gtd] Get a single project with full detail by name or UUID.
 
         Use when: You need full detail on a specific project — its tasks, notes,
         deadline, area, and status. For listing all projects, use get-projects instead.
@@ -231,7 +231,7 @@ def register_utility_tools(mcp: FastMCP):
         include_items: bool = False,
         ctx: Context = None,
     ) -> str:
-        """Get a single area with full detail by name or UUID.
+        """[tasks-gtd] Get a single area with full detail by name or UUID.
 
         Use when: Inspecting a specific area before modifying or deleting it,
         or checking what projects and to-dos belong to it. For listing all areas,
@@ -291,7 +291,7 @@ def register_utility_tools(mcp: FastMCP):
 
     @mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"], timeout=5)
     async def get_tags(include_items: bool = False, ctx: Context = None) -> str:
-        """Get all tags.
+        """[tasks-gtd] Get all tags.
 
         Args:
             include_items: Include items tagged with each tag
@@ -313,7 +313,7 @@ def register_utility_tools(mcp: FastMCP):
         id: str,
         ctx: Context = None,
     ) -> str:
-        """Open a specific item or list in the Things app.
+        """[tasks-gtd] Open a specific item or list in the Things app.
 
         Args:
             id: Item UUID, or list name: inbox, today, upcoming, anytime, someday, logbook,
@@ -348,7 +348,7 @@ def register_utility_tools(mcp: FastMCP):
         timeout=5,
     )
     async def get_cache_statistics(ctx: Context = None) -> str:
-        """Get cache performance statistics."""
+        """[tasks-gtd] Get cache performance statistics."""
         if ctx:
             await ctx.info("Fetching cache statistics...")
         stats = get_cache_stats()
@@ -372,7 +372,7 @@ def register_utility_tools(mcp: FastMCP):
         show_trends: bool = False,
         ctx: Context = None,
     ) -> str:
-        """Get insights into your inbox triage patterns.
+        """[tasks-gtd] Get insights into your inbox triage patterns.
 
         GTD Stage: Reflect
         Use when: Understanding capture and processing habits.

@@ -32,7 +32,7 @@ from .client_compat import (
     patch_accept_headers,
     get_streamable_http_middleware,
 )
-from .settings import get_transport, is_debug_enabled, get_settings
+from .settings import get_transport, is_debug_enabled
 from .cache import get_cache_stats
 from .utils import app_state
 from .url_scheme import launch_things
@@ -241,56 +241,6 @@ class _TrailingSlashMiddleware:
         await self.app(scope, receive, send)
 
 
-class _OAuthDiscoveryGateMiddleware:
-    """ASGI middleware that blocks OAuth discovery for non-public-URL requests.
-
-    OAuth metadata (/.well-known/*) should only be served when accessed via
-    the public URL (through Caddy reverse proxy). Direct/Tailscale connections
-    get 404, causing MCP clients like Claude Code to fall back to bearer token
-    auth instead of attempting OAuth with Keycloak.
-
-    This operates at the ASGI level to catch .well-known requests regardless
-    of whether they're served by root-level routes or inside mounted sub-apps.
-    """
-
-    def __init__(self, app, public_host: str):
-        self.app = app
-        self.public_host = public_host
-        # Domain without port for prefix matching
-        self.public_domain = public_host.split(":")[0]
-
-    def __getattr__(self, name):
-        return getattr(self.app, name)
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and "/.well-known/" in scope.get("path", ""):
-            # Extract Host header from raw ASGI headers
-            host = ""
-            for key, value in scope.get("headers", []):
-                if key == b"host":
-                    host = value.decode("latin-1")
-                    break
-
-            if host != self.public_host and not host.startswith(self.public_domain):
-                # Not from public URL — return 404 to force bearer token fallback
-                await send(
-                    {
-                        "type": "http.response.start",
-                        "status": 404,
-                        "headers": [(b"content-type", b"text/plain")],
-                    }
-                )
-                await send(
-                    {
-                        "type": "http.response.body",
-                        "body": b"Not Found",
-                    }
-                )
-                return
-
-        await self.app(scope, receive, send)
-
-
 def _create_combined_app(mcp_instance, transport_mode: str):
     """Create an ASGI app with streamable-http transport support.
 
@@ -302,7 +252,7 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         ASGI application with streamable-http transport endpoint.
     """
     from starlette.applications import Starlette
-    from starlette.routing import Mount, Route
+    from starlette.routing import Mount
     from starlette.responses import HTMLResponse, JSONResponse
 
     from .triage_tracker import triage_tracker
@@ -348,10 +298,12 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         data = _build_dashboard_data(triage_tracker, days)
         return JSONResponse(data, headers=_security_headers)
 
-    routes = [
-        Route("/dashboard", dashboard_page),
-        Route("/dashboard/data", dashboard_data),
-    ]
+    # Dashboard routes disabled — uncomment to re-enable
+    # routes = [
+    #     Route("/dashboard", dashboard_page),
+    #     Route("/dashboard/data", dashboard_data),
+    # ]
+    routes = []
 
     # Apply Accept header patch for streamable-http transport
     patch_accept_headers()
@@ -364,15 +316,6 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
     )
-    # Mount well-known routes at root level (RFC 9728 requires this).
-    # Auth routes (e.g. /.well-known/oauth-protected-resource) must live
-    # at the root, not under /mcp, so MCP clients can discover them.
-    if mcp_instance.auth:
-        auth_routes = mcp_instance.auth.get_routes("/mcp")
-        routes.extend(auth_routes)
-        route_paths = [r.path for r in auth_routes if hasattr(r, "path")]
-        logger.info("Auth routes mounted at root: %s", route_paths)
-
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
         "Streamable-HTTP transport enabled at /mcp (for Claude Desktop/n8n/ChatGPT)"
@@ -387,20 +330,6 @@ def _create_combined_app(mcp_instance, transport_mode: str):
 
     # Wrap with middleware to silently normalize /mcp to /mcp/ (avoids 307 redirects)
     app = _TrailingSlashMiddleware(app)
-
-    # Gate OAuth discovery endpoints to public URL only.
-    # Direct/Tailscale connections get 404 for /.well-known/* paths,
-    # forcing Claude Code to fall back to bearer token auth instead of
-    # attempting OAuth with Keycloak. Caddy connections (public URL host)
-    # still get OAuth metadata for Claude.ai connector.
-    public_url = get_settings().things_mcp_public_url
-    if public_url:
-        public_host = public_url.rstrip("/").split("://")[-1]
-        app = _OAuthDiscoveryGateMiddleware(app, public_host)
-        logger.info(
-            "OAuth discovery gated to public host: %s (direct connections use bearer token)",
-            public_host,
-        )
 
     return app
 
@@ -449,33 +378,9 @@ def run_things_mcp_server():
             HOST_ENV_VAR,
         )
     else:
-        settings = get_settings()
-        if settings.keycloak_client_secret:
-            logger.info(
-                "Server binding to %s with Keycloak OIDC authentication.",
-                host,
-            )
-        else:
-            logger.warning(
-                "SECURITY WARNING: Server is binding to %s with no authentication. "
-                "All MCP tools are publicly accessible. Only do this on trusted networks.",
-                host,
-            )
-
-    # Display Keycloak OIDC info
-    from .settings import get_keycloak_issuer
-
-    kc_issuer = get_keycloak_issuer()
-    settings = get_settings()
-    if kc_issuer and settings.keycloak_client_secret:
         logger.info(
-            "Keycloak OIDCProxy: issuer=%s client_id=%s",
-            kc_issuer,
-            settings.keycloak_client_id,
-        )
-    elif kc_issuer:
-        logger.warning(
-            "Keycloak issuer set but KEYCLOAK_CLIENT_SECRET missing — auth disabled"
+            "Server binding to %s with bearer token authentication.",
+            host,
         )
 
     # Schema compatibility is now handled by ClientCompatibilityMiddleware.on_list_tools
@@ -511,7 +416,7 @@ def run_things_mcp_server():
     port = get_binding_port()
     logger.info("Server endpoints:")
     logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")
-    logger.info(f"  - Dashboard:            http://{host}:{port}/dashboard")
+    # logger.info(f"  - Dashboard:            http://{host}:{port}/dashboard")  # disabled
 
     # Use wsproto to avoid deprecation warnings from websockets 14+
     # See: https://github.com/python-websockets/websockets/issues/975

@@ -73,7 +73,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         notes: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Create a task with specific scheduling and organization.
+        """[tasks-gtd] Create a task with specific scheduling and organization.
 
         GTD Stage: Organize
         Use when: You know when/where this task belongs.
@@ -158,7 +158,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         notes: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Delegate a task and track it as 'Waiting For'.
+        """[tasks-gtd] Delegate a task and track it as 'Waiting For'.
 
         GTD Stage: Organize
         Use when: You've handed off a task to someone else.
@@ -260,7 +260,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         reason: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Defer a task to a later time.
+        """[tasks-gtd] Defer a task to a later time.
 
         GTD Stage: Organize
 
@@ -377,7 +377,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         area: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Create a project with initial tasks atomically.
+        """[tasks-gtd] Create a project with initial tasks atomically.
 
         GTD Stage: Organize
         Use when: Planning a multi-step outcome.
@@ -469,7 +469,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         canceled: Optional[bool] = None,
         ctx: Context = None,
     ) -> str:
-        """General task modification for updates not covered by specific tools.
+        """[tasks-gtd] General task modification for updates not covered by specific tools.
 
         GTD Stage: Organize
         Instead use: complete-task for completing, defer-task for rescheduling,
@@ -588,7 +588,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         projects: Optional[List[str]] = None,
         ctx: Context = None,
     ) -> str:
-        """Create a new area in Things, optionally with initial projects.
+        """[tasks-gtd] Create a new area in Things, optionally with initial projects.
 
         GTD Stage: Organize
         Use when: Setting up a new area of responsibility (e.g., Health, Finance, Work).
@@ -699,7 +699,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         canceled: Optional[bool] = None,
         ctx: Context = None,
     ) -> str:
-        """Update a project's properties.
+        """[tasks-gtd] Update a project's properties.
 
         Use when: Renaming, rescheduling, reassigning to an area, adding notes,
         or closing a project.
@@ -826,7 +826,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         tags: Optional[List[str]] = None,
         ctx: Context = None,
     ) -> str:
-        """Rename an area or update its tags.
+        """[tasks-gtd] Rename an area or update its tags.
 
         Use when: Renaming an area of focus/responsibility or changing its tags.
 
@@ -913,7 +913,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name_or_uuid: str,
         ctx: Context = None,
     ) -> str:
-        """Delete an area. Refuses if loose to-dos exist (Things trashes them).
+        """[tasks-gtd] Delete an area. Refuses if loose to-dos exist (Things trashes them).
 
         Use when: Removing an area of responsibility that is no longer relevant.
         Projects in the area will become unassigned (safe). Loose to-dos would be
@@ -1008,7 +1008,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         target: str,
         ctx: Context = None,
     ) -> str:
-        """Move all contents from source area to target area, then delete source.
+        """[tasks-gtd] Move all contents from source area to target area, then delete source.
 
         Use when: Two areas of responsibility are converging (e.g., merging
         "Side Projects" into "Work"). Safely moves all to-dos and projects
