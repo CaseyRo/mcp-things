@@ -52,24 +52,16 @@ class Settings(BaseSettings):
         description="Things 3 authentication token (from Things > Settings > General > Enable Things URLs)",
     )
 
-    # Public URL (used as OAuth issuer — must be HTTPS for remote clients)
+    # Public URL (used as base_url for auth metadata)
     things_mcp_public_url: str = Field(
         default="",
-        description="Public HTTPS URL of this server (e.g. https://things.example.com). Required for OAuth/Claude.ai.",
+        description="Public HTTPS URL of this server (e.g. https://things.example.com).",
     )
 
-    # Keycloak OIDC (OIDCProxy for Claude.ai OAuth flow)
-    keycloak_issuer: str = Field(
-        default="https://auth.cdit-works.de/realms/cdit-mcp",
-        description="Keycloak realm issuer URL.",
-    )
-    keycloak_client_id: str = Field(
-        default="mcp-things",
-        description="Pre-registered Keycloak client ID for OIDCProxy.",
-    )
-    keycloak_client_secret: str = Field(
+    # MCP API key (bearer token for direct clients)
+    things_mcp_api_key: str = Field(
         default="",
-        description="Keycloak client secret for OIDCProxy.",
+        description="Server API key for bearer-token clients (auto-generated on first run if empty)",
     )
 
     # Debug settings
@@ -100,11 +92,6 @@ class Settings(BaseSettings):
     def has_auth_token(self) -> bool:
         """Check if an authentication token is configured."""
         return bool(self.things_auth_token)
-
-    @property
-    def has_keycloak_config(self) -> bool:
-        """Check if Keycloak OIDC is configured."""
-        return bool(self.keycloak_issuer and self.keycloak_client_secret)
 
 
 @lru_cache(maxsize=1)
@@ -163,11 +150,6 @@ def get_dashboard_url() -> str:
     host = get_settings().things_mcp_host
     port = get_settings().things_mcp_port
     return f"http://{host}:{port}/dashboard"
-
-
-def get_keycloak_issuer() -> str:
-    """Get the Keycloak realm issuer URL."""
-    return get_settings().keycloak_issuer
 
 
 def is_debug_enabled() -> bool:

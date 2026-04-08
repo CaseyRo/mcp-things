@@ -131,7 +131,7 @@ def register_batch_tools(mcp: FastMCP):
         ] = None,
         ctx: Context = None,
     ) -> str:
-        """Create multiple inbox items in one call. Batch version of capture-task.
+        """[tasks-gtd] Create multiple inbox items in one call. Batch version of capture-task.
 
         GTD Stage: Capture
         Use when: Capturing multiple items at once (meeting notes, braindump, etc.)
@@ -204,7 +204,7 @@ def register_batch_tools(mcp: FastMCP):
         task_ids: List[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
     ) -> str:
-        """Mark multiple tasks complete in one call. Batch version of complete-task.
+        """[tasks-gtd] Mark multiple tasks complete in one call. Batch version of complete-task.
 
         GTD Stage: Engage
         Use when: Completing several tasks at once (end-of-day cleanup, batch processing).
@@ -271,7 +271,7 @@ def register_batch_tools(mcp: FastMCP):
         task_ids: List[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
     ) -> str:
-        """Cancel multiple tasks in one call. Batch version of modify-task(canceled=True).
+        """[tasks-gtd] Cancel multiple tasks in one call. Batch version of modify-task(canceled=True).
 
         GTD Stage: Engage
         Use when: Canceling several tasks at once (cleanup, scope change).
@@ -340,7 +340,7 @@ def register_batch_tools(mcp: FastMCP):
         area: Optional[str] = None,
         ctx: Context = None,
     ) -> str:
-        """Apply the same modification to multiple tasks. Batch version of modify-task.
+        """[tasks-gtd] Apply the same modification to multiple tasks. Batch version of modify-task.
 
         GTD Stage: Organize
         Use when: Moving, tagging, or rescheduling many tasks at once.
@@ -423,7 +423,7 @@ def register_batch_tools(mcp: FastMCP):
         decisions: List[TriageDecision] = Field(..., min_length=1, max_length=100),
         ctx: Context = None,
     ) -> str:
-        """Process multiple inbox decisions in one call. Use after process-inbox(all=True).
+        """[tasks-gtd] Process multiple inbox decisions in one call. Use after process-inbox(all=True).
 
         GTD Stage: Clarify + Organize
         Use when: You have reviewed all inbox items and want to submit all decisions at once.

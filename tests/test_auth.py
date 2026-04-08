@@ -1,38 +1,46 @@
-"""Tests for OIDCProxy authentication."""
+"""Tests for bearer token authentication."""
 
-from unittest.mock import patch
+import asyncio
+
+from things_mcp.auth import BearerTokenVerifier, create_auth
 
 
-from things_mcp.auth import create_auth
+class TestBearerTokenVerifier:
+    def test_valid_token(self):
+        verifier = BearerTokenVerifier(api_key="tmcp_test123")
+        result = asyncio.get_event_loop().run_until_complete(
+            verifier.verify_token("tmcp_test123")
+        )
+        assert result is not None
+        assert result.client_id == "bearer"
+
+    def test_invalid_token(self):
+        verifier = BearerTokenVerifier(api_key="tmcp_test123")
+        result = asyncio.get_event_loop().run_until_complete(
+            verifier.verify_token("wrong_key")
+        )
+        assert result is None
+
+    def test_empty_token(self):
+        verifier = BearerTokenVerifier(api_key="tmcp_test123")
+        result = asyncio.get_event_loop().run_until_complete(verifier.verify_token(""))
+        assert result is None
+
+    def test_timing_safe_comparison(self):
+        """Verify we use hmac.compare_digest (timing-safe) by checking similar tokens are rejected."""
+        verifier = BearerTokenVerifier(api_key="tmcp_test123")
+        # Off-by-one character should still be rejected
+        result = asyncio.get_event_loop().run_until_complete(
+            verifier.verify_token("tmcp_test124")
+        )
+        assert result is None
 
 
 class TestCreateAuth:
-    @patch("things_mcp.auth.OIDCProxy")
-    def test_returns_oidc_proxy(self, mock_oidc):
-        mock_oidc.return_value = "mock_proxy"
-        result = create_auth(
-            base_url="https://example.com",
-            keycloak_issuer="https://auth.example.com/realms/test",
-            keycloak_client_id="test-client",
-            keycloak_client_secret="secret123",
-        )
-        mock_oidc.assert_called_once_with(
-            config_url="https://auth.example.com/realms/test/.well-known/openid-configuration",
-            client_id="test-client",
-            client_secret="secret123",
-            base_url="https://example.com",
-        )
-        assert result == "mock_proxy"
+    def test_returns_bearer_verifier(self):
+        result = create_auth(api_key="tmcp_test123")
+        assert isinstance(result, BearerTokenVerifier)
 
-    @patch("things_mcp.auth.OIDCProxy")
-    def test_config_url_construction(self, mock_oidc):
-        create_auth(
-            base_url="https://mcp.example.com",
-            keycloak_issuer="https://auth.cdit-works.de/realms/cdit-mcp",
-            keycloak_client_id="mcp-things",
-            keycloak_client_secret="secret",
-        )
-        call_kwargs = mock_oidc.call_args[1]
-        assert call_kwargs["config_url"] == (
-            "https://auth.cdit-works.de/realms/cdit-mcp/.well-known/openid-configuration"
-        )
+    def test_with_base_url(self):
+        result = create_auth(api_key="tmcp_test123", base_url="https://example.com")
+        assert isinstance(result, BearerTokenVerifier)

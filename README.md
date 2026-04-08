@@ -101,7 +101,7 @@ All MCP endpoints require bearer token authentication (`THINGS_MCP_API_KEY`). Wr
 - **Regenerate:** Delete the `THINGS_MCP_API_KEY=` line from `.env` and restart — a new key is generated
 - **Manual set:** Set `THINGS_MCP_API_KEY=your-key` in `.env` before starting
 
-The dashboard at `/dashboard` remains accessible without authentication (it contains only anonymized triage statistics).
+The dashboard at `/dashboard` is currently disabled (code preserved, routes commented out in `fast_server.py`).
 
 ### Claude Desktop Integration
 

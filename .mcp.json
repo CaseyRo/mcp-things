@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "cloudflare-mcp": {
+      "url": "https://new-mcp.cdit-dev.de/mcp"
+    }
+  }
+}

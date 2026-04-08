@@ -19,10 +19,7 @@ from fastmcp.server.middleware import Middleware
 import mcp.types as types
 
 from .logging_config import get_logger
-from .settings import (
-    get_settings,
-    get_keycloak_issuer,
-)
+from .settings import get_settings
 
 logger = get_logger(__name__)
 
@@ -422,32 +419,18 @@ class ClientCompatibilityMiddleware(Middleware):
 
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server instance."""
-    from .auth import create_auth
+    from .auth import create_auth, ensure_api_key
 
     settings = get_settings()
 
-    # Public URL is used as the resource identifier in Protected Resource
-    # Metadata (RFC 9728). Must be HTTPS for remote clients.
     if settings.things_mcp_public_url:
         base_url = settings.things_mcp_public_url.rstrip("/")
     else:
         base_url = f"http://{settings.things_mcp_host}:{settings.things_mcp_port}"
 
-    keycloak_client_secret = settings.keycloak_client_secret
-
-    if not keycloak_client_secret:
-        logger.warning(
-            "KEYCLOAK_CLIENT_SECRET not set — auth disabled. "
-            "Set it to enable OAuth via Keycloak."
-        )
-        auth = None
-    else:
-        auth = create_auth(
-            base_url=base_url,
-            keycloak_issuer=get_keycloak_issuer(),
-            keycloak_client_id=settings.keycloak_client_id,
-            keycloak_client_secret=keycloak_client_secret,
-        )
+    # Ensure API key exists (auto-generates and saves to .env if needed)
+    api_key = ensure_api_key()
+    auth = create_auth(api_key=api_key, base_url=base_url)
 
     server = FastMCP(
         "Things",

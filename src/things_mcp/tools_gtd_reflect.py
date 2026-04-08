@@ -27,7 +27,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
         name="daily-review", annotations=TOOL_ANNOTATIONS["daily-review"], timeout=5
     )
     async def daily_review(ctx: Context = None) -> str:
-        """Get a daily overview following GTD daily review.
+        """[tasks-gtd] Get a daily overview following GTD daily review.
 
         GTD Stage: Reflect
         Use when: Start of day, or asking "what do I need to do today?"
@@ -129,7 +129,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
         name="weekly-review", annotations=TOOL_ANNOTATIONS["weekly-review"], timeout=10
     )
     async def weekly_review(ctx: Context = None) -> str:
-        """Comprehensive GTD weekly review.
+        """[tasks-gtd] Comprehensive GTD weekly review.
 
         GTD Stage: Reflect
         David Allen calls this the "critical factor for success."
