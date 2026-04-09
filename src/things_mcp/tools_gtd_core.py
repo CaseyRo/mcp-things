@@ -6,7 +6,7 @@ These tools form the "input" side of GTD:
 - Clarify: process-inbox, convert-to-project
 """
 
-from typing import Optional, List, Union
+from typing import Literal, Optional, List, Union
 
 from . import reader as db
 from fastmcp import FastMCP, Context
@@ -43,7 +43,19 @@ def register_gtd_core_tools(mcp: FastMCP):
 
     @mcp.tool(name="get-tasks", annotations=TOOL_ANNOTATIONS["get-tasks"], timeout=5)
     async def get_tasks(
-        view: Optional[str] = None,
+        view: Optional[
+            Literal[
+                "inbox",
+                "today",
+                "tomorrow",
+                "upcoming",
+                "anytime",
+                "someday",
+                "logbook",
+                "trash",
+                "deadlines",
+            ]
+        ] = None,
         context: Optional[Union[str, List[str]]] = None,
         energy: Optional[str] = None,
         time_available: Optional[str] = None,
@@ -336,6 +348,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         GTD Stage: Engage
         Use when: Finishing a task. Provide task_id if known, or task_title to search.
+        Provide at least one of task_id or task_title to identify the task.
 
         Args:
             task_id: UUID of the task to complete (preferred if known)
