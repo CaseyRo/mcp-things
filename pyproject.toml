@@ -1,6 +1,6 @@
 [project]
 name = "mcp-things"
-version = "2.0.0"
+version = "2.1.0"
 description = "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -33,7 +33,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.28.1",
-    "fastmcp>=3.1.0",
+    "fastmcp>=3.2.2",
     "pydantic-settings>=2.12.0",
     "things-py>=1.0.1",
     "rich>=14.0.0",
