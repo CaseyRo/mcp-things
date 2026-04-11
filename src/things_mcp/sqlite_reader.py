@@ -424,11 +424,34 @@ class ThingsSQLiteReader:
         rows = self._execute(sql, (task_uuid,), row_factory=lambda _c, r: r[0])
         return rows
 
+    def _get_checklist_for_task(self, task_uuid: str) -> list[dict[str, Any]]:
+        """Return checklist items for a single task, matching things-py format."""
+        sql = f"""
+            SELECT
+                CI.uuid,
+                CI.title,
+                CASE
+                    WHEN CI.status = {STATUS_COMPLETED} THEN 'completed'
+                    ELSE 'incomplete'
+                END AS status,
+                'checklist-item' AS type,
+                datetime(CI.{DATE_STOP}, 'unixepoch', 'localtime') AS stop_date,
+                datetime(CI.{DATE_CREATED}, 'unixepoch', 'localtime') AS created,
+                datetime(CI.{DATE_MODIFIED}, 'unixepoch', 'localtime') AS modified
+            FROM {TABLE_CHECKLIST_ITEM} AS CI
+            WHERE CI.task = ?
+            ORDER BY CI."index"
+        """
+        rows = self._execute(sql, (task_uuid,))
+        return rows
+
     def _enrich_tasks(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Add tag lists to tasks that have tags=True (matches things-py behaviour)."""
+        """Add tag lists and checklist items to tasks (matches things-py behaviour)."""
         for task in tasks:
             if task.get("tags"):
                 task["tags"] = self._get_tags_for_task(task["uuid"])
+            if task.get("checklist"):
+                task["checklist"] = self._get_checklist_for_task(task["uuid"])
         return tasks
 
     # -- public read API ------------------------------------------------------
