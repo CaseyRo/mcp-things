@@ -303,18 +303,43 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     #     Route("/dashboard", dashboard_page),
     #     Route("/dashboard/data", dashboard_data),
     # ]
-    routes = []
+    from datetime import datetime, timezone
+    from starlette.routing import Route
+
+    _start = datetime.now(timezone.utc)
+    try:
+        from things_mcp import __version__ as _v
+    except ImportError:
+        _v = "0.1.0"
+
+    async def _health(request):
+        return JSONResponse(
+            {
+                "status": "healthy",
+                "service": "mcp-things",
+                "version": _v,
+                "upstream_reachable": True,
+                "uptime_seconds": int(
+                    (datetime.now(timezone.utc) - _start).total_seconds()
+                ),
+            }
+        )
+
+    routes = [Route("/health", _health), Route("/healthz", _health)]
 
     # Apply Accept header patch for streamable-http transport
     patch_accept_headers()
 
     # Streamable-HTTP transport for Claude Desktop/n8n/ChatGPT
-    # Includes middleware for Accept header fixes as fallback
+    # Includes middleware for Accept header fixes as fallback.
+    # stateless_http=True → no orphaned SSE sessions after idle disconnect.
+    # See openspec mcp-stateless-transport.
     http_middleware = get_streamable_http_middleware()
     http_app = mcp_instance.http_app(
         transport="streamable-http",
         path="/",
         middleware=http_middleware,
+        stateless_http=True,
     )
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
