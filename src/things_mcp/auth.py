@@ -86,7 +86,7 @@ def ensure_api_key() -> str:
     from .settings import get_settings
 
     settings = get_settings()
-    api_key = settings.things_mcp_api_key
+    api_key = settings.things_mcp_api_key.get_secret_value()
 
     if api_key:
         logger.warning(

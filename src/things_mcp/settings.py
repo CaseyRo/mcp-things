@@ -8,7 +8,7 @@ Settings are loaded once and cached for the lifetime of the application.
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     )
 
     # Things authentication (outbound to Things 3)
-    things_auth_token: str = Field(
-        default="",
+    things_auth_token: SecretStr = Field(
+        default=SecretStr(""),
         description="Things 3 authentication token (from Things > Settings > General > Enable Things URLs)",
     )
 
@@ -59,8 +59,8 @@ class Settings(BaseSettings):
     )
 
     # MCP API key (bearer token for direct clients)
-    things_mcp_api_key: str = Field(
-        default="",
+    things_mcp_api_key: SecretStr = Field(
+        default=SecretStr(""),
         description="Server API key for bearer-token clients (auto-generated on first run if empty)",
     )
 
@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     @property
     def has_auth_token(self) -> bool:
         """Check if an authentication token is configured."""
-        return bool(self.things_auth_token)
+        return bool(self.things_auth_token.get_secret_value())
 
 
 @lru_cache(maxsize=1)
@@ -115,7 +115,7 @@ def get_auth_token() -> str:
     Returns:
         str: The authentication token, or empty string if not configured.
     """
-    return get_settings().things_auth_token
+    return get_settings().things_auth_token.get_secret_value()
 
 
 def get_host() -> str:
