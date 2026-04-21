@@ -3,6 +3,8 @@
 import json
 from unittest import mock
 
+from pydantic import SecretStr
+
 
 class TestWriteEnvVar:
     """Test _write_env_var helper."""
@@ -95,7 +97,10 @@ class TestGetThingsAuthToken:
 
         monkeypatch.setattr(
             "things_mcp.config.get_settings",
-            lambda: mock.Mock(has_auth_token=True, things_auth_token="env-token"),
+            lambda: mock.Mock(
+                has_auth_token=True,
+                things_auth_token=SecretStr("env-token"),
+            ),
         )
         assert get_things_auth_token() == "env-token"
 

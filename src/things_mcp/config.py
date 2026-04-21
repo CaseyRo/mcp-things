@@ -74,7 +74,7 @@ def get_things_auth_token() -> str:
     settings = get_settings()
     if settings.has_auth_token:
         logger.debug("Using Things auth token from environment/.env")
-        return settings.things_auth_token
+        return settings.things_auth_token.get_secret_value()
 
     # Fall back to legacy config file
     legacy_config = _load_legacy_config()
