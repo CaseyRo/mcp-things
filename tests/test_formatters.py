@@ -226,6 +226,52 @@ class TestFormatTodo:
         assert "Area:" not in result
 
 
+class TestToDictTodoListField:
+    """Tests for the denormalised `list` field added by `to_dict_todo`.
+
+    Priority order: project_title > area_title > start bucket > "Inbox".
+    """
+
+    def test_list_resolves_to_project_title_when_in_project(self):
+        from things_mcp.formatters import to_dict_todo
+
+        todo = {
+            "uuid": "t1",
+            "title": "Ship CDI-1021",
+            "start": "Anytime",
+            "project": "p1",
+            "project_title": "Things MCP",
+            "area": "a1",
+            "area_title": "Engineering",
+        }
+        assert to_dict_todo(todo)["list"] == "Things MCP"
+
+    def test_list_resolves_to_area_title_when_no_project(self):
+        from things_mcp.formatters import to_dict_todo
+
+        todo = {
+            "uuid": "t2",
+            "title": "Plan offsite",
+            "start": "Someday",
+            "area": "a1",
+            "area_title": "Engineering",
+        }
+        assert to_dict_todo(todo)["list"] == "Engineering"
+
+    def test_list_resolves_to_start_bucket_when_loose(self):
+        from things_mcp.formatters import to_dict_todo
+
+        for bucket in ("Today", "Anytime", "Someday", "Upcoming"):
+            todo = {"uuid": "tx", "title": "x", "start": bucket}
+            assert to_dict_todo(todo)["list"] == bucket
+
+    def test_list_falls_back_to_inbox_when_unscheduled(self):
+        from things_mcp.formatters import to_dict_todo
+
+        todo = {"uuid": "t3", "title": "Quick capture"}
+        assert to_dict_todo(todo)["list"] == "Inbox"
+
+
 class TestFormatProject:
     """Tests for render_project()."""
 

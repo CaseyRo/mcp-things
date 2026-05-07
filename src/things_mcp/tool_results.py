@@ -49,7 +49,9 @@ def make_result(
     text_body = text if text is not None else summary
     return ToolResult(
         content=[TextContent(type="text", text=text_body)],
-        structured_content=envelope.model_dump(mode="json"),
+        # `by_alias=True` so fields with serialization aliases (e.g. Todo.list)
+        # emit the alias as the JSON key.
+        structured_content=envelope.model_dump(mode="json", by_alias=True),
     )
 
 

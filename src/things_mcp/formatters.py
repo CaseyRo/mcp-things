@@ -87,6 +87,9 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
     else:
         status = "incomplete"
 
+    start = todo.get("start") or None
+    list_label = project_title or area_title or start or "Inbox"
+
     return {
         "uuid": todo.get("uuid", ""),
         "title": todo.get("title", ""),
@@ -95,7 +98,7 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
         "notes": todo.get("notes") or None,
         "tags": list(todo.get("tags") or []),
         "checklist": _normalise_checklist(todo.get("checklist")),
-        "start": todo.get("start") or None,
+        "start": start,
         "start_date": todo.get("start_date") or None,
         "deadline": todo.get("deadline") or None,
         "stop_date": todo.get("stop_date") or None,
@@ -105,6 +108,7 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
         "project_title": project_title,
         "area": area_uuid or None,
         "area_title": area_title,
+        "list": list_label,
     }
 
 
