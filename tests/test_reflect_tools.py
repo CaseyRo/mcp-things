@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.conftest import create_mock_todo, create_mock_project
+from tests.conftest import create_mock_todo, create_mock_project, tool_text
 
 
 class TestWeeklyReview:
@@ -23,8 +23,11 @@ class TestWeeklyReview:
         self.things.someday.return_value = []
         self.things.last.return_value = []
         result = await self.weekly_review()
-        assert "Weekly Review" in result
-        assert "Inbox: Clear" in result
+        text = tool_text(result)
+        assert "Weekly Review" in text
+        assert "Inbox: Clear" in text
+        envelope = result.structured_content
+        assert envelope["data"]["period"] == "weekly"
 
     @pytest.mark.asyncio
     async def test_inbox_items_shown(self):
@@ -37,8 +40,10 @@ class TestWeeklyReview:
         self.things.someday.return_value = []
         self.things.last.return_value = []
         result = await self.weekly_review()
-        assert "2 items" in result
-        assert "Process to zero" in result
+        text = tool_text(result)
+        assert "2 items" in text
+        assert "Process to zero" in text
+        assert result.structured_content["data"]["inbox_count"] == 2
 
     @pytest.mark.asyncio
     async def test_stalled_projects_detected(self):
@@ -52,8 +57,9 @@ class TestWeeklyReview:
         self.things.someday.return_value = []
         self.things.last.return_value = []
         result = await self.weekly_review()
-        assert "Stalled" in result
-        assert "Stalled Project" in result
+        text = tool_text(result)
+        assert "Stalled" in text
+        assert "Stalled Project" in text
 
     @pytest.mark.asyncio
     async def test_waiting_for_items(self):
@@ -65,7 +71,7 @@ class TestWeeklyReview:
         self.things.someday.return_value = []
         self.things.last.return_value = []
         result = await self.weekly_review()
-        assert "Waiting For" in result
+        assert "Waiting For" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_completed_this_week(self):
@@ -78,8 +84,10 @@ class TestWeeklyReview:
             create_mock_todo(title="Done task 2"),
         ]
         result = await self.weekly_review()
-        assert "Completed This Week: 2" in result
-        assert "Celebrate" in result
+        text = tool_text(result)
+        assert "Completed This Week: 2" in text
+        assert "Celebrate" in text
+        assert len(result.structured_content["data"]["completed"]) == 2
 
     @pytest.mark.asyncio
     async def test_someday_items(self):
@@ -91,5 +99,6 @@ class TestWeeklyReview:
         ]
         self.things.last.return_value = []
         result = await self.weekly_review()
-        assert "Someday/Maybe" in result
-        assert "Learn guitar" in result
+        text = tool_text(result)
+        assert "Someday/Maybe" in text
+        assert "Learn guitar" in text

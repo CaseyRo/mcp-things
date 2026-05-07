@@ -22,6 +22,31 @@ import mcp.types as types  # noqa: E402 - must load after settings
 
 
 # ============================================================================
+# Test helpers
+# ============================================================================
+
+
+def tool_text(result) -> str:
+    """Extract the human-readable text body from a tool result.
+
+    Tools migrated to ``ToolResult`` (see openspec change
+    ``structured-json-tool-output``) return a ``ToolResult`` whose first
+    ``content`` block is the text fallback. Pre-migration tools still return
+    plain strings. This helper accepts both so tests can assert on the text
+    body uniformly.
+    """
+    if isinstance(result, str):
+        return result
+    content = getattr(result, "content", None)
+    if content:
+        first = content[0]
+        text = getattr(first, "text", None)
+        if text is not None:
+            return text
+    return str(result)
+
+
+# ============================================================================
 # Pytest Plugins
 # ============================================================================
 

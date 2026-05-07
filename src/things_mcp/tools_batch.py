@@ -14,7 +14,10 @@ import things
 from pydantic import BaseModel, Field, model_validator
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import ToolResult
 
+from .models import BulkItemError, BulkResult, ToolEnvelope, output_schema_for
+from .tool_results import bulk_result
 from .url_scheme import (
     build_todo_object,
     execute_json,
@@ -122,7 +125,10 @@ def register_batch_tools(mcp: FastMCP):
     """Register batch tools with the MCP server."""
 
     @mcp.tool(
-        name="bulk-capture", annotations=TOOL_ANNOTATIONS["bulk-capture"], timeout=30
+        name="bulk-capture",
+        annotations=TOOL_ANNOTATIONS["bulk-capture"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_capture(
         items: List[CaptureItem] = Field(..., min_length=1, max_length=50),
@@ -130,7 +136,7 @@ def register_batch_tools(mcp: FastMCP):
             Literal["today", "tomorrow", "evening", "anytime", "someday"]
         ] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Create multiple inbox items in one call. Batch version of capture-task.
 
         GTD Stage: Capture
@@ -183,13 +189,24 @@ def register_batch_tools(mcp: FastMCP):
             invalidate_caches_for(["get-inbox", "get-tasks"])
 
             titles = [item.title for item in items]
-            result = f"Captured {len(items)} items"
+            text_body = f"Captured {len(items)} items"
             if default_when:
-                result += f" (default schedule: {default_when})"
-            result += ":\n"
+                text_body += f" (default schedule: {default_when})"
+            text_body += ":\n"
             for title in titles:
-                result += f"- {title}\n"
-            return result
+                text_body += f"- {title}\n"
+
+            # Things JSON URL scheme returns no UUIDs; report titles as proxy IDs
+            # so consumers can still correlate per-item success.
+            return bulk_result(
+                requested=len(items),
+                succeeded_ids=titles,
+                failed_ids=[],
+                errors=[],
+                summary=f"Captured {len(items)} items.",
+                text=text_body,
+                meta={"default_when": default_when},
+            )
 
         except ToolError:
             raise
@@ -198,12 +215,15 @@ def register_batch_tools(mcp: FastMCP):
             _error_result("Failed to bulk capture. Check server logs for details.")
 
     @mcp.tool(
-        name="bulk-complete", annotations=TOOL_ANNOTATIONS["bulk-complete"], timeout=30
+        name="bulk-complete",
+        annotations=TOOL_ANNOTATIONS["bulk-complete"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_complete(
         task_ids: List[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Mark multiple tasks complete in one call. Batch version of complete-task.
 
         GTD Stage: Engage
@@ -254,8 +274,17 @@ def register_batch_tools(mcp: FastMCP):
                     pass
 
             completed_titles = [titles.get(tid, tid) for tid in task_ids]
-            return f"Completed {len(task_ids)} tasks:\n" + "\n".join(
+            text_body = f"Completed {len(task_ids)} tasks:\n" + "\n".join(
                 f"- {t}" for t in completed_titles
+            )
+            return bulk_result(
+                requested=len(task_ids),
+                succeeded_ids=task_ids,
+                failed_ids=[],
+                errors=[],
+                summary=f"Completed {len(task_ids)} tasks.",
+                text=text_body,
+                by_action={"complete": len(task_ids)},
             )
 
         except ToolError:
@@ -265,12 +294,15 @@ def register_batch_tools(mcp: FastMCP):
             _error_result("Failed to bulk complete. Check server logs for details.")
 
     @mcp.tool(
-        name="bulk-cancel", annotations=TOOL_ANNOTATIONS["bulk-cancel"], timeout=30
+        name="bulk-cancel",
+        annotations=TOOL_ANNOTATIONS["bulk-cancel"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_cancel(
         task_ids: List[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Cancel multiple tasks in one call. Batch version of modify-task(canceled=True).
 
         GTD Stage: Engage
@@ -319,8 +351,17 @@ def register_batch_tools(mcp: FastMCP):
                     pass
 
             canceled_titles = [titles.get(tid, tid) for tid in task_ids]
-            return f"Canceled {len(task_ids)} tasks:\n" + "\n".join(
+            text_body = f"Canceled {len(task_ids)} tasks:\n" + "\n".join(
                 f"- {t}" for t in canceled_titles
+            )
+            return bulk_result(
+                requested=len(task_ids),
+                succeeded_ids=task_ids,
+                failed_ids=[],
+                errors=[],
+                summary=f"Canceled {len(task_ids)} tasks.",
+                text=text_body,
+                by_action={"cancel": len(task_ids)},
             )
 
         except ToolError:
@@ -330,7 +371,10 @@ def register_batch_tools(mcp: FastMCP):
             _error_result("Failed to bulk cancel. Check server logs for details.")
 
     @mcp.tool(
-        name="bulk-modify", annotations=TOOL_ANNOTATIONS["bulk-modify"], timeout=30
+        name="bulk-modify",
+        annotations=TOOL_ANNOTATIONS["bulk-modify"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_modify(
         task_ids: List[str] = Field(..., min_length=1, max_length=50),
@@ -339,7 +383,7 @@ def register_batch_tools(mcp: FastMCP):
         project: Optional[str] = None,
         area: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Apply the same modification to multiple tasks. Batch version of modify-task.
 
         GTD Stage: Organize
@@ -383,6 +427,9 @@ def register_batch_tools(mcp: FastMCP):
                 list_id = resolve_list_id(area, "area")
 
             # Use URL scheme update for each task (update doesn't support batching)
+            succeeded_ids: list[str] = []
+            failed_ids: list[str] = []
+            errors: list[BulkItemError] = []
             for tid in task_ids:
                 url = update_todo(
                     id=tid,
@@ -391,7 +438,17 @@ def register_batch_tools(mcp: FastMCP):
                     list_id=list_id,
                 )
                 success = execute_url(url)
-                if not success:
+                if success:
+                    succeeded_ids.append(tid)
+                else:
+                    failed_ids.append(tid)
+                    errors.append(
+                        BulkItemError(
+                            task_id=tid,
+                            action="modify",
+                            reason="URL scheme failed",
+                        )
+                    )
                     logger.warning(f"Failed to modify task {tid}")
 
             invalidate_caches_for(
@@ -408,7 +465,20 @@ def register_batch_tools(mcp: FastMCP):
             if area:
                 changes.append(f"moved to area {area}")
 
-            return f"Modified {len(task_ids)} tasks: {', '.join(changes)}."
+            text_body = (
+                f"Modified {len(succeeded_ids)}/{len(task_ids)} tasks: "
+                f"{', '.join(changes)}."
+            )
+            return bulk_result(
+                requested=len(task_ids),
+                succeeded_ids=succeeded_ids,
+                failed_ids=failed_ids,
+                errors=errors,
+                summary=f"Modified {len(succeeded_ids)}/{len(task_ids)} tasks.",
+                text=text_body,
+                by_action={"modify": len(succeeded_ids)},
+                meta={"changes": changes},
+            )
 
         except ToolError:
             raise
@@ -417,12 +487,15 @@ def register_batch_tools(mcp: FastMCP):
             _error_result("Failed to bulk modify. Check server logs for details.")
 
     @mcp.tool(
-        name="bulk-triage", annotations=TOOL_ANNOTATIONS["bulk-triage"], timeout=60
+        name="bulk-triage",
+        annotations=TOOL_ANNOTATIONS["bulk-triage"],
+        timeout=60,
+        output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_triage(
         decisions: List[TriageDecision] = Field(..., min_length=1, max_length=100),
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Process multiple inbox decisions in one call. Use after process-inbox(all=True).
 
         GTD Stage: Clarify + Organize
@@ -457,6 +530,9 @@ def register_batch_tools(mcp: FastMCP):
             assigns = [d for d in decisions if d.action == "assign"]
 
             results = {"processed": 0, "failed": 0, "failures": []}
+            succeeded_ids: list[str] = []
+            failed_ids: list[str] = []
+            errors: list[BulkItemError] = []
             titles = _prefetch_titles(all_ids)
 
             # Batch complete (single AppleScript)
@@ -473,6 +549,7 @@ def register_batch_tools(mcp: FastMCP):
                 if run_applescript(script) is not False:
                     results["processed"] += len(completes)
                     for d in completes:
+                        succeeded_ids.append(d.task_id)
                         try:
                             triage_tracker.record(
                                 task_id=d.task_id,
@@ -491,6 +568,15 @@ def register_batch_tools(mcp: FastMCP):
                             "reason": "AppleScript failed",
                         }
                     )
+                    for d in completes:
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action="complete",
+                                reason="AppleScript failed",
+                            )
+                        )
 
             # Batch cancel (single AppleScript)
             if cancels:
@@ -506,6 +592,7 @@ def register_batch_tools(mcp: FastMCP):
                 if run_applescript(script) is not False:
                     results["processed"] += len(cancels)
                     for d in cancels:
+                        succeeded_ids.append(d.task_id)
                         try:
                             triage_tracker.record(
                                 task_id=d.task_id,
@@ -524,6 +611,15 @@ def register_batch_tools(mcp: FastMCP):
                             "reason": "AppleScript failed",
                         }
                     )
+                    for d in cancels:
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action="cancel",
+                                reason="AppleScript failed",
+                            )
+                        )
 
             # Defer/schedule (individual URL scheme calls)
             for d in defers + schedules:
@@ -539,6 +635,7 @@ def register_batch_tools(mcp: FastMCP):
                     url = update_todo(id=d.task_id, when=when_value)
                     if execute_url(url):
                         results["processed"] += 1
+                        succeeded_ids.append(d.task_id)
                         triage_tracker.record(
                             task_id=d.task_id,
                             task_title=titles.get(d.task_id, ""),
@@ -554,10 +651,26 @@ def register_batch_tools(mcp: FastMCP):
                                 "reason": "URL scheme failed",
                             }
                         )
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action=d.action,
+                                reason="URL scheme failed",
+                            )
+                        )
                 except Exception as e:
                     results["failed"] += 1
                     results["failures"].append(
                         {"task_id": d.task_id, "action": d.action, "reason": str(e)}
+                    )
+                    failed_ids.append(d.task_id)
+                    errors.append(
+                        BulkItemError(
+                            task_id=d.task_id,
+                            action=d.action,
+                            reason=str(e),
+                        )
                     )
 
             # Delegate (individual URL scheme calls — adds waiting-for tag + notes)
@@ -574,6 +687,7 @@ def register_batch_tools(mcp: FastMCP):
                     )
                     if execute_url(url):
                         results["processed"] += 1
+                        succeeded_ids.append(d.task_id)
                         triage_tracker.record(
                             task_id=d.task_id,
                             task_title=titles.get(d.task_id, ""),
@@ -592,10 +706,26 @@ def register_batch_tools(mcp: FastMCP):
                                 "reason": "URL scheme failed",
                             }
                         )
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action="delegate",
+                                reason="URL scheme failed",
+                            )
+                        )
                 except Exception as e:
                     results["failed"] += 1
                     results["failures"].append(
                         {"task_id": d.task_id, "action": "delegate", "reason": str(e)}
+                    )
+                    failed_ids.append(d.task_id)
+                    errors.append(
+                        BulkItemError(
+                            task_id=d.task_id,
+                            action="delegate",
+                            reason=str(e),
+                        )
                     )
 
             # Assign to project (individual convert-to-project calls)
@@ -613,6 +743,14 @@ def register_batch_tools(mcp: FastMCP):
                                 "reason": "Task not found",
                             }
                         )
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action="assign",
+                                reason="Task not found",
+                            )
+                        )
                         continue
 
                     # Create project from task
@@ -628,6 +766,7 @@ def register_batch_tools(mcp: FastMCP):
                         cancel_url = update_todo(id=d.task_id, canceled=True)
                         execute_url(cancel_url)
                         results["processed"] += 1
+                        succeeded_ids.append(d.task_id)
                         triage_tracker.record(
                             task_id=d.task_id,
                             task_title=titles.get(d.task_id, ""),
@@ -643,10 +782,26 @@ def register_batch_tools(mcp: FastMCP):
                                 "reason": "Failed to create project",
                             }
                         )
+                        failed_ids.append(d.task_id)
+                        errors.append(
+                            BulkItemError(
+                                task_id=d.task_id,
+                                action="assign",
+                                reason="Failed to create project",
+                            )
+                        )
                 except Exception as e:
                     results["failed"] += 1
                     results["failures"].append(
                         {"task_id": d.task_id, "action": "assign", "reason": str(e)}
+                    )
+                    failed_ids.append(d.task_id)
+                    errors.append(
+                        BulkItemError(
+                            task_id=d.task_id,
+                            action="assign",
+                            reason=str(e),
+                        )
                     )
 
             invalidate_caches_for(
@@ -654,7 +809,7 @@ def register_batch_tools(mcp: FastMCP):
             )
 
             # Build summary
-            action_counts = {}
+            action_counts: dict[str, int] = {}
             for d in decisions:
                 action_counts[d.action] = action_counts.get(d.action, 0) + 1
 
@@ -669,13 +824,29 @@ def register_batch_tools(mcp: FastMCP):
                 output += "\nFailures:\n"
                 for f in results["failures"]:
                     if "task_id" in f:
-                        output += f"- {f['action']} {titles.get(f['task_id'], f['task_id'])}: {f['reason']}\n"
+                        output += (
+                            f"- {f['action']} "
+                            f"{titles.get(f['task_id'], f['task_id'])}: "
+                            f"{f['reason']}\n"
+                        )
                     else:
                         output += (
                             f"- {f['action']} ({f['count']} items): {f['reason']}\n"
                         )
 
-            return output
+            return bulk_result(
+                requested=len(decisions),
+                succeeded_ids=succeeded_ids,
+                failed_ids=failed_ids,
+                errors=errors,
+                summary=(
+                    f"Triaged {results['processed']}/{len(decisions)} items"
+                    + (f" ({results['failed']} failed)" if results["failed"] else "")
+                    + "."
+                ),
+                text=output,
+                by_action=action_counts,
+            )
 
         except ToolError:
             raise

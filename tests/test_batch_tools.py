@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from fastmcp.exceptions import ToolError
 
 from things_mcp.tools_batch import CaptureItem, TriageDecision
-from tests.conftest import create_mock_todo
+from tests.conftest import create_mock_todo, tool_text
 
 
 # ============================================================================
@@ -185,10 +185,14 @@ class TestBulkCapture:
             CaptureItem(title="Task C", when="today"),
         ]
         result = await self.bulk_capture(items=items)
-        assert "Captured 3 items" in result
-        assert "Task A" in result
-        assert "Task B" in result
-        assert "Task C" in result
+        text = tool_text(result)
+        assert "Captured 3 items" in text
+        assert "Task A" in text
+        assert "Task B" in text
+        assert "Task C" in text
+        envelope = result.structured_content
+        assert envelope["data"]["requested"] == 3
+        assert envelope["data"]["succeeded"] == 3
         self.mock_execute_json.assert_called_once()
         # Verify correct number of todo objects were built
         todo_objects = self.mock_execute_json.call_args[0][0]
@@ -202,7 +206,7 @@ class TestBulkCapture:
             CaptureItem(title="Has schedule", when="tomorrow"),
         ]
         result = await self.bulk_capture(items=items, default_when="today")
-        assert "default schedule: today" in result
+        assert "default schedule: today" in tool_text(result)
         self.mock_execute_json.assert_called_once()
 
     @pytest.mark.asyncio
@@ -266,9 +270,13 @@ class TestBulkComplete:
             create_mock_todo(uuid_str="test-id-002", title="Task 2"),
         ]
         result = await self.bulk_complete(task_ids=["test-id-001", "test-id-002"])
-        assert "Completed 2 tasks" in result
-        assert "Task 1" in result
-        assert "Task 2" in result
+        text = tool_text(result)
+        assert "Completed 2 tasks" in text
+        assert "Task 1" in text
+        assert "Task 2" in text
+        envelope = result.structured_content
+        assert envelope["data"]["succeeded_ids"] == ["test-id-001", "test-id-002"]
+        assert envelope["data"]["by_action"] == {"complete": 2}
         # Single AppleScript call with UUID loop
         self.mock_run_applescript.assert_called_once()
         script = self.mock_run_applescript.call_args[0][0]
@@ -342,9 +350,12 @@ class TestBulkCancel:
             create_mock_todo(uuid_str="test-id-002", title="Task 2"),
         ]
         result = await self.bulk_cancel(task_ids=["test-id-001", "test-id-002"])
-        assert "Canceled 2 tasks" in result
-        assert "Task 1" in result
-        assert "Task 2" in result
+        text = tool_text(result)
+        assert "Canceled 2 tasks" in text
+        assert "Task 1" in text
+        assert "Task 2" in text
+        envelope = result.structured_content
+        assert envelope["data"]["by_action"] == {"cancel": 2}
         self.mock_run_applescript.assert_called_once()
         script = self.mock_run_applescript.call_args[0][0]
         assert '"test-id-001"' in script
@@ -420,8 +431,11 @@ class TestBulkModify:
         result = await self.bulk_modify(
             task_ids=["test-id-001", "test-id-002"], when="tomorrow"
         )
-        assert "Modified 2 tasks" in result
-        assert "scheduled to tomorrow" in result
+        text = tool_text(result)
+        assert "Modified 2/2 tasks" in text
+        assert "scheduled to tomorrow" in text
+        envelope = result.structured_content
+        assert envelope["data"]["succeeded"] == 2
         assert self.mock_update_todo.call_count == 2
 
     @pytest.mark.asyncio
@@ -430,22 +444,23 @@ class TestBulkModify:
         result = await self.bulk_modify(
             task_ids=["test-id-001"], add_tags=["@computer"]
         )
-        assert "Modified 1 tasks" in result
-        assert "tagged with @computer" in result
+        text = tool_text(result)
+        assert "Modified 1/1 tasks" in text
+        assert "tagged with @computer" in text
         self.mock_ensure_tags.assert_called_once_with(["@computer"])
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_modify_project(self):
         result = await self.bulk_modify(task_ids=["test-id-001"], project="My Project")
-        assert "moved to project" in result
+        assert "moved to project" in tool_text(result)
         self.mock_resolve_list_id.assert_called_once_with("My Project", "project")
 
     @pytest.mark.asyncio
     @pytest.mark.unit
     async def test_modify_area(self):
         result = await self.bulk_modify(task_ids=["test-id-001"], area="Work")
-        assert "moved to area" in result
+        assert "moved to area" in tool_text(result)
         self.mock_resolve_list_id.assert_called_once_with("Work", "area")
 
     @pytest.mark.asyncio
@@ -519,7 +534,9 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-002", action="complete"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "2/2" in result
+        assert "2/2" in tool_text(result)
+        envelope = result.structured_content
+        assert envelope["data"]["by_action"] == {"complete": 2}
         # Should use a single AppleScript for completions
         self.mock_run_applescript.assert_called_once()
         script = self.mock_run_applescript.call_args[0][0]
@@ -533,7 +550,7 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-001", action="cancel"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1/1" in result
+        assert "1/1" in tool_text(result)
         self.mock_run_applescript.assert_called_once()
         script = self.mock_run_applescript.call_args[0][0]
         assert "canceled" in script
@@ -546,7 +563,7 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-001", action="defer", when="someday"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1/1" in result
+        assert "1/1" in tool_text(result)
         # Defer uses update_todo URL scheme, not AppleScript
         self.mock_update_todo.assert_called()
         self.mock_execute_url.assert_called()
@@ -559,7 +576,7 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-001", action="schedule", when="tomorrow"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1/1" in result
+        assert "1/1" in tool_text(result)
         self.mock_update_todo.assert_called()
 
     @pytest.mark.asyncio
@@ -572,7 +589,7 @@ class TestBulkTriage:
             ),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1/1" in result
+        assert "1/1" in tool_text(result)
         self.mock_ensure_tags.assert_called_with(["waiting-for"])
         # update_todo should be called with add_tags=["waiting-for"]
         self.mock_update_todo.assert_called_once()
@@ -592,7 +609,15 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-004", action="schedule", when="tomorrow"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "4/4" in result
+        text = tool_text(result)
+        assert "4/4" in text
+        envelope = result.structured_content
+        assert envelope["data"]["by_action"] == {
+            "complete": 1,
+            "cancel": 1,
+            "defer": 1,
+            "schedule": 1,
+        }
         # Two AppleScript calls: one for completes, one for cancels
         assert self.mock_run_applescript.call_count == 2
         # URL scheme calls for defer + schedule
@@ -607,8 +632,16 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-001", action="complete"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1 failed" in result
-        assert "AppleScript failed" in result
+        text = tool_text(result)
+        assert "1 failed" in text
+        assert "AppleScript failed" in text
+        envelope = result.structured_content
+        assert envelope["data"]["failed"] == 1
+        # Per-item errors carry the failing task_id and the action.
+        assert any(
+            err["task_id"] == "test-id-001" and err["action"] == "complete"
+            for err in envelope["data"]["errors"]
+        )
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -619,7 +652,10 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-001", action="defer", when="tomorrow"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "1 failed" in result or "0/1" in result
+        text = tool_text(result)
+        assert "1 failed" in text or "0/1" in text
+        envelope = result.structured_content
+        assert envelope["data"]["failed_ids"] == ["test-id-001"]
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -632,8 +668,9 @@ class TestBulkTriage:
             TriageDecision(task_id="test-id-003", action="cancel"),
         ]
         result = await self.bulk_triage(decisions=decisions)
-        assert "complete: 2" in result
-        assert "cancel: 1" in result
+        text = tool_text(result)
+        assert "complete: 2" in text
+        assert "cancel: 1" in text
 
     @pytest.mark.asyncio
     @pytest.mark.unit
@@ -678,4 +715,4 @@ class TestBulkTriage:
             result = await self.bulk_triage(decisions=decisions)
         # execute_url called for project creation + task cancellation
         assert self.mock_execute_url.call_count >= 2
-        assert "1/1" in result
+        assert "1/1" in tool_text(result)

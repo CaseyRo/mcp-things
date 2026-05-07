@@ -56,12 +56,25 @@ def check_things_available():
     print("OK: Things 3 is running")
 
 
+def _result_text(result) -> str:
+    """Extract the text body from a ToolResult or pre-migration string return."""
+    if isinstance(result, str):
+        return result
+    content = getattr(result, "content", None)
+    if content:
+        first = content[0]
+        text = getattr(first, "text", None)
+        if text is not None:
+            return text
+    return str(result)
+
+
 async def test_read_inbox():
     """Test reading the inbox via get-tasks."""
     print("Testing: Read inbox...")
-    result = await get_tasks(view="inbox")
-    if result.startswith("Failed to ") or result.startswith("Error "):
-        print(f"FAIL: Could not read inbox: {result}")
+    text = _result_text(await get_tasks(view="inbox"))
+    if text.startswith("Failed to ") or text.startswith("Error "):
+        print(f"FAIL: Could not read inbox: {text}")
         return False
     print("OK: Read inbox successfully")
     return True
@@ -77,9 +90,10 @@ async def test_create_todo():
         title=title,
         notes="Smoke test - will be deleted automatically",
     )
+    text = _result_text(result)
 
-    if "Captured to Inbox" not in result:
-        print(f"FAIL: Could not create todo: {result}")
+    if "Captured to Inbox" not in text:
+        print(f"FAIL: Could not create todo: {text}")
         return None
 
     print(f"OK: Created todo '{title}'")
@@ -130,9 +144,10 @@ async def test_update_todo(title: str):
         task_id=todo_id,
         notes="Smoke test - updated notes",
     )
+    text = _result_text(result)
 
-    if "Updated" not in result and "updated" not in result.lower():
-        print(f"FAIL: Could not update todo: {result}")
+    if "Updated" not in text and "updated" not in text.lower():
+        print(f"FAIL: Could not update todo: {text}")
         return False
 
     print("OK: Updated todo")
@@ -151,9 +166,10 @@ async def test_complete_todo(title: str):
 
     # Complete it
     result = await complete_task(task_id=todo_id)
+    text = _result_text(result)
 
-    if "completed" not in result.lower():
-        print(f"FAIL: Could not complete todo: {result}")
+    if "completed" not in text.lower():
+        print(f"FAIL: Could not complete todo: {text}")
         return False
 
     print("OK: Completed todo")
