@@ -85,15 +85,20 @@ src/things_mcp/
 
 ## Key Patterns (FastMCP 3.x)
 
-- **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"])`
+- **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"], output_schema=output_schema_for(ToolEnvelope[<DataT>]))`. The `output_schema=` kwarg is **mandatory** for every tool — auto-derivation does not apply when the return type is `ToolResult`.
 - **Async tools**: All tool functions must be `async def` with `ctx: Context` parameter for logging
-- **Error handling**: Raise `ToolError("message")` for failures (FastMCP 3 pattern)
+- **Return shape**: Every tool returns a `ToolResult` built via `make_result(...)`, `write_result(...)`, or `bulk_result(...)` from `tool_results.py`. The structured payload is a `ToolEnvelope[DataT]` with three fields — `data` (typed payload), `summary` (one-sentence headline), `meta` (free-form bag for warnings/truncation/cache info). The text block is always explicit; FastMCP's auto-derived text would emit raw JSON and regress text-only clients.
+- **Error handling**: Raise `ToolError("message")` for failures (FastMCP 3 pattern). MCP's protocol-level `isError: true` is the source of truth — the envelope deliberately has no `ok` / `success` field.
 - **Context logging**: Use `await ctx.info("message")` for operation logging within tools
 - **Tool timeouts**: Write tools use `timeout=30`, read tools use `timeout=5`
 - **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
 - **Logging**: Use `get_logger(__name__)`, redact sensitive data (never log task titles/notes)
 - **Tags**: Call `ensure_tags_exist(tags)` before using tags in write operations
-- **Batch tools**: Use `bulk-*` prefix for N-item versions of singular tools. Use Pydantic models for typed input schemas (e.g., `CaptureItem`, `TriageDecision`). Validate UUIDs with `validate_uuid_list()` from `input_validation.py`.
+- **Batch tools**: Use `bulk-*` prefix for N-item versions of singular tools. Use Pydantic models for typed input schemas (e.g., `CaptureItem`, `TriageDecision`). Validate UUIDs with `validate_uuid_list()` from `input_validation.py`. Return `BulkResult` via `bulk_result(...)` with per-item `succeeded_ids` / `failed_ids` / `errors`.
+
+### Domain models (`models.py`)
+
+The structured envelope is generic over a `DataT` payload chosen per tool: `Todo`, `Project`, `Area`, `Tag`, `WriteResult`, `BulkResult`, `FocusResult`, `ReviewReport`, `TriageInsights`, `CacheStats`, `ShowInAppResult`, or a `list[…]` of these. List-view read tools (`get-tasks`, `search-tasks`) leave `Todo.checklist` empty for performance; detail-view tools (`get-project`, `focus-mode`, single-mode `process-inbox`) populate it via `db.checklist_items()`.
 
 ## Environment Variables
 
@@ -166,7 +171,8 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 **`on_list_tools` — Client-aware schema transforms:**
 
 - Detects client type via `User-Agent` header (ChatGPT, n8n, Claude, unknown)
-- **All clients**: Flattens `anyOf` → type arrays (valid JSON Schema, needed for n8n)
+- Transforms are applied to **both** `inputSchema` (`tool.parameters`) and `outputSchema` (`tool.output_schema`) so structured tool responses pass strict-mode validators end-to-end.
+- **All clients**: Flattens `anyOf` → type arrays (valid JSON Schema, needed for n8n). The flattener recurses into `properties`, `items`, `additionalProperties`, and `$defs` so nested envelope payloads (e.g. `Project` with embedded `Todo` items) are fully unwrapped.
 - **ChatGPT only**: Applies strict-mode transforms (`additionalProperties: false`, all fields required with nullable types)
 - Non-ChatGPT clients get standard schemas where optional params are truly optional, saving LLM tokens
 

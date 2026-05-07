@@ -8,7 +8,10 @@ from typing import Optional, List, Dict, Any
 import things
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import ToolResult
 
+from .models import ToolEnvelope, WriteResult, output_schema_for
+from .tool_results import write_result
 from .utils import app_state
 from .url_scheme import (
     add_todo,
@@ -60,7 +63,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
     """Register GTD Organize stage tools with the MCP server."""
 
     @mcp.tool(
-        name="schedule-task", annotations=TOOL_ANNOTATIONS["schedule-task"], timeout=30
+        name="schedule-task",
+        annotations=TOOL_ANNOTATIONS["schedule-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def schedule_task(
         title: str,
@@ -72,7 +78,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         checklist: Optional[List[str]] = None,
         notes: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Create a task with specific scheduling and organization.
 
         GTD Stage: Organize
@@ -130,16 +136,27 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 ["get-tasks", "get-today", "get-upcoming", "get-anytime"]
             )
 
-            result = f"Scheduled: {title}\n"
-            result += f"- When: {when}\n"
+            text_body = f"Scheduled: {title}\n"
+            text_body += f"- When: {when}\n"
             if deadline:
-                result += f"- Deadline: {deadline}\n"
+                text_body += f"- Deadline: {deadline}\n"
             if project:
-                result += f"- Project: {project}\n"
+                text_body += f"- Project: {project}\n"
             if context:
-                result += f"- Context: {', '.join(context)}\n"
+                text_body += f"- Context: {', '.join(context)}\n"
 
-            return result
+            return write_result(
+                summary=f"Scheduled: {title} ({when})",
+                thing_id=None,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "when": when,
+                    "deadline": deadline,
+                    "project": project,
+                    "area": area,
+                },
+            )
 
         except ToolError:
             raise
@@ -148,7 +165,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
             _error_result("Failed to schedule task. Check server logs for details.")
 
     @mcp.tool(
-        name="delegate-task", annotations=TOOL_ANNOTATIONS["delegate-task"], timeout=30
+        name="delegate-task",
+        annotations=TOOL_ANNOTATIONS["delegate-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def delegate_task(
         task_id: Optional[str] = None,
@@ -157,7 +177,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         follow_up_date: Optional[str] = None,
         notes: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Delegate a task and track it as 'Waiting For'.
 
         GTD Stage: Organize
@@ -237,14 +257,23 @@ def register_gtd_organize_tools(mcp: FastMCP):
             except Exception:
                 logger.debug("Triage tracking failed (non-critical)")
 
-            result = f"Delegated to {delegated_to}: {original_title}\n"
-            result += "- Tagged: waiting-for\n"
+            text_body = f"Delegated to {delegated_to}: {original_title}\n"
+            text_body += "- Tagged: waiting-for\n"
             if follow_up_date:
-                result += f"- Follow up: {follow_up_date}\n"
+                text_body += f"- Follow up: {follow_up_date}\n"
             else:
-                result += "- No follow-up date set. Will appear in weekly review.\n"
+                text_body += "- No follow-up date set. Will appear in weekly review.\n"
 
-            return result
+            return write_result(
+                summary=f"Delegated to {delegated_to}: {original_title}",
+                thing_id=task_id,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "delegated_to": delegated_to,
+                    "follow_up_date": follow_up_date,
+                },
+            )
 
         except ToolError:
             raise
@@ -252,14 +281,19 @@ def register_gtd_organize_tools(mcp: FastMCP):
             logger.error("Error delegating task", exc_info=True)
             _error_result("Failed to delegate task. Check server logs for details.")
 
-    @mcp.tool(name="defer-task", annotations=TOOL_ANNOTATIONS["defer-task"], timeout=30)
+    @mcp.tool(
+        name="defer-task",
+        annotations=TOOL_ANNOTATIONS["defer-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
+    )
     async def defer_task(
         task_id: Optional[str] = None,
         task_title: Optional[str] = None,
         defer_to: str = "",
         reason: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Defer a task to a later time.
 
         GTD Stage: Organize
@@ -352,12 +386,24 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 logger.debug("Triage tracking failed (non-critical)")
 
             if defer_to == "someday":
-                return (
+                text_body = (
                     "Moved to Someday/Maybe for incubation.\n\n"
                     "This item will appear in your weekly review for reconsideration."
                 )
+                summary = "Moved to Someday/Maybe."
             else:
-                return f"Deferred to {when_value}. Task will reappear on that date."
+                text_body = (
+                    f"Deferred to {when_value}. Task will reappear on that date."
+                )
+                summary = f"Deferred to {when_value}."
+
+            return write_result(
+                summary=summary,
+                thing_id=task_id,
+                acknowledged=True,
+                text=text_body,
+                meta={"defer_to": defer_to, "when": when_value},
+            )
 
         except ToolError:
             raise
@@ -366,7 +412,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
             _error_result("Failed to defer task. Check server logs for details.")
 
     @mcp.tool(
-        name="plan-project", annotations=TOOL_ANNOTATIONS["plan-project"], timeout=30
+        name="plan-project",
+        annotations=TOOL_ANNOTATIONS["plan-project"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def plan_project(
         title: str,
@@ -376,7 +425,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         deadline: Optional[str] = None,
         area: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Create a project with initial tasks atomically.
 
         GTD Stage: Organize
@@ -433,15 +482,29 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-projects", "get-tasks"])
 
-            result = f"Created project: {title}\n"
-            result += f"- {len(tasks)} tasks added\n"
+            text_body = f"Created project: {title}\n"
+            text_body += f"- {len(tasks)} tasks added\n"
             if deadline:
-                result += f"- Deadline: {deadline}\n"
+                text_body += f"- Deadline: {deadline}\n"
 
             if not has_next_action:
-                result += "\n**Warning:** No immediate next action. GTD recommends at least one task with when='anytime' to make progress."
+                text_body += (
+                    "\n**Warning:** No immediate next action. GTD recommends at "
+                    "least one task with when='anytime' to make progress."
+                )
 
-            return result
+            return write_result(
+                summary=f"Created project: {title}",
+                thing_id=None,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "task_count": len(tasks),
+                    "has_next_action": has_next_action,
+                    "deadline": deadline,
+                    "area": area,
+                },
+            )
 
         except ToolError:
             raise
@@ -450,7 +513,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
             _error_result("Failed to create project. Check server logs for details.")
 
     @mcp.tool(
-        name="modify-task", annotations=TOOL_ANNOTATIONS["modify-task"], timeout=30
+        name="modify-task",
+        annotations=TOOL_ANNOTATIONS["modify-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def modify_task(
         task_id: Optional[str] = None,
@@ -468,7 +534,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         area: Optional[str] = None,
         canceled: Optional[bool] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] General task modification for updates not covered by specific tools.
 
         GTD Stage: Organize
@@ -563,15 +629,25 @@ def register_gtd_organize_tools(mcp: FastMCP):
             except Exception:
                 logger.debug("Triage tracking failed (non-critical)")
 
-            result = "Task updated successfully."
+            text_body = "Task updated successfully."
             if canceled:
-                result = "Task canceled."
+                text_body = "Task canceled."
             elif project:
-                result += f" Moved to project: {project}"
+                text_body += f" Moved to project: {project}"
             elif area:
-                result += f" Moved to area: {area}"
+                text_body += f" Moved to area: {area}"
 
-            return result
+            return write_result(
+                summary="Task canceled." if canceled else "Task updated.",
+                thing_id=task_id,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "canceled": bool(canceled),
+                    "moved_to_project": project,
+                    "moved_to_area": area,
+                },
+            )
 
         except ToolError:
             raise
@@ -580,14 +656,17 @@ def register_gtd_organize_tools(mcp: FastMCP):
             _error_result("Failed to update task. Check server logs for details.")
 
     @mcp.tool(
-        name="create-area", annotations=TOOL_ANNOTATIONS["create-area"], timeout=30
+        name="create-area",
+        annotations=TOOL_ANNOTATIONS["create-area"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def create_area(
         name: str,
         tags: Optional[List[str]] = None,
         projects: Optional[List[str]] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Create a new area in Things, optionally with initial projects.
 
         GTD Stage: Organize
@@ -661,15 +740,28 @@ def register_gtd_organize_tools(mcp: FastMCP):
                         created_projects.append(p_name)
                 invalidate_caches_for(["get-projects"])
 
-            result = f"Created area: {name}"
+            text_body = f"Created area: {name}"
             if created_projects:
-                result += f"\nCreated {len(created_projects)} project(s): {', '.join(created_projects)}"
-                result += (
+                text_body += (
+                    f"\nCreated {len(created_projects)} project(s): "
+                    f"{', '.join(created_projects)}"
+                )
+                text_body += (
                     "\n\nThese projects have no tasks yet — they will appear as "
                     "stalled in weekly review until you add next actions "
                     "(GTD: every project needs a next action)."
                 )
-            return result
+            return write_result(
+                summary=f"Created area: {name}",
+                thing_id=None,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "name": name,
+                    "tags": tags or [],
+                    "projects_created": created_projects,
+                },
+            )
 
         except ToolError:
             raise
@@ -683,6 +775,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="modify-project",
         annotations=TOOL_ANNOTATIONS["modify-project"],
         timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def modify_project(
         name_or_uuid: str,
@@ -698,7 +791,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         completed: Optional[bool] = None,
         canceled: Optional[bool] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Update a project's properties.
 
         Use when: Renaming, rescheduling, reassigning to an area, adding notes,
@@ -804,10 +897,16 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if canceled:
                 changes.append("marked canceled")
 
-            result = f"Modified project. Changes: {', '.join(changes)}."
-            result += completion_note
+            text_body = f"Modified project. Changes: {', '.join(changes)}."
+            text_body += completion_note
 
-            return result
+            return write_result(
+                summary=f"Modified project: {', '.join(changes)}",
+                thing_id=project_uuid,
+                acknowledged=True,
+                text=text_body,
+                meta={"changes": changes},
+            )
 
         except ToolError:
             raise
@@ -819,13 +918,14 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="modify-area",
         annotations=TOOL_ANNOTATIONS["modify-area"],
         timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def modify_area(
         name_or_uuid: str,
         new_name: Optional[str] = None,
         tags: Optional[List[str]] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Rename an area or update its tags.
 
         Use when: Renaming an area of focus/responsibility or changing its tags.
@@ -896,7 +996,14 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if tags:
                 changes.append(f"tags: {', '.join(tags)}")
 
-            return f"Modified area. Changes: {', '.join(changes)}."
+            text_body = f"Modified area. Changes: {', '.join(changes)}."
+            return write_result(
+                summary=f"Modified area: {', '.join(changes)}",
+                thing_id=area_uuid,
+                acknowledged=True,
+                text=text_body,
+                meta={"changes": changes},
+            )
 
         except ToolError:
             raise
@@ -908,11 +1015,12 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="delete-area",
         annotations=TOOL_ANNOTATIONS["delete-area"],
         timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def delete_area(
         name_or_uuid: str,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Delete an area. Refuses if loose to-dos exist (Things trashes them).
 
         Use when: Removing an area of responsibility that is no longer relevant.
@@ -990,7 +1098,17 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
 
-            return f"Deleted area.{warning}"
+            text_body = f"Deleted area.{warning}"
+            return write_result(
+                summary="Deleted area.",
+                thing_id=area_uuid,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "unassigned_project_count": len(projects),
+                    "unassigned_project_titles": [p["title"] for p in projects],
+                },
+            )
 
         except ToolError:
             raise
@@ -1002,12 +1120,13 @@ def register_gtd_organize_tools(mcp: FastMCP):
         name="merge-areas",
         annotations=TOOL_ANNOTATIONS["merge-areas"],
         timeout=60,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def merge_areas(
         source: str,
         target: str,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Move all contents from source area to target area, then delete source.
 
         Use when: Two areas of responsibility are converging (e.g., merging
@@ -1110,10 +1229,25 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             invalidate_caches_for(["get-areas", "get-projects", "get-tasks"])
 
-            return (
+            text_body = (
                 f"Merged areas. Moved {len(todo_uuids)} to-do(s) and "
                 f"{len(project_uuids)} project(s) to target. "
                 "Source area deleted."
+            )
+            return write_result(
+                summary=(
+                    f"Merged: {len(todo_uuids)} to-do(s) and "
+                    f"{len(project_uuids)} project(s) moved; source deleted."
+                ),
+                thing_id=target_uuid,
+                acknowledged=True,
+                text=text_body,
+                meta={
+                    "todos_moved": len(todo_uuids),
+                    "projects_moved": len(project_uuids),
+                    "source_uuid": source_uuid,
+                    "target_uuid": target_uuid,
+                },
             )
 
         except ToolError:

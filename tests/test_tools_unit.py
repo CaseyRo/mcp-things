@@ -10,7 +10,7 @@ import pytest
 from unittest import mock
 from fastmcp.exceptions import ToolError
 
-from tests.conftest import create_mock_todo, create_mock_project
+from tests.conftest import create_mock_todo, create_mock_project, tool_text
 
 
 class TestGetTasks:
@@ -27,14 +27,15 @@ class TestGetTasks:
     async def test_inbox_view(self):
         self.things.inbox.return_value = [create_mock_todo(title="Buy milk")]
         result = await self.get_tasks(view="inbox")
-        assert "Buy milk" in result
-        assert "1 task" in result
+        text = tool_text(result)
+        assert "Buy milk" in text
+        assert "1 task" in text
 
     @pytest.mark.asyncio
     async def test_empty_inbox(self):
         self.things.inbox.return_value = []
         result = await self.get_tasks(view="inbox")
-        assert "No tasks found" in result
+        assert "No tasks found" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_invalid_view(self):
@@ -48,8 +49,9 @@ class TestGetTasks:
             create_mock_todo(title="Out and about", tags=["@errands"]),
         ]
         result = await self.get_tasks(context="@computer")
-        assert "At desk" in result
-        assert "Out and about" not in result
+        text = tool_text(result)
+        assert "At desk" in text
+        assert "Out and about" not in text
 
     @pytest.mark.asyncio
     async def test_multiple_context_tags(self):
@@ -59,21 +61,22 @@ class TestGetTasks:
             create_mock_todo(title="Task C", tags=["@office"]),
         ]
         result = await self.get_tasks(context=["@computer", "@phone"])
-        assert "Task A" in result
-        assert "Task B" in result
-        assert "Task C" not in result
+        text = tool_text(result)
+        assert "Task A" in text
+        assert "Task B" in text
+        assert "Task C" not in text
 
     @pytest.mark.asyncio
     async def test_today_view(self):
         self.things.today.return_value = [create_mock_todo(title="Today task")]
         result = await self.get_tasks(view="today")
-        assert "Today task" in result
+        assert "Today task" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_someday_view(self):
         self.things.someday.return_value = [create_mock_todo(title="Someday task")]
         result = await self.get_tasks(view="someday")
-        assert "Someday task" in result
+        assert "Someday task" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_energy_filter(self):
@@ -82,8 +85,73 @@ class TestGetTasks:
             create_mock_todo(title="Easy work", tags=["low-energy"]),
         ]
         result = await self.get_tasks(energy="high-energy")
-        assert "Hard work" in result
-        assert "Easy work" not in result
+        text = tool_text(result)
+        assert "Hard work" in text
+        assert "Easy work" not in text
+
+    @pytest.mark.asyncio
+    async def test_structured_content_shape(self):
+        """Verify structured payload carries full Things metadata per CDI-1021."""
+        self.things.today.return_value = [
+            create_mock_todo(
+                uuid_str="abc-123",
+                title="Buy milk",
+                tags=["@errands", "5min"],
+                deadline="2026-05-01",
+                project="proj-1",
+            ),
+        ]
+        result = await self.get_tasks(view="today")
+
+        # ToolResult, not a string.
+        assert hasattr(result, "structured_content")
+        envelope = result.structured_content
+        assert envelope is not None
+
+        # Three-field envelope.
+        assert set(envelope.keys()) == {"data", "summary", "meta"}
+
+        data = envelope["data"]
+        assert isinstance(data, list)
+        assert len(data) == 1
+
+        todo = data[0]
+        assert todo["uuid"] == "abc-123"
+        assert todo["title"] == "Buy milk"
+        assert todo["type"] == "to-do"
+        assert todo["tags"] == ["@errands", "5min"]
+        assert todo["deadline"] == "2026-05-01"
+        assert todo["project"] == "proj-1"
+        # Optional fields serialise as null, not missing.
+        assert "notes" in todo
+        assert "area" in todo
+
+        # Meta carries counts.
+        assert envelope["meta"]["total_count"] == 1
+        assert envelope["meta"]["shown"] == 1
+        assert "truncated" not in envelope["meta"]
+
+    @pytest.mark.asyncio
+    async def test_structured_content_truncation(self):
+        """When results exceed limit, meta.truncated is set."""
+        self.things.todos.return_value = [
+            create_mock_todo(uuid_str=f"id-{i}", title=f"Task {i}") for i in range(5)
+        ]
+        result = await self.get_tasks(limit=2)
+        envelope = result.structured_content
+        assert envelope["meta"]["total_count"] == 5
+        assert envelope["meta"]["shown"] == 2
+        assert envelope["meta"]["truncated"] is True
+        assert len(envelope["data"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_envelope_shape(self):
+        """Empty results still produce a valid envelope with data: []."""
+        self.things.inbox.return_value = []
+        result = await self.get_tasks(view="inbox")
+        envelope = result.structured_content
+        assert envelope["data"] == []
+        assert "No tasks found" in envelope["summary"]
 
 
 class TestFocusMode:
@@ -102,7 +170,7 @@ class TestFocusMode:
         self.things.today.return_value = []
         self.things.anytime.return_value = []
         result = await self.focus_mode()
-        assert "No tasks match" in result
+        assert "No tasks match" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_overdue_task_prioritized(self):
@@ -112,8 +180,12 @@ class TestFocusMode:
         self.things.today.return_value = []
         self.things.anytime.return_value = []
         result = await self.focus_mode()
-        assert "OVERDUE" in result
-        assert "Overdue!" in result
+        text = tool_text(result)
+        assert "OVERDUE" in text
+        assert "Overdue!" in text
+        envelope = result.structured_content
+        assert envelope["data"]["selection_reason"] == "overdue"
+        assert envelope["data"]["task"]["title"] == "Overdue!"
 
     @pytest.mark.asyncio
     async def test_today_task_returned(self):
@@ -121,7 +193,7 @@ class TestFocusMode:
         self.things.today.return_value = [create_mock_todo(title="Do today")]
         self.things.anytime.return_value = []
         result = await self.focus_mode()
-        assert "Do today" in result
+        assert "Do today" in tool_text(result)
 
 
 class TestCompleteTask:
@@ -150,13 +222,20 @@ class TestCompleteTask:
     async def test_complete_by_id(self):
         self.things.get.return_value = create_mock_todo(uuid_str="abc123")
         result = await self.complete_task(task_id="abc123")
-        assert "completed" in result.lower()
+        text = tool_text(result)
+        assert "completed" in text.lower()
+        envelope = result.structured_content
+        assert envelope["data"]["acknowledged"] is True
+        assert envelope["data"]["thing_id"] == "abc123"
 
     @pytest.mark.asyncio
     async def test_title_search_no_match(self):
         self.things.todos.return_value = []
         result = await self.complete_task(task_title="nonexistent")
-        assert "No task found" in result
+        text = tool_text(result)
+        assert "No task found" in text
+        envelope = result.structured_content
+        assert envelope["data"]["acknowledged"] is False
 
     @pytest.mark.asyncio
     async def test_title_search_multiple_matches(self):
@@ -165,9 +244,10 @@ class TestCompleteTask:
             create_mock_todo(uuid_str="a2", title="Buy supplies"),
         ]
         result = await self.complete_task(task_title="Buy")
-        assert "Found 2 tasks" in result
-        assert "a1" in result
-        assert "a2" in result
+        text = tool_text(result)
+        assert "Found 2 tasks" in text
+        assert "a1" in text
+        assert "a2" in text
 
 
 class TestCaptureTask:
@@ -193,13 +273,17 @@ class TestCaptureTask:
     @pytest.mark.asyncio
     async def test_basic_capture(self):
         result = await self.capture_task(title="New idea")
-        assert "Captured to Inbox" in result
-        assert "New idea" in result
+        text = tool_text(result)
+        assert "Captured to Inbox" in text
+        assert "New idea" in text
+        envelope = result.structured_content
+        assert envelope["data"]["acknowledged"] is True
+        assert envelope["data"]["summary"].startswith("Captured to Inbox")
 
     @pytest.mark.asyncio
     async def test_capture_with_tags(self):
         result = await self.capture_task(title="Phone call", tags=["@phone"])
-        assert "Captured to Inbox" in result
+        assert "Captured to Inbox" in tool_text(result)
 
 
 class TestProcessInbox:
@@ -216,18 +300,27 @@ class TestProcessInbox:
     async def test_empty_inbox(self):
         self.things.inbox.return_value = []
         result = await self.process_inbox()
-        assert "Inbox is clear" in result
+        text = tool_text(result)
+        assert "Inbox is clear" in text
+        envelope = result.structured_content
+        assert envelope["meta"]["remaining"] == 0
 
     @pytest.mark.asyncio
     async def test_processes_oldest_item(self):
         self.things.inbox.return_value = [
-            create_mock_todo(title="Oldest item"),
+            create_mock_todo(uuid_str="oldest-id", title="Oldest item"),
             create_mock_todo(title="Newer item"),
         ]
+        self.things.checklist_items.return_value = []
         result = await self.process_inbox()
-        assert "Oldest item" in result
-        assert "1 item remaining" in result
-        assert "GTD Decision Tree" in result
+        text = tool_text(result)
+        assert "Oldest item" in text
+        assert "1 item remaining" in text
+        assert "GTD Decision Tree" in text
+        envelope = result.structured_content
+        assert envelope["data"]["uuid"] == "oldest-id"
+        assert envelope["data"]["title"] == "Oldest item"
+        assert envelope["meta"]["remaining"] == 1
 
 
 class TestScheduleTask:
@@ -254,15 +347,18 @@ class TestScheduleTask:
     @pytest.mark.asyncio
     async def test_schedule_for_today(self):
         result = await self.schedule_task(title="Do thing", when="today")
-        assert "Scheduled" in result
-        assert "today" in result
+        text = tool_text(result)
+        assert "Scheduled" in text
+        assert "today" in text
+        envelope = result.structured_content
+        assert envelope["data"]["acknowledged"] is True
 
     @pytest.mark.asyncio
     async def test_schedule_with_deadline(self):
         result = await self.schedule_task(
             title="Urgent", when="today", deadline="2026-03-20"
         )
-        assert "Deadline: 2026-03-20" in result
+        assert "Deadline: 2026-03-20" in tool_text(result)
 
 
 class TestDelegateTask:
@@ -298,8 +394,11 @@ class TestDelegateTask:
             uuid_str="task1", title="Review PR"
         )
         result = await self.delegate_task(task_id="task1", delegated_to="Alice")
-        assert "Delegated to Alice" in result
-        assert "waiting-for" in result
+        text = tool_text(result)
+        assert "Delegated to Alice" in text
+        assert "waiting-for" in text
+        envelope = result.structured_content
+        assert envelope["data"]["thing_id"] == "task1"
 
 
 class TestResolveListId:
@@ -355,8 +454,9 @@ class TestDailyReview:
         self.things.inbox.return_value = []
         self.things.todos.return_value = []
         result = await self.daily_review()
-        assert "Daily Review" in result
-        assert "0 tasks today" in result
+        text = tool_text(result)
+        assert "Daily Review" in text
+        assert "0 tasks today" in text
 
     @pytest.mark.asyncio
     async def test_with_overdue(self):
@@ -366,8 +466,12 @@ class TestDailyReview:
             create_mock_todo(title="Late task", deadline="2020-01-01"),
         ]
         result = await self.daily_review()
-        assert "overdue" in result.lower()
-        assert "Late task" in result
+        text = tool_text(result)
+        assert "overdue" in text.lower()
+        assert "Late task" in text
+        envelope = result.structured_content
+        assert envelope["data"]["period"] == "daily"
+        assert len(envelope["data"]["overdue"]) == 1
 
 
 class TestSearchTasks:
@@ -389,14 +493,15 @@ class TestSearchTasks:
     async def test_search_by_query(self):
         self.things.search.return_value = [create_mock_todo(title="Found it")]
         result = await self.search_tasks(query="Found")
-        assert "Found it" in result
-        assert "1 task" in result
+        text = tool_text(result)
+        assert "Found it" in text
+        assert "1 task" in text
 
     @pytest.mark.asyncio
     async def test_no_results(self):
         self.things.search.return_value = []
         result = await self.search_tasks(query="nothing")
-        assert "No tasks found" in result
+        assert "No tasks found" in tool_text(result)
 
 
 class TestTriageInsights:
@@ -418,4 +523,4 @@ class TestTriageInsights:
     @pytest.mark.asyncio
     async def test_no_data(self):
         result = await self.triage_insights()
-        assert "No triage activity" in result
+        assert "No triage activity" in tool_text(result)

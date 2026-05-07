@@ -1,6 +1,10 @@
 """Utility Tools: search, list projects/areas/tags, show in app, cache stats.
 
 These tools support general operations not tied to a specific GTD stage.
+
+All tools in this module return ``ToolResult`` with a ``ToolEnvelope`` in
+``structured_content`` and a backwards-compatible text block in ``content``.
+See ``openspec/changes/structured-json-tool-output/`` for the contract.
 """
 
 from typing import Optional
@@ -8,8 +12,31 @@ from typing import Optional
 from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import ToolResult
 
-from .formatters import format_todo, format_project, format_area, format_tag
+from .formatters import (
+    render_area,
+    render_project,
+    render_tag,
+    render_todo,
+    to_dict_area,
+    to_dict_project,
+    to_dict_tag,
+    to_dict_todo,
+)
+from .models import (
+    Area,
+    CacheStats,
+    Project,
+    ShowInAppResult,
+    Tag,
+    Todo,
+    ToolEnvelope,
+    TriageActionStats,
+    TriageInsights,
+    output_schema_for,
+)
+from .tool_results import make_result
 from .utils import app_state
 from .url_scheme import show, launch_things
 from .logging_config import get_logger
@@ -32,7 +59,10 @@ def register_utility_tools(mcp: FastMCP):
     """Register utility tools with the MCP server."""
 
     @mcp.tool(
-        name="search-tasks", annotations=TOOL_ANNOTATIONS["search-tasks"], timeout=5
+        name="search-tasks",
+        annotations=TOOL_ANNOTATIONS["search-tasks"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
     async def search_tasks(
         query: Optional[str] = None,
@@ -42,7 +72,7 @@ def register_utility_tools(mcp: FastMCP):
         deadline: Optional[str] = None,
         limit: int = 20,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Search for tasks by keyword or filters.
 
         GTD Stage: Utility
@@ -61,7 +91,6 @@ def register_utility_tools(mcp: FastMCP):
             await ctx.info("Searching tasks...")
 
         try:
-            # Build search parameters
             kwargs = {}
             if status:
                 kwargs["status"] = status
@@ -72,7 +101,6 @@ def register_utility_tools(mcp: FastMCP):
             if deadline:
                 kwargs["deadline"] = deadline
 
-            # Get tasks
             if query:
                 todos = db.search(query)
             elif kwargs:
@@ -83,24 +111,39 @@ def register_utility_tools(mcp: FastMCP):
                 )
 
             if not todos:
-                return "No tasks found matching your criteria."
+                return make_result(
+                    data=[],
+                    summary="No tasks found matching your criteria.",
+                    text="No tasks found matching your criteria.",
+                )
 
-            # Format results with limit
             effective_limit = min(max(1, limit), 200)
             total_count = len(todos)
+            shown = todos[:effective_limit]
 
-            summary = f"**Found {total_count} task{'s' if total_count != 1 else ''}**"
+            data = [to_dict_todo(t) for t in shown]
+            summary = f"Found {total_count} task{'s' if total_count != 1 else ''}" + (
+                f" (showing {effective_limit})" if total_count > effective_limit else ""
+            )
+
+            text_summary = (
+                f"**Found {total_count} task{'s' if total_count != 1 else ''}**"
+            )
             if total_count > effective_limit:
-                summary += f" (showing {effective_limit})"
-            summary += "\n\n"
-
-            formatted_todos = [format_todo(todo) for todo in todos[:effective_limit]]
-
-            result = summary + "\n\n---\n\n".join(formatted_todos)
+                text_summary += f" (showing {effective_limit})"
+            text_summary += "\n\n"
+            text_body = text_summary + "\n\n---\n\n".join(render_todo(t) for t in shown)
             if total_count > effective_limit:
-                result += f"\n\n*...and {total_count - effective_limit} more results. Use limit= to see more.*"
+                text_body += (
+                    f"\n\n*...and {total_count - effective_limit} more results. "
+                    "Use limit= to see more.*"
+                )
 
-            return result
+            meta = {"total_count": total_count, "shown": len(shown)}
+            if total_count > effective_limit:
+                meta["truncated"] = True
+
+            return make_result(data=data, summary=summary, meta=meta, text=text_body)
 
         except ToolError:
             raise
@@ -109,9 +152,14 @@ def register_utility_tools(mcp: FastMCP):
             _error_result("Failed to search tasks. Check server logs for details.")
 
     @mcp.tool(
-        name="get-projects", annotations=TOOL_ANNOTATIONS["get-projects"], timeout=5
+        name="get-projects",
+        annotations=TOOL_ANNOTATIONS["get-projects"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[list[Project]]),
     )
-    async def get_projects(include_items: bool = False, ctx: Context = None) -> str:
+    async def get_projects(
+        include_items: bool = False, ctx: Context = None
+    ) -> ToolResult:
         """[tasks-gtd] Get all projects from Things.
 
         Args:
@@ -119,18 +167,27 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching projects...")
-        projects = db.projects()
+        projects = db.projects() or []
 
         if not projects:
-            return "No projects found"
+            return make_result(
+                data=[], summary="No projects found", text="No projects found"
+            )
 
-        formatted_projects = [
-            format_project(project, include_items) for project in projects
-        ]
-        return "\n\n---\n\n".join(formatted_projects)
+        data = [to_dict_project(p, include_items) for p in projects]
+        text_body = "\n\n---\n\n".join(
+            render_project(p, include_items) for p in projects
+        )
+        summary = f"{len(projects)} project{'s' if len(projects) != 1 else ''}"
+        return make_result(data=data, summary=summary, text=text_body)
 
-    @mcp.tool(name="get-areas", annotations=TOOL_ANNOTATIONS["get-areas"], timeout=5)
-    async def get_areas(include_items: bool = False, ctx: Context = None) -> str:
+    @mcp.tool(
+        name="get-areas",
+        annotations=TOOL_ANNOTATIONS["get-areas"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[list[Area]]),
+    )
+    async def get_areas(include_items: bool = False, ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get all areas from Things.
 
         Args:
@@ -138,18 +195,23 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching areas...")
-        areas = db.areas()
+        areas = db.areas() or []
 
         if not areas:
-            return "No areas found"
+            return make_result(data=[], summary="No areas found", text="No areas found")
 
-        formatted_areas = [format_area(area, include_items) for area in areas]
-        return "\n\n---\n\n".join(formatted_areas)
+        data = [to_dict_area(a, include_items) for a in areas]
+        text_body = "\n\n---\n\n".join(render_area(a, include_items) for a in areas)
+        summary = f"{len(areas)} area{'s' if len(areas) != 1 else ''}"
+        return make_result(data=data, summary=summary, text=text_body)
 
     @mcp.tool(
-        name="get-project", annotations=TOOL_ANNOTATIONS["get-project"], timeout=5
+        name="get-project",
+        annotations=TOOL_ANNOTATIONS["get-project"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[Project]),
     )
-    async def get_project(name_or_uuid: str, ctx: Context = None) -> str:
+    async def get_project(name_or_uuid: str, ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get a single project with full detail by name or UUID.
 
         Use when: You need full detail on a specific project — its tasks, notes,
@@ -165,49 +227,60 @@ def register_utility_tools(mcp: FastMCP):
             project = resolve_item(name_or_uuid, "project")
             uuid = project["uuid"]
 
-            # Build detailed output
-            output = f"**{project.get('title', 'Untitled')}**\n"
-            output += f"UUID: {uuid}\n"
-            output += f"Status: {project.get('status', 'unknown')}\n"
-
-            # Area
+            # Resolve area title
             area_id = project.get("area")
+            area_title = None
             if area_id:
                 try:
                     area = db.get(area_id)
-                    output += f"Area: {area['title']}\n" if area else ""
+                    if area:
+                        area_title = area["title"]
                 except Exception:
                     pass
+
+            # Fetch tasks (active + completed) and enrich with checklists.
+            active = db.todos(project=uuid, status="incomplete") or []
+            completed = db.todos(project=uuid, status="completed") or []
+
+            enriched_tasks: list[dict] = []
+            for raw in list(active) + list(completed):
+                row = dict(raw)
+                try:
+                    row["checklist"] = db.checklist_items(row["uuid"]) or []
+                except Exception:
+                    row["checklist"] = []
+                enriched_tasks.append(to_dict_todo(row))
+
+            data = to_dict_project(project, include_items=False)
+            data["area_title"] = area_title or data.get("area_title")
+            data["tasks"] = enriched_tasks
+
+            # Build the legacy text block (preserved verbatim).
+            output = f"**{project.get('title', 'Untitled')}**\n"
+            output += f"UUID: {uuid}\n"
+            output += f"Status: {project.get('status', 'unknown')}\n"
+            if area_id:
+                output += f"Area: {area_title}\n" if area_title else ""
             else:
                 output += "Area: (none)\n"
-
-            # Dates
             if project.get("deadline"):
                 output += f"Deadline: {project['deadline']}\n"
             if project.get("start_date"):
                 output += f"Scheduled: {project['start_date']}\n"
             if project.get("creation_date"):
                 output += f"Created: {project['creation_date']}\n"
-
-            # Tags
             tags = project.get("tags")
             if tags:
                 output += f"Tags: {', '.join(tags)}\n"
-
-            # Notes
             if project.get("notes"):
                 output += f"\nNotes:\n{project['notes']}\n"
 
-            # Tasks
-            todos = db.todos(project=uuid, status="incomplete")
-            completed = db.todos(project=uuid, status="completed")
-
-            if todos:
-                output += f"\n**Tasks** ({len(todos)} active"
+            if active:
+                output += f"\n**Tasks** ({len(active)} active"
                 if completed:
                     output += f", {len(completed)} completed"
                 output += "):\n"
-                for t in todos:
+                for t in active:
                     output += f"  - [ ] {t['title']}"
                     if t.get("deadline"):
                         output += f" (due: {t['deadline']})"
@@ -217,7 +290,16 @@ def register_utility_tools(mcp: FastMCP):
             else:
                 output += "\n**No tasks** — GTD: every project needs a next action.\n"
 
-            return output
+            summary = (
+                f"Project '{project.get('title', 'Untitled')}': "
+                f"{len(active)} active task{'s' if len(active) != 1 else ''}, "
+                f"{len(completed)} completed"
+            )
+            meta = {
+                "active_count": len(active),
+                "completed_count": len(completed),
+            }
+            return make_result(data=data, summary=summary, meta=meta, text=output)
 
         except ToolError:
             raise
@@ -225,12 +307,17 @@ def register_utility_tools(mcp: FastMCP):
             logger.error("Error getting project", exc_info=True)
             _error_result("Failed to get project. Check server logs for details.")
 
-    @mcp.tool(name="get-area", annotations=TOOL_ANNOTATIONS["get-area"], timeout=5)
+    @mcp.tool(
+        name="get-area",
+        annotations=TOOL_ANNOTATIONS["get-area"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[Area]),
+    )
     async def get_area(
         name_or_uuid: str,
         include_items: bool = False,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Get a single area with full detail by name or UUID.
 
         Use when: Inspecting a specific area before modifying or deleting it,
@@ -248,21 +335,23 @@ def register_utility_tools(mcp: FastMCP):
             area = resolve_item(name_or_uuid, "area")
             uuid = area["uuid"]
 
-            output = f"**{area.get('title', 'Untitled')}**\n"
-            output += f"UUID: {uuid}\n"
-
-            # Tags
-            tags = area.get("tags")
-            if tags:
-                output += f"Tags: {', '.join(tags)}\n"
-
-            # Projects in this area
             projects = [p for p in (db.projects() or []) if p.get("area") == uuid]
-            # Loose to-dos (in this area but not in a project)
             loose_todos = [
                 t for t in (db.todos(area=uuid) or []) if not t.get("project")
             ]
 
+            data = to_dict_area(area, include_items=False)
+            if include_items:
+                data["projects"] = [to_dict_project(p) for p in projects]
+                data["tasks"] = [to_dict_todo(t) for t in loose_todos]
+            data["tags"] = list(area.get("tags") or [])
+
+            # Legacy text block.
+            output = f"**{area.get('title', 'Untitled')}**\n"
+            output += f"UUID: {uuid}\n"
+            tags = area.get("tags")
+            if tags:
+                output += f"Tags: {', '.join(tags)}\n"
             output += f"\nProjects: {len(projects)}\n"
             output += f"Loose to-dos: {len(loose_todos)}\n"
 
@@ -275,13 +364,21 @@ def register_utility_tools(mcp: FastMCP):
                             db.todos(project=p["uuid"], status="incomplete") or []
                         )
                         output += f"  - {p['title']} ({status}, {task_count} tasks)\n"
-
                 if loose_todos:
                     output += "\n**Loose To-dos:**\n"
                     for t in loose_todos:
                         output += f"  - {t['title']}\n"
 
-            return output
+            summary = (
+                f"Area '{area.get('title', 'Untitled')}': "
+                f"{len(projects)} project{'s' if len(projects) != 1 else ''}, "
+                f"{len(loose_todos)} loose to-do{'s' if len(loose_todos) != 1 else ''}"
+            )
+            meta = {
+                "project_count": len(projects),
+                "loose_todo_count": len(loose_todos),
+            }
+            return make_result(data=data, summary=summary, meta=meta, text=output)
 
         except ToolError:
             raise
@@ -289,8 +386,13 @@ def register_utility_tools(mcp: FastMCP):
             logger.error("Error getting area", exc_info=True)
             _error_result("Failed to get area. Check server logs for details.")
 
-    @mcp.tool(name="get-tags", annotations=TOOL_ANNOTATIONS["get-tags"], timeout=5)
-    async def get_tags(include_items: bool = False, ctx: Context = None) -> str:
+    @mcp.tool(
+        name="get-tags",
+        annotations=TOOL_ANNOTATIONS["get-tags"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[list[Tag]]),
+    )
+    async def get_tags(include_items: bool = False, ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get all tags.
 
         Args:
@@ -298,21 +400,26 @@ def register_utility_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Fetching tags...")
-        tags = db.tags()
+        tags = db.tags() or []
 
         if not tags:
-            return "No tags found"
+            return make_result(data=[], summary="No tags found", text="No tags found")
 
-        formatted_tags = [format_tag(tag, include_items) for tag in tags]
-        return "\n\n---\n\n".join(formatted_tags)
+        data = [to_dict_tag(t, include_items) for t in tags]
+        text_body = "\n\n---\n\n".join(render_tag(t, include_items) for t in tags)
+        summary = f"{len(tags)} tag{'s' if len(tags) != 1 else ''}"
+        return make_result(data=data, summary=summary, text=text_body)
 
     @mcp.tool(
-        name="show-in-app", annotations=TOOL_ANNOTATIONS["show-in-app"], timeout=10
+        name="show-in-app",
+        annotations=TOOL_ANNOTATIONS["show-in-app"],
+        timeout=10,
+        output_schema=output_schema_for(ToolEnvelope[ShowInAppResult]),
     )
     async def show_in_app(
         id: str,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Open a specific item or list in the Things app.
 
         Args:
@@ -325,7 +432,6 @@ def register_utility_tools(mcp: FastMCP):
         validate_show_id(id)
 
         try:
-            # Ensure Things app is running
             if not app_state.update_app_state():
                 if not launch_things():
                     _error_result("Unable to launch Things app")
@@ -334,7 +440,9 @@ def register_utility_tools(mcp: FastMCP):
             if not result:
                 _error_result(f"Failed to open '{id}'")
 
-            return f"Opened '{id}' in Things"
+            payload = ShowInAppResult(opened=id)
+            summary = f"Opened '{id}' in Things"
+            return make_result(data=payload.model_dump(), summary=summary, text=summary)
 
         except ToolError:
             raise
@@ -346,32 +454,48 @@ def register_utility_tools(mcp: FastMCP):
         name="get-cache-stats",
         annotations=TOOL_ANNOTATIONS["get-cache-stats"],
         timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[CacheStats]),
     )
-    async def get_cache_statistics(ctx: Context = None) -> str:
+    async def get_cache_statistics(ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get cache performance statistics."""
         if ctx:
             await ctx.info("Fetching cache statistics...")
         stats = get_cache_stats()
 
-        return f"""Cache Statistics:
-- Total entries: {stats["entries"]}
-- Cache hits: {stats["hits"]}
-- Cache misses: {stats["misses"]}
-- Hit rate: {stats["hit_rate"]}
-- Total requests: {stats["total_requests"]}"""
+        payload = CacheStats(
+            entries=stats["entries"],
+            hits=stats["hits"],
+            misses=stats["misses"],
+            hit_rate=str(stats["hit_rate"]),
+            total_requests=stats["total_requests"],
+        )
+        text_body = (
+            "Cache Statistics:\n"
+            f"- Total entries: {stats['entries']}\n"
+            f"- Cache hits: {stats['hits']}\n"
+            f"- Cache misses: {stats['misses']}\n"
+            f"- Hit rate: {stats['hit_rate']}\n"
+            f"- Total requests: {stats['total_requests']}"
+        )
+        summary = (
+            f"Cache: {stats['entries']} entries, "
+            f"{stats['hit_rate']} hit rate over {stats['total_requests']} requests"
+        )
+        return make_result(data=payload.model_dump(), summary=summary, text=text_body)
 
     @mcp.tool(
         name="triage-insights",
         annotations=TOOL_ANNOTATIONS["triage-insights"],
         timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[TriageInsights]),
     )
-    async def triage_insights(
+    async def triage_insights_tool(
         days: int = 7,
         category: Optional[str] = None,
         action: Optional[str] = None,
         show_trends: bool = False,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Get insights into your inbox triage patterns.
 
         GTD Stage: Reflect
@@ -387,58 +511,47 @@ def register_utility_tools(mcp: FastMCP):
             await ctx.info("Analyzing triage patterns...")
 
         try:
-            summary = triage_tracker.get_summary(days=days)
+            summary_data = triage_tracker.get_summary(days=days)
+            total = summary_data["total"]
+            period = f"last {days} days" if days > 0 else "all time"
 
-            if summary["total"] == 0:
-                period = f"last {days} days" if days > 0 else "all time"
-                return (
+            if total == 0:
+                empty_payload = TriageInsights(
+                    period_days=days,
+                    total=0,
+                    avg_per_day=0.0,
+                )
+                text_body = (
                     f"No triage activity recorded in the {period}.\n\n"
                     "Triage actions are tracked automatically when you process "
                     "inbox items using complete-task, modify-task, defer-task, etc."
                 )
+                return make_result(
+                    data=empty_payload.model_dump(),
+                    summary=f"No triage activity in the {period}.",
+                    text=text_body,
+                )
 
-            # Header
-            period = f"last {days} days" if days > 0 else "all time"
-            total = summary["total"]
-            avg = summary["avg_per_day"]
-            sessions = summary["sessions"]
-            output = f"# Triage Insights ({period})\n\n"
-            output += f"**{total} items triaged**"
-            if sessions:
-                output += f" across {sessions} session{'s' if sessions != 1 else ''}"
-            output += f" | {avg}/day avg"
-            if summary["busiest_day"]:
-                output += f" | Busiest: {summary['busiest_day']}"
-            output += "\n\n"
+            actions = summary_data.get("actions", {}) or {}
+            categories = summary_data.get("categories", {}) or {}
 
-            # Action breakdown
-            actions = summary["actions"]
-            if actions:
-                output += "## Actions\n\n"
-                for act, count in sorted(actions.items(), key=lambda x: -x[1]):
-                    pct = int(count / total * 100)
-                    output += f"- {act}: {count} ({pct}%)\n"
-                output += "\n"
+            action_stats = [
+                TriageActionStats(action=a, count=c, percent=int(c / total * 100))
+                for a, c in sorted(actions.items(), key=lambda x: -x[1])
+            ]
+            category_stats = [
+                TriageActionStats(action=cat, count=c, percent=int(c / total * 100))
+                for cat, c in sorted(categories.items(), key=lambda x: -x[1])
+            ]
 
-            # Category breakdown
-            categories = summary["categories"]
-            if categories:
-                output += "## Categories\n\n"
-                for cat, count in sorted(categories.items(), key=lambda x: -x[1]):
-                    pct = int(count / total * 100)
-                    output += f"- {cat}: {count} ({pct}%)\n"
-                output += "\n"
-
-            # Actionable insights
-            insights = []
-            cancel_rate = summary["no_context_cancel_rate"]
+            insights: list[str] = []
+            cancel_rate = summary_data.get("no_context_cancel_rate", 0.0) or 0.0
             if cancel_rate > 0.3:
                 pct = int(cancel_rate * 100)
                 insights.append(
                     f"{pct}% of canceled items had no context at capture. "
                     "Adding notes when capturing could save triage time."
                 )
-
             vague_count = categories.get("vague-capture", 0)
             if vague_count > 0 and total > 0:
                 vague_pct = int(vague_count / total * 100)
@@ -447,7 +560,6 @@ def register_utility_tools(mcp: FastMCP):
                         f"{vague_pct}% of captures were vague (short title, no notes). "
                         "Try adding context when capturing to speed up future triage."
                     )
-
             delegated = actions.get("delegated", 0)
             if total > 10 and delegated == 0:
                 insights.append(
@@ -455,17 +567,51 @@ def register_utility_tools(mcp: FastMCP):
                     "GTD recommends delegating tasks others can do."
                 )
 
-            if insights:
-                output += "## Insights\n\n"
-                for insight in insights:
-                    output += f"- {insight}\n"
-                output += "\n"
+            payload = TriageInsights(
+                period_days=days,
+                total=total,
+                avg_per_day=float(summary_data.get("avg_per_day", 0.0) or 0.0),
+                sessions=summary_data.get("sessions", 0) or 0,
+                busiest_day=summary_data.get("busiest_day"),
+                actions=action_stats,
+                categories=category_stats,
+                insights=insights,
+                no_context_cancel_rate=float(cancel_rate),
+            )
 
-            # Trends
+            # Build legacy text body — preserved verbatim from the previous tool.
+            avg = summary_data.get("avg_per_day", 0)
+            sessions = summary_data.get("sessions", 0)
+            text_body = f"# Triage Insights ({period})\n\n"
+            text_body += f"**{total} items triaged**"
+            if sessions:
+                text_body += f" across {sessions} session{'s' if sessions != 1 else ''}"
+            text_body += f" | {avg}/day avg"
+            busiest = summary_data.get("busiest_day")
+            if busiest:
+                text_body += f" | Busiest: {busiest}"
+            text_body += "\n\n"
+
+            if actions:
+                text_body += "## Actions\n\n"
+                for stat in action_stats:
+                    text_body += f"- {stat.action}: {stat.count} ({stat.percent}%)\n"
+                text_body += "\n"
+            if categories:
+                text_body += "## Categories\n\n"
+                for stat in category_stats:
+                    text_body += f"- {stat.action}: {stat.count} ({stat.percent}%)\n"
+                text_body += "\n"
+            if insights:
+                text_body += "## Insights\n\n"
+                for insight in insights:
+                    text_body += f"- {insight}\n"
+                text_body += "\n"
+
             if show_trends:
                 trends = triage_tracker.get_trends(weeks=4)
                 if trends:
-                    output += "## Weekly Trends\n\n"
+                    text_body += "## Weekly Trends\n\n"
                     for i, week in enumerate(trends):
                         arrow = ""
                         if i < len(trends) - 1:
@@ -475,11 +621,19 @@ def register_utility_tools(mcp: FastMCP):
                                 arrow = " ^"
                             elif curr < prev:
                                 arrow = " v"
-                        output += f"- Week of {week['week_start']}: {week['total']} items{arrow}\n"
+                        text_body += (
+                            f"- Week of {week['week_start']}: {week['total']} "
+                            f"items{arrow}\n"
+                        )
+            text_body += f"\nFull dashboard: {get_dashboard_url()}\n"
 
-            output += f"\nFull dashboard: {get_dashboard_url()}\n"
-
-            return output
+            summary_line = f"{total} items triaged in the {period} ({avg}/day avg)"
+            return make_result(
+                data=payload.model_dump(),
+                summary=summary_line,
+                text=text_body,
+                meta={"period_days": days},
+            )
 
         except ToolError:
             raise

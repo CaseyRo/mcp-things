@@ -6,9 +6,13 @@ These tools support the "Reflect" stage of GTD - reviewing and updating your sys
 from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import ToolResult
 
+from .formatters import to_dict_todo
 from .logging_config import get_logger
+from .models import ReviewReport, ToolEnvelope, output_schema_for
 from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_results import make_result
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
 
@@ -24,9 +28,12 @@ def register_gtd_reflect_tools(mcp: FastMCP):
     """Register GTD Reflect stage tools with the MCP server."""
 
     @mcp.tool(
-        name="daily-review", annotations=TOOL_ANNOTATIONS["daily-review"], timeout=5
+        name="daily-review",
+        annotations=TOOL_ANNOTATIONS["daily-review"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[ReviewReport]),
     )
-    async def daily_review(ctx: Context = None) -> str:
+    async def daily_review(ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get a daily overview following GTD daily review.
 
         GTD Stage: Reflect
@@ -117,7 +124,39 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 if len(inbox) > 3:
                     output += f"- ...and {len(inbox) - 3} more\n"
 
-            return output
+            notes: list[str] = []
+            if overdue:
+                notes.append(
+                    f"{len(overdue)} task(s) overdue — these should be the priority."
+                )
+            if not today_tasks:
+                notes.append("No tasks scheduled for today.")
+            if inbox:
+                notes.append(f"{len(inbox)} inbox item(s) await clarification.")
+
+            payload = ReviewReport(
+                period="daily",
+                today_tasks=[to_dict_todo(t) for t in (today_tasks or [])],
+                overdue=[to_dict_todo(t) for t in overdue],
+                completed=[],
+                inbox_count=len(inbox or []),
+                upcoming_count=0,
+                notes=notes,
+            )
+            summary = (
+                f"Daily review: {len(today_tasks or [])} today, "
+                f"{len(overdue)} overdue, {len(inbox or [])} inbox"
+            )
+            return make_result(
+                data=payload.model_dump(),
+                summary=summary,
+                text=output,
+                meta={
+                    "today_count": len(today_tasks or []),
+                    "overdue_count": len(overdue),
+                    "inbox_count": len(inbox or []),
+                },
+            )
 
         except ToolError:
             raise
@@ -126,9 +165,12 @@ def register_gtd_reflect_tools(mcp: FastMCP):
             _error_result("Failed to run daily review. Check server logs for details.")
 
     @mcp.tool(
-        name="weekly-review", annotations=TOOL_ANNOTATIONS["weekly-review"], timeout=10
+        name="weekly-review",
+        annotations=TOOL_ANNOTATIONS["weekly-review"],
+        timeout=10,
+        output_schema=output_schema_for(ToolEnvelope[ReviewReport]),
     )
-    async def weekly_review(ctx: Context = None) -> str:
+    async def weekly_review(ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Comprehensive GTD weekly review.
 
         GTD Stage: Reflect
@@ -306,7 +348,51 @@ def register_gtd_reflect_tools(mcp: FastMCP):
             except Exception:
                 logger.debug("Triage summary in weekly review failed (non-critical)")
 
-            return output
+            review_notes: list[str] = []
+            if stalled:
+                review_notes.append(
+                    f"{len(stalled)} stalled project(s) — add a next action."
+                )
+            if unassigned:
+                review_notes.append(
+                    f"{len(unassigned)} unassigned project(s) — assign an area."
+                )
+            if waiting:
+                review_notes.append(f"{len(waiting)} item(s) waiting on others.")
+            if someday:
+                review_notes.append(f"{len(someday)} someday/maybe item(s) to revisit.")
+
+            payload = ReviewReport(
+                period="weekly",
+                today_tasks=[],
+                overdue=[
+                    to_dict_todo(w)
+                    for w in (waiting or [])
+                    if w.get("deadline") and w.get("deadline") < today_str
+                ],
+                completed=[to_dict_todo(c) for c in (completed or [])],
+                inbox_count=len(inbox or []),
+                upcoming_count=len(someday or []),
+                notes=review_notes,
+            )
+            summary = (
+                f"Weekly review: {len(stalled)} stalled, {len(unassigned)} "
+                f"unassigned, {len(waiting or [])} waiting, "
+                f"{len(completed or [])} completed"
+            )
+            return make_result(
+                data=payload.model_dump(),
+                summary=summary,
+                text=output,
+                meta={
+                    "stalled_count": len(stalled),
+                    "unassigned_count": len(unassigned),
+                    "waiting_count": len(waiting or []),
+                    "someday_count": len(someday or []),
+                    "completed_count": len(completed or []),
+                    "inbox_count": len(inbox or []),
+                },
+            )
 
         except ToolError:
             raise

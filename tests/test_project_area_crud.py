@@ -13,6 +13,7 @@ from tests.conftest import (
     create_mock_todo,
     create_mock_project,
     create_mock_area,
+    tool_text,
 )
 
 
@@ -48,8 +49,9 @@ class TestGetProject:
         self.things.projects.return_value = [proj]
         self.things.todos.return_value = []
         result = await self.get_project(name_or_uuid="My Project")
-        assert "My Project" in result
-        assert "proj-1" in result
+        text = tool_text(result)
+        assert "My Project" in text
+        assert "proj-1" in text
 
     @pytest.mark.asyncio
     async def test_get_by_uuid(self):
@@ -57,7 +59,7 @@ class TestGetProject:
         self.things.get.return_value = proj
         self.things.todos.return_value = []
         result = await self.get_project(name_or_uuid="proj-uuid-123")
-        assert "Found" in result
+        assert "Found" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_not_found(self):
@@ -97,7 +99,7 @@ class TestModifyProject:
     async def test_rename(self):
         self.things.get.return_value = create_mock_project(uuid_str="p1")
         result = await self.modify_project(name_or_uuid="p1", title="New Name")
-        assert "title updated" in result
+        assert "title updated" in tool_text(result)
         self.mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
@@ -110,7 +112,7 @@ class TestModifyProject:
             create_mock_area(uuid_str="area-1", title="Work")
         ]
         result = await self.modify_project(name_or_uuid="p1", area="Work")
-        assert "moved to area" in result
+        assert "moved to area" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_complete_with_incomplete_tasks_warning(self):
@@ -120,7 +122,7 @@ class TestModifyProject:
             create_mock_todo(title="Task 2"),
         ]
         result = await self.modify_project(name_or_uuid="p1", completed=True)
-        assert "2 incomplete tasks" in result
+        assert "2 incomplete tasks" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_not_found(self):
@@ -151,8 +153,9 @@ class TestGetArea:
         self.things.projects.return_value = []
         self.things.todos.return_value = []
         result = await self.get_area(name_or_uuid="Work")
-        assert "Work" in result
-        assert "a1" in result
+        text = tool_text(result)
+        assert "Work" in text
+        assert "a1" in text
 
     @pytest.mark.asyncio
     async def test_get_by_uuid(self):
@@ -161,7 +164,7 @@ class TestGetArea:
         self.things.projects.return_value = []
         self.things.todos.return_value = []
         result = await self.get_area(name_or_uuid="area-uuid")
-        assert "Health" in result
+        assert "Health" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_not_found(self):
@@ -187,8 +190,9 @@ class TestGetArea:
         self.things.projects.return_value = [proj]
         self.things.todos.return_value = [create_mock_todo(title="Loose", area="a1")]
         result = await self.get_area(name_or_uuid="a1", include_items=True)
-        assert "Proj" in result
-        assert "Loose" in result
+        text = tool_text(result)
+        assert "Proj" in text
+        assert "Loose" in text
 
 
 # ============================================================================
@@ -213,7 +217,7 @@ class TestModifyArea:
         self.things.get.return_value = create_mock_area(uuid_str="a1", title="Old")
         self.things.areas.return_value = [create_mock_area(uuid_str="a1", title="Old")]
         result = await self.modify_area(name_or_uuid="a1", new_name="New")
-        assert "renamed" in result
+        assert "renamed" in tool_text(result)
         # Verify UUID-based lookup in AppleScript
         call_args = self.mock_applescript.call_args[0][0]
         assert 'whose id is "a1"' in call_args
@@ -265,7 +269,7 @@ class TestDeleteArea:
         self.things.projects.return_value = []
         self.things.todos.return_value = []
         result = await self.delete_area(name_or_uuid="a1")
-        assert "Deleted" in result
+        assert "Deleted" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_delete_with_projects_only(self):
@@ -275,7 +279,7 @@ class TestDeleteArea:
         ]
         self.things.todos.return_value = []
         result = await self.delete_area(name_or_uuid="a1")
-        assert "unassigned" in result
+        assert "unassigned" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_blocked_by_loose_todos(self):
@@ -323,9 +327,10 @@ class TestMergeAreas:
             [],  # re-read before delete
         ]
         result = await self.merge_areas(source="src", target="tgt")
-        assert "1 to-do" in result
-        assert "1 project" in result
-        assert "deleted" in result.lower()
+        text = tool_text(result)
+        assert "1 to-do" in text
+        assert "1 project" in text
+        assert "deleted" in text.lower()
 
     @pytest.mark.asyncio
     async def test_self_merge_guard_uuid(self):
@@ -349,7 +354,7 @@ class TestMergeAreas:
         self.things.projects.side_effect = [[], []]
         self.things.todos.side_effect = [[], []]
         result = await self.merge_areas(source="src", target="tgt")
-        assert "0 to-do" in result
+        assert "0 to-do" in tool_text(result)
 
 
 # ============================================================================
@@ -373,7 +378,7 @@ class TestEnhancedPlanProject:
         result = await self.plan_project(
             title="Test", tasks=[{"title": "Step 1"}], notes="My notes"
         )
-        assert "Created project" in result
+        assert "Created project" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_name_validation(self):
@@ -401,15 +406,17 @@ class TestEnhancedCreateArea:
     async def test_with_projects(self):
         self.things.areas.return_value = []
         result = await self.create_area(name="New Area", projects=["Proj A", "Proj B"])
-        assert "2 project" in result
-        assert "stalled" in result
+        text = tool_text(result)
+        assert "2 project" in text
+        assert "stalled" in text
 
     @pytest.mark.asyncio
     async def test_without_projects_no_regression(self):
         self.things.areas.return_value = []
         result = await self.create_area(name="Simple Area")
-        assert "Created area" in result
-        assert "stalled" not in result
+        text = tool_text(result)
+        assert "Created area" in text
+        assert "stalled" not in text
 
 
 # ============================================================================
@@ -439,7 +446,7 @@ class TestGTDIntegration:
         task["checklist"] = []
         self.things.get.return_value = task
         result = await convert(task_id="t1")
-        assert "modify-project" in result
+        assert "modify-project" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_convert_no_area_guidance(self):
@@ -451,16 +458,18 @@ class TestGTDIntegration:
         task["area_title"] = None
         self.things.get.return_value = task
         result = await convert(task_id="t1")
-        assert "no area" in result.lower()
+        assert "no area" in tool_text(result).lower()
 
     @pytest.mark.asyncio
     async def test_process_inbox_organize_guidance(self):
         """process-inbox should include organize tip about existing projects."""
         process = _get_tool(self.mcp, "process-inbox")
         self.things.inbox.return_value = [create_mock_todo(title="Some task")]
+        self.things.checklist_items.return_value = []
         result = await process()
-        assert "schedule-task" in result
-        assert "project=" in result
+        text = tool_text(result)
+        assert "schedule-task" in text
+        assert "project=" in text
 
     @pytest.mark.asyncio
     async def test_weekly_review_unassigned_projects(self):
@@ -473,8 +482,9 @@ class TestGTDIntegration:
         self.things.todos.return_value = []
         self.things.someday.return_value = []
         result = await review()
-        assert "Unassigned" in result
-        assert "modify-project" in result
+        text = tool_text(result)
+        assert "Unassigned" in text
+        assert "modify-project" in text
 
     @pytest.mark.asyncio
     async def test_daily_review_overdue_projects(self):
@@ -489,8 +499,9 @@ class TestGTDIntegration:
             ),
         ]
         result = await review()
-        assert "Overdue Projects" in result
-        assert "Late Project" in result
+        text = tool_text(result)
+        assert "Overdue Projects" in text
+        assert "Late Project" in text
 
 
 # ============================================================================

@@ -145,6 +145,22 @@ Copy the API key from the console output, then add to `~/Library/Application Sup
 claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key-here" things http://127.0.0.1:8009/mcp
 ```
 
+## Tool response shape
+
+Every tool returns both a human-readable text block (the existing markdown formatting) and a JSON `structuredContent` envelope so MCP clients can read fields without parsing prose. The envelope is uniform across all 32 tools:
+
+```json
+{
+  "data": <typed payload | list | null>,
+  "summary": "one-sentence headline",
+  "meta": {"total_count": 12, "truncated": false, "...": "..."}
+}
+```
+
+Per-tool payload types are defined in `src/things_mcp/models.py` (`Todo`, `Project`, `Area`, `Tag`, `WriteResult`, `BulkResult`, `FocusResult`, `ReviewReport`, `TriageInsights`, …). Each tool publishes its `outputSchema` in `tools/list`, and the `ClientCompatibilityMiddleware` applies the same anyOf-flattening + ChatGPT strict-mode transforms it does to inputs.
+
+**Migration note for downstream consumers:** if you previously regex-parsed the markdown body (Things URLs, deadline dates, project titles), prefer reading from `structuredContent` going forward. The text block is preserved field-for-field for back-compat, but the JSON envelope is the supported contract.
+
 ## GTD Tools
 
 The server provides **27 GTD-native tools** organized by methodology stage:

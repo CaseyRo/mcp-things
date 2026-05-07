@@ -11,8 +11,11 @@ from typing import Literal, Optional, List, Union
 from . import reader as db
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import ToolResult
 
-from .formatters import format_todo
+from .formatters import render_todo, to_dict_todo
+from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
+from .tool_results import make_result, write_result
 from .utils import app_state
 from .url_scheme import (
     add_todo,
@@ -41,7 +44,12 @@ def register_gtd_core_tools(mcp: FastMCP):
 
     # --- GTD ENGAGE STAGE ---
 
-    @mcp.tool(name="get-tasks", annotations=TOOL_ANNOTATIONS["get-tasks"], timeout=5)
+    @mcp.tool(
+        name="get-tasks",
+        annotations=TOOL_ANNOTATIONS["get-tasks"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
+    )
     async def get_tasks(
         view: Optional[
             Literal[
@@ -64,7 +72,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         include_completed: bool = False,
         limit: int = 50,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Get tasks filtered by view, context, energy, and time available.
 
         GTD Stage: Engage
@@ -72,6 +80,20 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         Context is your FIRST filter in GTD. Common contexts:
         - @computer, @phone, @office, @home, @errands, @anywhere
+
+        Returns a ``ToolResult`` whose ``structured_content`` is a
+        ``ToolEnvelope[list[Todo]]`` payload (see ``models.py``):
+
+        - ``data``: list of Todo objects with full Things 3 metadata —
+          ``uuid``, ``title``, ``type``, ``status``, ``notes``, ``tags``,
+          ``start``, ``start_date``, ``deadline``, ``stop_date``, ``created``,
+          ``modified``, ``project``, ``project_title``, ``area``,
+          ``area_title``. Checklists are not enriched in list view.
+        - ``summary``: one-line headline (e.g. ``"3 tasks in today"``).
+        - ``meta``: ``total_count`` and ``truncated`` when results are sliced.
+
+        The ``content`` text block preserves the legacy human-readable prose
+        for backwards compatibility.
 
         Args:
             view: Task view - inbox, today, tomorrow, upcoming, anytime, someday, logbook, trash, deadlines
@@ -180,28 +202,64 @@ def register_gtd_core_tools(mcp: FastMCP):
                 if energy:
                     filters.append(f"energy={energy}")
                 filter_str = ", ".join(filters) if filters else "no filters"
-                return f"No tasks found ({filter_str}). Try different filters or add tasks with capture-task."
+                empty_text = (
+                    f"No tasks found ({filter_str}). Try different filters or "
+                    "add tasks with capture-task."
+                )
+                return make_result(
+                    data=[],
+                    summary=f"No tasks found ({filter_str}).",
+                    text=empty_text,
+                )
 
             # Apply limit
             effective_limit = min(max(1, limit), 200)
             total_count = len(todos)
-            todos = todos[:effective_limit]
+            shown = todos[:effective_limit]
 
-            # Format output with summary
-            summary = f"**{total_count} task{'s' if total_count != 1 else ''}**"
+            # Build legacy text block (preserved verbatim).
+            text_header = f"**{total_count} task{'s' if total_count != 1 else ''}**"
             if view:
-                summary += f" in {view}"
+                text_header += f" in {view}"
             if context:
-                summary += f" with context {context}"
+                text_header += f" with context {context}"
+            if total_count > effective_limit:
+                text_header += f" (showing first {effective_limit})"
+            text_header += "\n\n"
+
+            text_body = text_header + "\n\n---\n\n".join(
+                render_todo(todo) for todo in shown
+            )
+            if total_count > effective_limit:
+                text_body += (
+                    f"\n\n*...and {total_count - effective_limit} more tasks. "
+                    "Use limit= to see more.*"
+                )
+
+            # Build structured payload.
+            data = [to_dict_todo(t) for t in shown]
+            summary_parts = [f"{total_count} task{'s' if total_count != 1 else ''}"]
+            if view:
+                summary_parts.append(f"in {view}")
+            if context:
+                summary_parts.append(f"with context {context}")
+            summary = " ".join(summary_parts)
             if total_count > effective_limit:
                 summary += f" (showing first {effective_limit})"
-            summary += "\n\n"
 
-            formatted_todos = [format_todo(todo) for todo in todos]
-            result = summary + "\n\n---\n\n".join(formatted_todos)
+            meta: dict = {
+                "total_count": total_count,
+                "shown": len(shown),
+            }
             if total_count > effective_limit:
-                result += f"\n\n*...and {total_count - effective_limit} more tasks. Use limit= to see more.*"
-            return result
+                meta["truncated"] = True
+
+            return make_result(
+                data=data,
+                summary=summary,
+                meta=meta,
+                text=text_body,
+            )
 
         except ToolError:
             raise
@@ -209,13 +267,18 @@ def register_gtd_core_tools(mcp: FastMCP):
             logger.error("Error in get-tasks", exc_info=True)
             _error_result("Failed to fetch tasks. Check server logs for details.")
 
-    @mcp.tool(name="focus-mode", annotations=TOOL_ANNOTATIONS["focus-mode"], timeout=5)
+    @mcp.tool(
+        name="focus-mode",
+        annotations=TOOL_ANNOTATIONS["focus-mode"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[FocusResult]),
+    )
     async def focus_mode(
         context: Optional[str] = None,
         energy: Optional[str] = None,
         time_available: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Get the single most important task to work on right now.
 
         GTD Stage: Engage
@@ -241,6 +304,9 @@ def register_gtd_core_tools(mcp: FastMCP):
             today_str = date.today().isoformat()
             selected_task = None
             selection_reason = ""
+            selection_kind: Optional[
+                Literal["overdue", "today_with_deadline", "today", "anytime"]
+            ] = None
 
             # 1. Check for overdue tasks with deadlines
             all_todos = db.todos(status="incomplete")
@@ -266,6 +332,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                 selection_reason = (
                     f"OVERDUE (deadline was {selected_task.get('deadline')})"
                 )
+                selection_kind = "overdue"
 
             # 2. Check today's tasks with deadlines
             if not selected_task:
@@ -278,6 +345,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                 if today_with_deadline:
                     selected_task = today_with_deadline[0]
                     selection_reason = "Due TODAY with deadline"
+                    selection_kind = "today_with_deadline"
 
             # 3. Check today's tasks without deadlines
             if not selected_task:
@@ -290,6 +358,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                 if today_no_deadline:
                     selected_task = today_no_deadline[0]
                     selection_reason = "Scheduled for today"
+                    selection_kind = "today"
 
             # 4. Check anytime tasks
             if not selected_task:
@@ -298,6 +367,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                 if anytime_filtered:
                     selected_task = anytime_filtered[0]
                     selection_reason = "Next available action"
+                    selection_kind = "anytime"
 
             if not selected_task:
                 filter_desc = []
@@ -311,23 +381,49 @@ def register_gtd_core_tools(mcp: FastMCP):
                 filter_str = (
                     ", ".join(filter_desc) if filter_desc else "current filters"
                 )
-                return (
+                empty_text = (
                     f"No tasks match {filter_str}.\n\n"
                     "Try:\n"
                     "- Different context (remove context filter)\n"
                     "- Check if tasks need context tags\n"
                     "- Use get-tasks(view='anytime') to see all available tasks"
                 )
+                return make_result(
+                    data=None,
+                    summary=f"No tasks match {filter_str}.",
+                    text=empty_text,
+                )
+
+            # Enrich the focused task with checklist (detail view).
+            enriched = dict(selected_task)
+            try:
+                enriched["checklist"] = db.checklist_items(enriched["uuid"]) or []
+            except Exception:
+                enriched["checklist"] = []
 
             # Format the focused task with context
             output = f"**FOCUS: {selection_reason}**\n\n"
-            output += format_todo(selected_task)
+            output += render_todo(enriched)
 
             # Add project context if applicable
             if selected_task.get("project"):
-                output += f"\n\n*Part of project: {selected_task.get('project_title', selected_task.get('project'))}*"
+                output += (
+                    "\n\n*Part of project: "
+                    f"{selected_task.get('project_title', selected_task.get('project'))}*"
+                )
 
-            return output
+            todo_dict = to_dict_todo(enriched)
+            payload = FocusResult(
+                task=todo_dict,
+                selection_reason=selection_kind,
+                selection_detail=selection_reason,
+            )
+            summary = f"Focus task: {enriched.get('title', '')} ({selection_reason})"
+            return make_result(
+                data=payload.model_dump(),
+                summary=summary,
+                text=output,
+            )
 
         except ToolError:
             raise
@@ -336,14 +432,17 @@ def register_gtd_core_tools(mcp: FastMCP):
             _error_result("Failed to find focus task. Check server logs for details.")
 
     @mcp.tool(
-        name="complete-task", annotations=TOOL_ANNOTATIONS["complete-task"], timeout=30
+        name="complete-task",
+        annotations=TOOL_ANNOTATIONS["complete-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def complete_task(
         task_id: Optional[str] = None,
         task_title: Optional[str] = None,
         completion_notes: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Mark a task as complete.
 
         GTD Stage: Engage
@@ -372,19 +471,40 @@ def register_gtd_core_tools(mcp: FastMCP):
                 ]
 
                 if len(matches) == 0:
-                    return (
+                    no_match = (
                         f"No task found matching '{task_title}'.\n\n"
                         "Use search-tasks to find the correct task, or check "
                         "get-tasks(view='logbook') if already completed."
                     )
+                    return make_result(
+                        data=WriteResult(
+                            acknowledged=False,
+                            thing_id=None,
+                            summary=f"No task found matching '{task_title}'.",
+                        ).model_dump(),
+                        summary=f"No task found matching '{task_title}'.",
+                        text=no_match,
+                    )
 
                 if len(matches) > 1:
-                    result = f"Found {len(matches)} tasks matching '{task_title}'. Please specify:\n\n"
+                    text_body = (
+                        f"Found {len(matches)} tasks matching '{task_title}'. "
+                        "Please specify:\n\n"
+                    )
                     for t in matches[:5]:
-                        result += f"- **{t.get('title')}** (ID: `{t.get('uuid')}`)\n"
+                        text_body += f"- **{t.get('title')}** (ID: `{t.get('uuid')}`)\n"
                     if len(matches) > 5:
-                        result += f"\n...and {len(matches) - 5} more."
-                    return result
+                        text_body += f"\n...and {len(matches) - 5} more."
+                    return make_result(
+                        data=WriteResult(
+                            acknowledged=False,
+                            thing_id=None,
+                            summary=f"Multiple tasks matched '{task_title}'.",
+                        ).model_dump(),
+                        summary=f"Found {len(matches)} tasks matching '{task_title}'.",
+                        text=text_body,
+                        meta={"match_count": len(matches)},
+                    )
 
                 task_id = matches[0].get("uuid")
 
@@ -426,7 +546,13 @@ def register_gtd_core_tools(mcp: FastMCP):
             except Exception:
                 logger.debug("Triage tracking failed (non-critical)")
 
-            return "Task completed successfully. Keep up the momentum!"
+            summary = "Task completed successfully. Keep up the momentum!"
+            return write_result(
+                summary=summary,
+                thing_id=task_id,
+                acknowledged=True,
+                text=summary,
+            )
 
         except ToolError:
             raise
@@ -437,7 +563,10 @@ def register_gtd_core_tools(mcp: FastMCP):
     # --- GTD CAPTURE STAGE ---
 
     @mcp.tool(
-        name="capture-task", annotations=TOOL_ANNOTATIONS["capture-task"], timeout=30
+        name="capture-task",
+        annotations=TOOL_ANNOTATIONS["capture-task"],
+        timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def capture_task(
         title: str,
@@ -445,7 +574,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         tags: Optional[List[str]] = None,
         when: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Quick capture a task to Inbox for later processing.
 
         GTD Stage: Capture
@@ -481,13 +610,22 @@ def register_gtd_core_tools(mcp: FastMCP):
             invalidate_caches_for(["get-inbox", "get-tasks"])
 
             if when:
-                return (
+                summary = f"Captured and scheduled: {title} ({when})"
+                text_body = (
                     f"Captured and scheduled: {title} ({when})\n\n"
                     "Task is scheduled — no further inbox processing needed."
                 )
-            return (
-                f"Captured to Inbox: {title}\n\n"
-                "Use process-inbox or schedule-task to clarify and organize."
+            else:
+                summary = f"Captured to Inbox: {title}"
+                text_body = (
+                    f"Captured to Inbox: {title}\n\n"
+                    "Use process-inbox or schedule-task to clarify and organize."
+                )
+            return write_result(
+                summary=summary,
+                thing_id=None,
+                acknowledged=True,
+                text=text_body,
             )
 
         except ToolError:
@@ -499,13 +637,16 @@ def register_gtd_core_tools(mcp: FastMCP):
     # --- GTD CLARIFY STAGE ---
 
     @mcp.tool(
-        name="process-inbox", annotations=TOOL_ANNOTATIONS["process-inbox"], timeout=5
+        name="process-inbox",
+        annotations=TOOL_ANNOTATIONS["process-inbox"],
+        timeout=5,
+        output_schema=output_schema_for(ToolEnvelope[Union[Todo, list[Todo]]]),
     )
     async def process_inbox(
         all: bool = False,
         limit: int = 50,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Process inbox items using GTD methodology.
 
         GTD Stage: Clarify
@@ -531,12 +672,15 @@ def register_gtd_core_tools(mcp: FastMCP):
                     "Your inbox is empty. Use capture-task when new items come up."
                 )
                 try:
-                    summary = triage_tracker.get_summary(days=7)
-                    if summary["total"] > 0:
-                        total = summary["total"]
+                    summary_data = triage_tracker.get_summary(days=7)
+                    if summary_data["total"] > 0:
+                        total = summary_data["total"]
                         top_action = (
-                            max(summary["actions"], key=summary["actions"].get)
-                            if summary["actions"]
+                            max(
+                                summary_data["actions"],
+                                key=summary_data["actions"].get,
+                            )
+                            if summary_data["actions"]
                             else None
                         )
                         inbox_zero_msg += f"\n\n*This week: {total} items triaged"
@@ -545,7 +689,12 @@ def register_gtd_core_tools(mcp: FastMCP):
                         inbox_zero_msg += f". View trends at {get_dashboard_url()}*"
                 except Exception:
                     pass
-                return inbox_zero_msg
+                return make_result(
+                    data=[],
+                    summary="Inbox is clear.",
+                    text=inbox_zero_msg,
+                    meta={"remaining": 0},
+                )
 
             # Track inbox view for source detection
             try:
@@ -587,16 +736,39 @@ def register_gtd_core_tools(mcp: FastMCP):
                     output += f"{i}. **{title}** (`{uuid}`){tags_str}{notes_preview}\n"
 
                 if total_count > effective_limit:
-                    output += f"\n*...and {total_count - effective_limit} more items. Call again with higher limit or process remaining after.*"
+                    output += (
+                        f"\n*...and {total_count - effective_limit} more items. "
+                        "Call again with higher limit or process remaining after.*"
+                    )
 
-                return output
+                data = [to_dict_todo(t) for t in items_to_show]
+                summary = f"{total_count} inbox item{'s' if total_count != 1 else ''}"
+                if total_count > effective_limit:
+                    summary += f" (showing first {effective_limit})"
+                meta = {
+                    "total_count": total_count,
+                    "shown": len(items_to_show),
+                }
+                if total_count > effective_limit:
+                    meta["truncated"] = True
+                return make_result(data=data, summary=summary, meta=meta, text=output)
 
             # Default: one item at a time
             item = inbox_items[0]
             remaining = len(inbox_items) - 1
 
-            output = f"**Processing Inbox** ({remaining} item{'s' if remaining != 1 else ''} remaining)\n\n"
-            output += format_todo(item)
+            # Enrich with checklist for the single-item detail view.
+            enriched = dict(item)
+            try:
+                enriched["checklist"] = db.checklist_items(enriched["uuid"]) or []
+            except Exception:
+                enriched["checklist"] = []
+
+            output = (
+                f"**Processing Inbox** ({remaining} item"
+                f"{'s' if remaining != 1 else ''} remaining)\n\n"
+            )
+            output += render_todo(enriched)
             output += "\n\n---\n\n"
             output += "**GTD Decision Tree:**\n\n"
             output += "1. **Is this actionable?**\n"
@@ -616,7 +788,15 @@ def register_gtd_core_tools(mcp: FastMCP):
             )
             output += "use `schedule-task` with `project=` to add it directly.*\n"
 
-            return output
+            return make_result(
+                data=to_dict_todo(enriched),
+                summary=(
+                    f"Processing inbox: {enriched.get('title', 'Untitled')} "
+                    f"({remaining} remaining)"
+                ),
+                meta={"remaining": remaining},
+                text=output,
+            )
 
         except ToolError:
             raise
@@ -628,12 +808,13 @@ def register_gtd_core_tools(mcp: FastMCP):
         name="convert-to-project",
         annotations=TOOL_ANNOTATIONS["convert-to-project"],
         timeout=30,
+        output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def convert_to_project(
         task_id: str,
         first_action: Optional[str] = None,
         ctx: Context = None,
-    ) -> str:
+    ) -> ToolResult:
         """[tasks-gtd] Convert a task into a project when it requires multiple steps.
 
         GTD Stage: Clarify
@@ -724,28 +905,53 @@ def register_gtd_core_tools(mcp: FastMCP):
                 logger.debug("Triage tracking failed (non-critical)")
 
             # Build result message
-            result = f"Converted '{project_title}' to project."
+            result_text = f"Converted '{project_title}' to project."
             if project_deadline:
-                result += f"\nDeadline: {project_deadline}"
+                result_text += f"\nDeadline: {project_deadline}"
 
             checklist_count = len(
                 [i for i in checklist_items if i.get("status") != "completed"]
             )
             if first_action and checklist_count > 0:
-                result += f"\nTasks: {first_action} + {checklist_count} from checklist"
+                result_text += (
+                    f"\nTasks: {first_action} + {checklist_count} from checklist"
+                )
             elif first_action:
-                result += f"\nFirst action: {first_action}"
+                result_text += f"\nFirst action: {first_action}"
             elif checklist_count > 0:
-                result += f"\nConverted {checklist_count} checklist items to tasks."
+                result_text += (
+                    f"\nConverted {checklist_count} checklist items to tasks."
+                )
             else:
-                result += "\n\n**Warning:** Project has no next action. GTD requires every project to have a clear next step. Use schedule-task to add one."
+                result_text += (
+                    "\n\n**Warning:** Project has no next action. GTD requires every "
+                    "project to have a clear next step. Use schedule-task to add one."
+                )
 
             # Post-conversion guidance
-            result += "\n\nUse `modify-project` to assign an area, set a deadline, or edit properties."
+            result_text += (
+                "\n\nUse `modify-project` to assign an area, set a deadline, "
+                "or edit properties."
+            )
             if not task.get("area_title"):
-                result += "\nThis project has no area of focus — consider assigning one with `modify-project`."
+                result_text += (
+                    "\nThis project has no area of focus — consider assigning one "
+                    "with `modify-project`."
+                )
 
-            return result
+            summary = f"Converted '{project_title}' to project"
+            meta: dict = {
+                "checklist_items_converted": checklist_count,
+                "has_first_action": bool(first_action),
+                "has_area": bool(task.get("area_title")),
+            }
+            return write_result(
+                summary=summary,
+                thing_id=None,  # JSON-API doesn't return the new project's UUID
+                acknowledged=True,
+                text=result_text,
+                meta=meta,
+            )
 
         except ToolError:
             raise

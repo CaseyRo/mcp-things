@@ -165,31 +165,36 @@ def get_binding_port() -> int:
 
 
 def _flatten_anyof_for_n8n(schema: dict) -> dict:
-    """Flatten anyOf constructs in JSON Schema for n8n compatibility.
+    """Flatten anyOf constructs in JSON Schema for n8n / ChatGPT compatibility.
 
-    n8n's MCP client doesn't handle anyOf properly (causes 'Cannot read properties
-    of undefined' errors). This function transforms:
+    Transforms:
       {"anyOf": [{"type": "string"}, {"type": "null"}]}
     into:
       {"type": ["string", "null"]}
 
-    Using type arrays is valid JSON Schema and allows n8n to accept null values.
+    Recurses into ``properties``, ``items``, ``additionalProperties``, and
+    ``$defs`` so nested Pydantic models (which Pydantic emits via ``$defs``
+    references for non-trivial output schemas) are handled correctly.
+
+    See: openspec/changes/structured-json-tool-output/spec.md
+         "anyOf flattener handles nested $defs" scenario.
     """
     if not isinstance(schema, dict):
         return schema
 
-    result = {}
+    result: dict = {}
     for key, value in schema.items():
         if key == "anyOf" and isinstance(value, list):
-            # Check if null is one of the options
-            has_null = any(t.get("type") == "null" for t in value)
-            non_null_types = [t for t in value if t.get("type") != "null"]
+            has_null = any(
+                t.get("type") == "null" for t in value if isinstance(t, dict)
+            )
+            non_null_types = [
+                t for t in value if isinstance(t, dict) and t.get("type") != "null"
+            ]
 
             if len(non_null_types) == 1:
-                # Simple case: one type + null -> use type array
                 flattened = _flatten_anyof_for_n8n(non_null_types[0])
                 result.update(flattened)
-                # Add null to type if it was in anyOf
                 if has_null and "type" in result:
                     current_type = result["type"]
                     if isinstance(current_type, str):
@@ -197,17 +202,17 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
                     elif isinstance(current_type, list) and "null" not in current_type:
                         result["type"] = current_type + ["null"]
             elif len(non_null_types) > 1:
-                # Multiple non-null types: pick first, add null if present
                 flattened = _flatten_anyof_for_n8n(non_null_types[0])
                 result.update(flattened)
                 if has_null and "type" in result:
                     current_type = result["type"]
                     if isinstance(current_type, str):
                         result["type"] = [current_type, "null"]
-            # If all types are null, skip the anyOf entirely
-        elif key == "properties" and isinstance(value, dict):
-            # Recurse into properties
+            # If all branches are null, drop the anyOf entirely.
+        elif key in ("properties", "$defs", "definitions") and isinstance(value, dict):
             result[key] = {k: _flatten_anyof_for_n8n(v) for k, v in value.items()}
+        elif key == "additionalProperties" and isinstance(value, dict):
+            result[key] = _flatten_anyof_for_n8n(value)
         elif isinstance(value, dict):
             result[key] = _flatten_anyof_for_n8n(value)
         elif isinstance(value, list):
@@ -225,7 +230,9 @@ def _add_additional_properties_false(schema: dict) -> dict:
     """Add additionalProperties: false to all object schemas for ChatGPT compatibility.
 
     ChatGPT's strict mode requires additionalProperties: false on every object.
-    This recursively adds the property to all objects in the schema.
+    Recurses into ``properties``, ``items``, ``additionalProperties``, ``$defs``,
+    and the boolean composition keywords so nested models in output schemas are
+    covered.
 
     See: https://github.com/github/github-mcp-server/issues/376
     """
@@ -234,24 +241,33 @@ def _add_additional_properties_false(schema: dict) -> dict:
 
     result = dict(schema)
 
-    # If this is an object with properties, add additionalProperties: false
     if result.get("type") == "object" or "properties" in result:
         if "additionalProperties" not in result:
             result["additionalProperties"] = False
 
-    # Recurse into properties
     if "properties" in result:
         result["properties"] = {
             k: _add_additional_properties_false(v)
             for k, v in result["properties"].items()
         }
 
-    # Recurse into items (for arrays)
     if "items" in result and isinstance(result["items"], dict):
         result["items"] = _add_additional_properties_false(result["items"])
 
-    # Recurse into nested schemas in other locations
-    for key in ["allOf", "oneOf", "anyOf"]:
+    if "additionalProperties" in result and isinstance(
+        result["additionalProperties"], dict
+    ):
+        result["additionalProperties"] = _add_additional_properties_false(
+            result["additionalProperties"]
+        )
+
+    for key in ("$defs", "definitions"):
+        if key in result and isinstance(result[key], dict):
+            result[key] = {
+                k: _add_additional_properties_false(v) for k, v in result[key].items()
+            }
+
+    for key in ("allOf", "oneOf", "anyOf"):
         if key in result and isinstance(result[key], list):
             result[key] = [
                 _add_additional_properties_false(item)
@@ -268,7 +284,8 @@ def _make_all_fields_required(schema: dict) -> dict:
 
     ChatGPT's strict mode requires ALL properties to be listed in the required array.
     Optional fields should use type arrays like ["string", "null"] instead of being
-    omitted from required.
+    omitted from required. Recurses into ``items`` and ``$defs`` so nested models in
+    output schemas are covered.
 
     See: https://community.openai.com/t/strict-true-and-required-fields/1131075
     """
@@ -281,14 +298,11 @@ def _make_all_fields_required(schema: dict) -> dict:
         all_props = list(result["properties"].keys())
         current_required = set(result.get("required", []))
 
-        # For fields not currently required, make them nullable
         new_properties = {}
         for prop_name, prop_schema in result["properties"].items():
-            # Recurse first
             prop_schema = _make_all_fields_required(dict(prop_schema))
 
             if prop_name not in current_required:
-                # Add null to type for optional fields
                 if "type" in prop_schema:
                     current_type = prop_schema["type"]
                     if isinstance(current_type, str) and current_type != "null":
@@ -296,7 +310,6 @@ def _make_all_fields_required(schema: dict) -> dict:
                     elif isinstance(current_type, list) and "null" not in current_type:
                         prop_schema["type"] = current_type + ["null"]
                 elif "type" not in prop_schema:
-                    # No type specified, add nullable type
                     prop_schema["type"] = ["object", "null"]
 
             new_properties[prop_name] = prop_schema
@@ -304,11 +317,30 @@ def _make_all_fields_required(schema: dict) -> dict:
         result["properties"] = new_properties
         result["required"] = all_props
 
-    # Recurse into items (for arrays of objects)
     if "items" in result and isinstance(result["items"], dict):
         result["items"] = _make_all_fields_required(result["items"])
 
+    for key in ("$defs", "definitions"):
+        if key in result and isinstance(result[key], dict):
+            result[key] = {
+                k: _make_all_fields_required(v) for k, v in result[key].items()
+            }
+
     return result
+
+
+def _transform_schema_for_client(schema: dict, *, is_chatgpt: bool) -> dict:
+    """Apply client-aware transforms to a single JSON Schema (input or output).
+
+    All clients get ``anyOf`` flattening (type arrays are valid JSON Schema and
+    n8n needs them). ChatGPT additionally gets ``additionalProperties: false``
+    everywhere and the all-fields-required nullable-type expansion.
+    """
+    transformed = _flatten_anyof_for_n8n(schema)
+    if is_chatgpt:
+        transformed = _add_additional_properties_false(transformed)
+        transformed = _make_all_fields_required(transformed)
+    return transformed
 
 
 class ClientCompatibilityMiddleware(Middleware):
@@ -370,16 +402,24 @@ class ClientCompatibilityMiddleware(Middleware):
 
         for tool in tools:
             if hasattr(tool, "parameters") and tool.parameters:
-                # 1. Always flatten anyOf → type arrays (all clients)
-                transformed = _flatten_anyof_for_n8n(tool.parameters)
-
-                # 2-3. Only for ChatGPT: strict-mode transforms
-                if is_chatgpt:
-                    transformed = _add_additional_properties_false(transformed)
-                    transformed = _make_all_fields_required(transformed)
-
+                transformed_params = _transform_schema_for_client(
+                    tool.parameters, is_chatgpt=is_chatgpt
+                )
                 tool.parameters.clear()
-                tool.parameters.update(transformed)
+                tool.parameters.update(transformed_params)
+
+            # Output schemas: published in tools/list as `outputSchema`. The
+            # FastMCP Tool model exposes this as `output_schema` on the
+            # Pythonic side.
+            output_schema = getattr(tool, "output_schema", None) or getattr(
+                tool, "outputSchema", None
+            )
+            if isinstance(output_schema, dict) and output_schema:
+                transformed_output = _transform_schema_for_client(
+                    output_schema, is_chatgpt=is_chatgpt
+                )
+                output_schema.clear()
+                output_schema.update(transformed_output)
 
         logger.info(f"Processed {len(tools)} tool schemas for client '{client}'")
         return tools
