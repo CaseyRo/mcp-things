@@ -71,7 +71,7 @@ class Todo(BaseModel):
     single-item `process-inbox`) MUST populate it via `db.checklist_items()`.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     uuid: str
     title: str
@@ -90,6 +90,17 @@ class Todo(BaseModel):
     project_title: str | None = None
     area: str | None = None
     area_title: str | None = None
+    list_label: str | None = Field(
+        default=None,
+        alias="list",
+        serialization_alias="list",
+        description=(
+            "Denormalised display label for the to-do's location: project title "
+            "if it belongs to one, else area title, else the start bucket name "
+            '("Today" / "Anytime" / "Someday" / "Inbox" / "Upcoming"). Provided '
+            "for clients that want a single human-readable string per task."
+        ),
+    )
 
 
 class Project(BaseModel):
