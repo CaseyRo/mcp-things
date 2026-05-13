@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
+      - name: Security audit (pip-audit)
+        run: uvx pip-audit
+
       - name: Ruff check
         run: uv run ruff check .
 
