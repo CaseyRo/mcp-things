@@ -2,6 +2,18 @@
 
 All notable changes to Things 3 Enhanced MCP will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- `modify-task` can now clear an existing deadline or start date (`when`).
+  Pass a clear-sentinel — `none`, `clear`, `remove`, or `null`
+  (case-insensitive) — for `deadline`/`when`. This enables moving an overdue
+  task to Someday and dropping its stale deadline in one call
+  (`when="someday"`, `deadline="none"`). Empty string also clears at the URL
+  layer, but a non-empty sentinel is the documented contract because some
+  MCP clients/middleware drop empty optional params. (CDI-1167)
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

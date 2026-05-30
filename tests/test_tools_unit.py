@@ -361,6 +361,72 @@ class TestScheduleTask:
         assert "Deadline: 2026-03-20" in tool_text(result)
 
 
+class TestModifyTaskClearDates:
+    """Test modify-task clearing of deadline / when (CDI-1167)."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_things, mock_utils, monkeypatch):
+        self.things = mock_things
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.execute_url", mock.Mock(return_value=True)
+        )
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.app_state",
+            mock.Mock(update_app_state=mock.Mock(return_value=True)),
+        )
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.ensure_tags_exist",
+            mock.Mock(return_value=True),
+        )
+        # Capture the exact kwargs handed to the URL builder. We record into an
+        # instance dict via side_effect (rather than reading call_args) so the
+        # assertion is robust against any shared-mock / ordering effects.
+        self.captured = {}
+
+        def _capture(**kwargs):
+            self.captured = dict(kwargs)
+            return "things:///update?id=x"
+
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.update_todo",
+            mock.Mock(side_effect=_capture),
+        )
+        from things_mcp.fast_server import mcp
+
+        self.modify_task = mcp._local_provider._components["tool:modify-task@"].fn
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "sentinel", ["none", "clear", "remove", "null", "NONE", " Clear "]
+    )
+    async def test_clear_deadline_via_sentinel(self, sentinel):
+        await self.modify_task(task_id="abc", deadline=sentinel)
+        assert self.captured["deadline"] == ""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("sentinel", ["none", "clear", "remove", "null"])
+    async def test_clear_when_via_sentinel(self, sentinel):
+        await self.modify_task(task_id="abc", when=sentinel)
+        assert self.captured["when"] == ""
+
+    @pytest.mark.asyncio
+    async def test_someday_plus_clear_deadline_one_call(self):
+        await self.modify_task(task_id="abc", when="someday", deadline="none")
+        assert self.captured["when"] == "someday"
+        assert self.captured["deadline"] == ""
+
+    @pytest.mark.asyncio
+    async def test_real_deadline_passes_through(self):
+        await self.modify_task(task_id="abc", deadline="2026-06-01")
+        assert self.captured["deadline"] == "2026-06-01"
+
+    @pytest.mark.asyncio
+    async def test_unset_dates_pass_through_as_none(self):
+        await self.modify_task(task_id="abc", title="Renamed")
+        assert self.captured["deadline"] is None
+        assert self.captured["when"] is None
+
+
 class TestDelegateTask:
     """Test delegate-task tool."""
 
