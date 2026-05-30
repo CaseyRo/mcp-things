@@ -38,6 +38,35 @@ def _error_result(message: str):
     raise ToolError(message)
 
 
+# Case-insensitive, trimmed tokens that mean "clear this date field" (CDI-1167).
+# The empty string is included so a raw "" still clears, but note that the
+# documented user-facing way is a NON-empty sentinel (e.g. "none"): some MCP
+# clients and middleware drop empty-string optional params before they reach
+# the handler, so an empty string is not a reliable clear signal over the wire.
+_CLEAR_DATE_SENTINELS = frozenset({"", "none", "clear", "remove", "null"})
+
+
+def _normalize_clearable_date(value: Optional[str]) -> Optional[str]:
+    """Normalize a clearable date field (``when`` / ``deadline``) for updates.
+
+    Maps any clear-sentinel (case-insensitive, whitespace-trimmed) to the empty
+    string ``""``. The URL scheme emits ``""`` as ``key=`` which Things treats
+    as "clear this field". Real dates and ``None`` (meaning "not provided, leave
+    unchanged") pass through untouched.
+
+    Args:
+        value: The raw ``when``/``deadline`` argument, or ``None``.
+
+    Returns:
+        ``None`` if not provided, ``""`` to clear, otherwise the original value.
+    """
+    if value is None:
+        return None
+    if value.strip().lower() in _CLEAR_DATE_SENTINELS:
+        return ""
+    return value
+
+
 def _resolve_task_by_title(task_title: str) -> str:
     """Resolve a task_title to a UUID. Returns UUID or raises ToolError."""
     matches = things.todos(status="incomplete")
@@ -541,14 +570,29 @@ def register_gtd_organize_tools(mcp: FastMCP):
         Instead use: complete-task for completing, defer-task for rescheduling,
                      delegate-task for delegation.
 
+        Clearing a deadline or schedule (CDI-1167):
+            To CLEAR an existing deadline or start date, pass one of the
+            clear-sentinels as the value (case-insensitive): "none", "clear",
+            "remove", or "null". An empty string also clears, but a non-empty
+            sentinel is the reliable contract because some clients/middleware
+            drop empty optional params before they reach the server.
+            Leave a field as null (omit it) to keep it unchanged.
+
+            Common case — move an overdue task to Someday AND drop the stale
+            deadline so it stops showing overdue, in a single call:
+
+                modify-task(task_id=..., when="someday", deadline="none")
+
         Args:
             task_id: UUID of the task to update (preferred if known)
             task_title: Title to search for (fuzzy match). If multiple match, returns list.
             title: New title (replaces existing)
             notes: New notes (replaces existing)
             add_notes: Notes to append (preserves existing)
-            when: New schedule
-            deadline: New deadline
+            when: New schedule (today, tomorrow, evening, anytime, someday,
+                YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it.
+            deadline: New deadline (YYYY-MM-DD). Pass "none"/"clear"/"remove"/
+                "null" to clear an existing deadline.
             tags: New tags (replaces existing)
             add_tags: Tags to add (preserves existing)
             checklist: New checklist items (replaces existing)
@@ -562,6 +606,12 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         if ctx:
             await ctx.info("Updating task...")
+
+        # Normalize clearable date fields: map clear-sentinels to "" so the
+        # URL scheme emits `when=`/`deadline=` (Things clears the field).
+        # CDI-1167: enables clearing a stale deadline / start date.
+        when = _normalize_clearable_date(when)
+        deadline = _normalize_clearable_date(deadline)
 
         try:
             if task_title and not task_id:

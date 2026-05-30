@@ -72,6 +72,20 @@ class TestConstructUrl:
         assert params["completed"] == "true"
 
     @patch(PATCH_AUTH, return_value="")
+    def test_empty_string_value_emitted_for_clearing(self, _):
+        """CDI-1167: empty-string values are kept (only None is skipped).
+
+        Things treats ``deadline=`` (empty value) as "clear the deadline", so
+        the URL layer must emit the key even when the value is "".
+        """
+        from things_mcp.url_scheme import construct_url
+
+        url = construct_url("update", {"id": "x", "deadline": ""})
+        assert "deadline=" in url
+        _, params = _parse_things_url(url)
+        assert params["deadline"] == ""
+
+    @patch(PATCH_AUTH, return_value="")
     def test_tags_comma_separated(self, _):
         """Tag lists are joined with commas."""
         from things_mcp.url_scheme import construct_url
@@ -108,6 +122,29 @@ class TestConstructUrl:
         _, params = _parse_things_url(url)
 
         assert params["items"] == "a,b,c"
+
+
+class TestUpdateTodoClearing:
+    """CDI-1167: update_todo emits empty values so Things clears the field."""
+
+    @patch(PATCH_AUTH, return_value="")
+    def test_clear_deadline_with_empty_string(self, _):
+        from things_mcp.url_scheme import update_todo
+
+        url = update_todo(id="task-123", deadline="")
+        command, params = _parse_things_url(url)
+        assert command == "update"
+        assert "deadline=" in url
+        assert params["deadline"] == ""
+
+    @patch(PATCH_AUTH, return_value="")
+    def test_clear_when_with_empty_string(self, _):
+        from things_mcp.url_scheme import update_todo
+
+        url = update_todo(id="task-123", when="")
+        _, params = _parse_things_url(url)
+        assert "when=" in url
+        assert params["when"] == ""
 
 
 class TestAddTodo:
