@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.3] - 2026-06-05
+
+- chore(ci): drop PyPI publishing — deploy is launchd-local, no PyPI consumers (CDI-1169)
+
+
 ## [2.1.2] - 2026-06-05
 
 - fix(ci): dispatch publish.yml after tag push so PyPI publish fires (CDI-1169)
