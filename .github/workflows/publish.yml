@@ -2,6 +2,10 @@ name: Publish to PyPI
 on:
   push:
     tags: ['v*']
+  # Dispatched by release.yml: tag pushes made with GITHUB_TOKEN never
+  # trigger tag-push workflows, so the release job dispatches this one
+  # explicitly on the new tag ref (CDI-1169).
+  workflow_dispatch:
 jobs:
   publish:
     runs-on: ubuntu-latest
