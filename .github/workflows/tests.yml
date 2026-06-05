@@ -3,9 +3,9 @@ name: Tests
 
 on:
   push:
-    branches: [source, main]
+    branches: [source]
   pull_request:
-    branches: [source, main]
+    branches: [source]
 
 jobs:
   lint-and-test:
