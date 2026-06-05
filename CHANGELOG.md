@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.2] - 2026-06-05
+
+- fix(ci): dispatch publish.yml after tag push so PyPI publish fires (CDI-1169)
+
+
 All notable changes to Things 3 Enhanced MCP will be documented in this file.
 
 ## [Unreleased]
