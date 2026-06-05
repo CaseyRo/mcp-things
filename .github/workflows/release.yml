@@ -17,7 +17,6 @@ jobs:
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     permissions:
       contents: write
-      actions: write  # needed to dispatch publish.yml
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,11 +61,3 @@ jobs:
         run: |
           git push origin HEAD:source
           git push origin --tags
-
-      # Tag pushes made with GITHUB_TOKEN do not trigger the tag-triggered
-      # publish workflow (GitHub anti-recursion rule), so dispatch it
-      # explicitly on the new tag (CDI-1169).
-      - name: Trigger PyPI publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run publish.yml --ref "v${{ steps.version.outputs.version }}"
