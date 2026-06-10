@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.6] - 2026-06-10
+
+- fix(things): harden ToolEnvelope (optional summary, extra=ignore) (shelf) (#36)
+
+
 ## [2.1.5] - 2026-06-10
 
 - ci: bump GitHub Actions to node24 majors (checkout@v6, setup-python@v6) (#35)
