@@ -11,7 +11,7 @@ from fastmcp.tools import ToolResult
 from .formatters import to_dict_todo
 from .logging_config import get_logger
 from .models import ReviewReport, ToolEnvelope, output_schema_for
-from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .tool_results import make_result
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
@@ -30,6 +30,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
     @mcp.tool(
         name="daily-review",
         annotations=TOOL_ANNOTATIONS["daily-review"],
+        tags=tags_for("daily-review"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[ReviewReport]),
     )
@@ -167,6 +168,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
     @mcp.tool(
         name="weekly-review",
         annotations=TOOL_ANNOTATIONS["weekly-review"],
+        tags=tags_for("weekly-review"),
         timeout=10,
         output_schema=output_schema_for(ToolEnvelope[ReviewReport]),
     )

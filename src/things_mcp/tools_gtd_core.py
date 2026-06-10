@@ -27,7 +27,7 @@ from .url_scheme import (
 from .logging_config import get_logger
 from .cache import invalidate_caches_for
 from .tag_handler import ensure_tags_exist
-from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
 
@@ -47,6 +47,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-tasks",
         annotations=TOOL_ANNOTATIONS["get-tasks"],
+        tags=tags_for("get-tasks"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
@@ -270,6 +271,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="focus-mode",
         annotations=TOOL_ANNOTATIONS["focus-mode"],
+        tags=tags_for("focus-mode"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[FocusResult]),
     )
@@ -434,6 +436,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="complete-task",
         annotations=TOOL_ANNOTATIONS["complete-task"],
+        tags=tags_for("complete-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -565,6 +568,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="capture-task",
         annotations=TOOL_ANNOTATIONS["capture-task"],
+        tags=tags_for("capture-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -639,6 +643,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="process-inbox",
         annotations=TOOL_ANNOTATIONS["process-inbox"],
+        tags=tags_for("process-inbox"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[Union[Todo, list[Todo]]]),
     )
@@ -807,6 +812,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     @mcp.tool(
         name="convert-to-project",
         annotations=TOOL_ANNOTATIONS["convert-to-project"],
+        tags=tags_for("convert-to-project"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
