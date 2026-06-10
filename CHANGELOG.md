@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.5] - 2026-06-10
+
+- ci: bump GitHub Actions to node24 majors (checkout@v6, setup-python@v6) (#35)
+
+
 ## [2.1.4] - 2026-06-10
 
 - feat: fastmcp 3.4.2 uplift — annotations, structured output, resources, prompts, context (#34)
