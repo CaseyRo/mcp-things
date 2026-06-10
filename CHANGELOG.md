@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.4] - 2026-06-10
+
+- feat: fastmcp 3.4.2 uplift — annotations, structured output, resources, prompts, context (#34)
+
+
 ## [2.1.3] - 2026-06-05
 
 - chore(ci): drop PyPI publishing — deploy is launchd-local, no PyPI consumers (CDI-1169)
