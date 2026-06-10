@@ -32,7 +32,7 @@ from .tag_handler import ensure_tags_exist
 from .triage_tracker import triage_tracker
 from .utils import app_state
 from .input_validation import validate_uuid_list, validate_tag_names
-from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .resolvers import resolve_list_id
 
 logger = get_logger(__name__)
@@ -127,6 +127,7 @@ def register_batch_tools(mcp: FastMCP):
     @mcp.tool(
         name="bulk-capture",
         annotations=TOOL_ANNOTATIONS["bulk-capture"],
+        tags=tags_for("bulk-capture"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
@@ -225,6 +226,7 @@ def register_batch_tools(mcp: FastMCP):
     @mcp.tool(
         name="bulk-complete",
         annotations=TOOL_ANNOTATIONS["bulk-complete"],
+        tags=tags_for("bulk-complete"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
@@ -314,6 +316,7 @@ def register_batch_tools(mcp: FastMCP):
     @mcp.tool(
         name="bulk-cancel",
         annotations=TOOL_ANNOTATIONS["bulk-cancel"],
+        tags=tags_for("bulk-cancel"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
@@ -401,6 +404,7 @@ def register_batch_tools(mcp: FastMCP):
     @mcp.tool(
         name="bulk-modify",
         annotations=TOOL_ANNOTATIONS["bulk-modify"],
+        tags=tags_for("bulk-modify"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
@@ -524,6 +528,7 @@ def register_batch_tools(mcp: FastMCP):
     @mcp.tool(
         name="bulk-triage",
         annotations=TOOL_ANNOTATIONS["bulk-triage"],
+        tags=tags_for("bulk-triage"),
         timeout=60,
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )

@@ -41,7 +41,7 @@ from .utils import app_state
 from .url_scheme import show, launch_things
 from .logging_config import get_logger
 from .cache import get_cache_stats
-from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
 from .input_validation import validate_show_id
@@ -61,6 +61,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="search-tasks",
         annotations=TOOL_ANNOTATIONS["search-tasks"],
+        tags=tags_for("search-tasks"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
@@ -154,6 +155,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-projects",
         annotations=TOOL_ANNOTATIONS["get-projects"],
+        tags=tags_for("get-projects"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Project]]),
     )
@@ -184,6 +186,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-areas",
         annotations=TOOL_ANNOTATIONS["get-areas"],
+        tags=tags_for("get-areas"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Area]]),
     )
@@ -208,6 +211,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-project",
         annotations=TOOL_ANNOTATIONS["get-project"],
+        tags=tags_for("get-project"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[Project]),
     )
@@ -310,6 +314,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-area",
         annotations=TOOL_ANNOTATIONS["get-area"],
+        tags=tags_for("get-area"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[Area]),
     )
@@ -389,6 +394,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-tags",
         annotations=TOOL_ANNOTATIONS["get-tags"],
+        tags=tags_for("get-tags"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Tag]]),
     )
@@ -413,6 +419,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="show-in-app",
         annotations=TOOL_ANNOTATIONS["show-in-app"],
+        tags=tags_for("show-in-app"),
         timeout=10,
         output_schema=output_schema_for(ToolEnvelope[ShowInAppResult]),
     )
@@ -453,6 +460,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="get-cache-stats",
         annotations=TOOL_ANNOTATIONS["get-cache-stats"],
+        tags=tags_for("get-cache-stats"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[CacheStats]),
     )
@@ -486,6 +494,7 @@ def register_utility_tools(mcp: FastMCP):
     @mcp.tool(
         name="triage-insights",
         annotations=TOOL_ANNOTATIONS["triage-insights"],
+        tags=tags_for("triage-insights"),
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[TriageInsights]),
     )

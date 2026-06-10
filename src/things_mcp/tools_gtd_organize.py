@@ -24,7 +24,7 @@ from .url_scheme import (
 from .logging_config import get_logger
 from .cache import invalidate_caches_for
 from .tag_handler import ensure_tags_exist
-from .tool_annotations import TOOL_ANNOTATIONS
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .applescript_bridge import run_applescript, escape_applescript_string
 from .triage_tracker import triage_tracker
 from .input_validation import validate_tag_names, validate_name, validate_notes_length
@@ -94,6 +94,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="schedule-task",
         annotations=TOOL_ANNOTATIONS["schedule-task"],
+        tags=tags_for("schedule-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -196,6 +197,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="delegate-task",
         annotations=TOOL_ANNOTATIONS["delegate-task"],
+        tags=tags_for("delegate-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -313,6 +315,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="defer-task",
         annotations=TOOL_ANNOTATIONS["defer-task"],
+        tags=tags_for("defer-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -443,6 +446,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="plan-project",
         annotations=TOOL_ANNOTATIONS["plan-project"],
+        tags=tags_for("plan-project"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -544,6 +548,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="modify-task",
         annotations=TOOL_ANNOTATIONS["modify-task"],
+        tags=tags_for("modify-task"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -708,6 +713,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="create-area",
         annotations=TOOL_ANNOTATIONS["create-area"],
+        tags=tags_for("create-area"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -824,6 +830,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="modify-project",
         annotations=TOOL_ANNOTATIONS["modify-project"],
+        tags=tags_for("modify-project"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -967,6 +974,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="modify-area",
         annotations=TOOL_ANNOTATIONS["modify-area"],
+        tags=tags_for("modify-area"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -1064,6 +1072,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="delete-area",
         annotations=TOOL_ANNOTATIONS["delete-area"],
+        tags=tags_for("delete-area"),
         timeout=30,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
@@ -1169,6 +1178,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
     @mcp.tool(
         name="merge-areas",
         annotations=TOOL_ANNOTATIONS["merge-areas"],
+        tags=tags_for("merge-areas"),
         timeout=60,
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
