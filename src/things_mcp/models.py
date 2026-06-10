@@ -30,16 +30,29 @@ DataT = TypeVar("DataT")
 
 
 class ToolEnvelope(BaseModel, Generic[DataT]):
-    """Uniform JSON envelope returned by every tool's `structured_content`."""
+    """Uniform JSON envelope returned by every tool's `structured_content`.
 
-    model_config = ConfigDict(extra="forbid")
+    Hardened to never raise at construction time on an internal path:
+
+    - ``summary`` is optional and defaults to ``""``. Every tool still sets a
+      real summary on the wire (the external return contract is unchanged), but
+      an internal caller that omits it gets an empty headline instead of a
+      runtime ``ValidationError``.
+    - ``extra="ignore"`` means an unexpected key (e.g. one re-attached by a
+      client/middleware round-trip) is dropped rather than rejected.
+      ``ClientCompatibilityMiddleware`` already strips extras on the wire, so
+      the shape clients see is unchanged; this only removes the footgun where a
+      stray key would crash construction.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     data: DataT | None = Field(
         default=None,
         description="Typed payload. Null when the tool's only useful signal is the summary.",
     )
     summary: str = Field(
-        ...,
+        default="",
         description="One-sentence machine-readable headline.",
     )
     meta: dict[str, Any] = Field(
