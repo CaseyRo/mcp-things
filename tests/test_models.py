@@ -215,9 +215,43 @@ class TestModelInvariants:
         env = ToolEnvelope(data=None, summary="ok")
         assert env.meta == {}
 
-    def test_envelope_extra_fields_forbidden(self):
-        with pytest.raises(Exception):
-            ToolEnvelope.model_validate({"data": None, "summary": "ok", "extra": 1})
+    def test_envelope_summary_is_optional_and_defaults_to_empty(self):
+        """Hardened envelope: omitting `summary` must not raise (footgun fix).
+
+        Internal paths that forget to set a summary should get an empty
+        headline instead of a runtime ValidationError.
+        """
+        env = ToolEnvelope(data=None)
+        assert env.summary == ""
+        # Same via model_validate (the structured-output path).
+        validated = ToolEnvelope.model_validate({"data": None})
+        assert validated.summary == ""
+
+    def test_envelope_ignores_unexpected_extra_key(self):
+        """Hardened envelope: an unexpected extra key must be dropped, not raise.
+
+        ClientCompatibilityMiddleware already strips extras on the wire; this
+        guarantees the model itself degrades gracefully if one slips through.
+        """
+        # Construction with an unexpected kwarg must not raise.
+        env = ToolEnvelope(data=None, summary="ok", unexpected="boom")
+        assert env.summary == "ok"
+        assert not hasattr(env, "unexpected")
+        # And via model_validate (the round-trip path).
+        validated = ToolEnvelope.model_validate(
+            {"data": None, "summary": "ok", "extra": 1}
+        )
+        assert validated.summary == "ok"
+        # The extra key is ignored, so the serialized shape clients see is
+        # unchanged (data/summary/meta only).
+        assert set(validated.model_dump().keys()) == {"data", "summary", "meta"}
+
+    def test_envelope_no_args_does_not_raise(self):
+        """Belt-and-suspenders: a fully bare envelope is constructible."""
+        env = ToolEnvelope()
+        assert env.data is None
+        assert env.summary == ""
+        assert env.meta == {}
 
     def test_todo_status_enum_enforced(self):
         with pytest.raises(Exception):
