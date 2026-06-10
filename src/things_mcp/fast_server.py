@@ -48,6 +48,8 @@ from .tools_gtd_organize import register_gtd_organize_tools
 from .tools_gtd_reflect import register_gtd_reflect_tools
 from .tools_utility import register_utility_tools
 from .tools_batch import register_batch_tools
+from .resources import register_resources
+from .prompts import register_prompts
 
 # Configure enhanced logging
 # Console shows DEBUG if THINGS_MCP_DEBUG=true, otherwise INFO
@@ -67,6 +69,10 @@ register_gtd_organize_tools(mcp)  # Organize
 register_gtd_reflect_tools(mcp)  # Reflect
 register_utility_tools(mcp)  # Utility (search, list, show, cache)
 register_batch_tools(mcp)  # Batch (bulk-capture, bulk-complete, etc.)
+
+# Register ambient GTD-state resources and guided-workflow prompts
+register_resources(mcp)  # things:// resources (inbox count, today, stalled, etc.)
+register_prompts(mcp)  # Guided GTD prompts (weekly-review, process-inbox, plan)
 
 
 def _print_shutdown_summary():

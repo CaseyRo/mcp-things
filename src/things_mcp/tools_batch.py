@@ -148,6 +148,9 @@ def register_batch_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info(f"Bulk capturing {len(items)} items...")
+            await ctx.report_progress(
+                progress=0, total=len(items), message="Preparing capture"
+            )
 
         if not items:
             _error_result("items cannot be empty")
@@ -185,6 +188,11 @@ def register_batch_tools(mcp: FastMCP):
             success = execute_json(todo_objects)
             if not success:
                 _error_result("Failed to create items via Things JSON API")
+
+            if ctx:
+                await ctx.report_progress(
+                    progress=len(items), total=len(items), message="Capture complete"
+                )
 
             invalidate_caches_for(["get-inbox", "get-tasks"])
 
@@ -234,6 +242,9 @@ def register_batch_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info(f"Completing {len(task_ids)} tasks...")
+            await ctx.report_progress(
+                progress=0, total=len(task_ids), message="Completing tasks"
+            )
 
         validate_uuid_list(task_ids)
 
@@ -255,6 +266,13 @@ def register_batch_tools(mcp: FastMCP):
                 _error_result(
                     f"AppleScript failed. {len(task_ids)} tasks may be partially completed. "
                     "Verify with get-tasks and retry remaining."
+                )
+
+            if ctx:
+                await ctx.report_progress(
+                    progress=len(task_ids),
+                    total=len(task_ids),
+                    message="Tasks completed",
                 )
 
             invalidate_caches_for(
@@ -313,6 +331,9 @@ def register_batch_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info(f"Canceling {len(task_ids)} tasks...")
+            await ctx.report_progress(
+                progress=0, total=len(task_ids), message="Canceling tasks"
+            )
 
         validate_uuid_list(task_ids)
 
@@ -333,6 +354,13 @@ def register_batch_tools(mcp: FastMCP):
                 _error_result(
                     f"AppleScript failed. {len(task_ids)} tasks may be partially canceled. "
                     "Verify with get-tasks and retry remaining."
+                )
+
+            if ctx:
+                await ctx.report_progress(
+                    progress=len(task_ids),
+                    total=len(task_ids),
+                    message="Tasks canceled",
                 )
 
             invalidate_caches_for(
@@ -430,7 +458,14 @@ def register_batch_tools(mcp: FastMCP):
             succeeded_ids: list[str] = []
             failed_ids: list[str] = []
             errors: list[BulkItemError] = []
-            for tid in task_ids:
+            total = len(task_ids)
+            for idx, tid in enumerate(task_ids, start=1):
+                if ctx:
+                    await ctx.report_progress(
+                        progress=idx,
+                        total=total,
+                        message=f"Modifying task {idx}/{total}",
+                    )
                 url = update_todo(
                     id=tid,
                     when=when,
@@ -535,6 +570,21 @@ def register_batch_tools(mcp: FastMCP):
             errors: list[BulkItemError] = []
             titles = _prefetch_titles(all_ids)
 
+            # Progress tracking: batched complete/cancel count as one step each;
+            # the per-item URL-scheme actions report incremental progress.
+            total_steps = len(decisions)
+            done_steps = 0
+
+            async def _tick(amount: int = 1, message: str = "") -> None:
+                nonlocal done_steps
+                done_steps += amount
+                if ctx:
+                    await ctx.report_progress(
+                        progress=min(done_steps, total_steps),
+                        total=total_steps,
+                        message=message or f"Triaged {done_steps}/{total_steps}",
+                    )
+
             # Batch complete (single AppleScript)
             if completes:
                 ids = [d.task_id for d in completes]
@@ -559,6 +609,7 @@ def register_batch_tools(mcp: FastMCP):
                             )
                         except Exception:
                             pass
+                    await _tick(len(completes), "Completed inbox items")
                 else:
                     results["failed"] += len(completes)
                     results["failures"].append(
@@ -577,6 +628,7 @@ def register_batch_tools(mcp: FastMCP):
                                 reason="AppleScript failed",
                             )
                         )
+                    await _tick(len(completes), "Complete batch failed")
 
             # Batch cancel (single AppleScript)
             if cancels:
@@ -602,6 +654,7 @@ def register_batch_tools(mcp: FastMCP):
                             )
                         except Exception:
                             pass
+                    await _tick(len(cancels), "Canceled inbox items")
                 else:
                     results["failed"] += len(cancels)
                     results["failures"].append(
@@ -620,9 +673,11 @@ def register_batch_tools(mcp: FastMCP):
                                 reason="AppleScript failed",
                             )
                         )
+                    await _tick(len(cancels), "Cancel batch failed")
 
             # Defer/schedule (individual URL scheme calls)
             for d in defers + schedules:
+                await _tick(message=f"{d.action.capitalize()} item")
                 try:
                     # Append notes if provided
                     if d.notes:
@@ -675,6 +730,7 @@ def register_batch_tools(mcp: FastMCP):
 
             # Delegate (individual URL scheme calls — adds waiting-for tag + notes)
             for d in delegates:
+                await _tick(message="Delegating item")
                 try:
                     ensure_tags_exist(["waiting-for"])
                     delegate_notes = f"Delegated to: {d.delegated_to}"
@@ -730,6 +786,7 @@ def register_batch_tools(mcp: FastMCP):
 
             # Assign to project (individual convert-to-project calls)
             for d in assigns:
+                await _tick(message="Assigning item to a project")
                 try:
                     from .url_scheme import add_project_with_tasks
 
