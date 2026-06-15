@@ -165,6 +165,9 @@ def mock_things(monkeypatch):
     mock_things_module.tags = mock.Mock(return_value=[])
     mock_things_module.get = mock.Mock(return_value=None)
     mock_things_module.search = mock.Mock(return_value=[])
+    # Reader-only helper (CDI-1255): the reader exposes index_stale(); the
+    # mocked db must default to "not stale" so empty reads are authoritative.
+    mock_things_module.index_stale = mock.Mock(return_value=False)
 
     # Patch the things module in modules that still import it directly
     monkeypatch.setattr("things_mcp.formatters.things", mock_things_module)

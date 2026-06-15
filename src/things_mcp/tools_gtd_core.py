@@ -30,6 +30,7 @@ from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .triage_tracker import triage_tracker
 from .settings import get_dashboard_url
+from .write_overlay import record_write
 
 logger = get_logger(__name__)
 
@@ -114,6 +115,26 @@ def register_gtd_core_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info(f"Fetching tasks (view={view}, context={context})...")
+
+        # CDI-1255: built-in lists (Inbox, Today, ...) are not areas. If someone
+        # passes a list name as `area`, redirect them to the matching `view`
+        # rather than filtering by a non-existent area and returning empty.
+        if area and area.strip().lower() in {
+            "inbox",
+            "today",
+            "tomorrow",
+            "upcoming",
+            "anytime",
+            "someday",
+            "logbook",
+            "trash",
+            "deadlines",
+        }:
+            list_name = area.strip().lower()
+            _error_result(
+                f"'{area}' is a built-in Things list, not an area. "
+                f"Use view='{list_name}' (not area='{area}') to list its contents."
+            )
 
         try:
             # Build query based on view
@@ -474,19 +495,37 @@ def register_gtd_core_tools(mcp: FastMCP):
                 ]
 
                 if len(matches) == 0:
-                    no_match = (
-                        f"No task found matching '{task_title}'.\n\n"
-                        "Use search-tasks to find the correct task, or check "
-                        "get-tasks(view='logbook') if already completed."
-                    )
+                    # CDI-1255: distinguish a genuine miss from a possibly-stale
+                    # index. If something was just written, the on-disk SQLite
+                    # snapshot may be behind — say so instead of a false negative.
+                    stale = db.index_stale()
+                    if stale:
+                        no_match = (
+                            f"No task found matching '{task_title}' yet — a task was "
+                            "captured very recently and Things may not have flushed "
+                            "it to the read index. Wait a moment and retry, or pass "
+                            "task_id directly."
+                        )
+                        summary_msg = (
+                            f"No task found matching '{task_title}' "
+                            "(index may be stale)."
+                        )
+                    else:
+                        no_match = (
+                            f"No task found matching '{task_title}'.\n\n"
+                            "Use search-tasks to find the correct task, or check "
+                            "get-tasks(view='logbook') if already completed."
+                        )
+                        summary_msg = f"No task found matching '{task_title}'."
                     return make_result(
                         data=WriteResult(
                             acknowledged=False,
                             thing_id=None,
-                            summary=f"No task found matching '{task_title}'.",
+                            summary=summary_msg,
                         ).model_dump(),
-                        summary=f"No task found matching '{task_title}'.",
+                        summary=summary_msg,
                         text=no_match,
+                        meta={"index_stale": stale},
                     )
 
                 if len(matches) > 1:
@@ -612,6 +651,11 @@ def register_gtd_core_tools(mcp: FastMCP):
                 _error_result("Failed to capture task")
 
             invalidate_caches_for(["get-inbox", "get-tasks"])
+
+            # Record in the write overlay so this item is visible to same-session
+            # reads (search-tasks / get-tasks / fuzzy task_title) before Things
+            # flushes it to SQLite. CDI-1255: read-your-writes consistency.
+            record_write(title, when=when, tags=tags, notes=notes)
 
             if when:
                 summary = f"Captured and scheduled: {title} ({when})"

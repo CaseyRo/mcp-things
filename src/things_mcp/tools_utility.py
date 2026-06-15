@@ -80,16 +80,46 @@ def register_utility_tools(mcp: FastMCP):
         Use when: Looking for a specific task or filtering by criteria.
         Results are capped at `limit` (default 20). Increase limit to see more.
 
+        Note on `area`: `area` filters by an *area of responsibility* (name or
+        UUID). Things' built-in lists — Inbox, Today, Anytime, Someday, Upcoming,
+        Logbook, Trash — are NOT areas. To list one of those, use
+        get-tasks(view="inbox" | "today" | "anytime" | ...). Passing a list name
+        like area="Inbox" is rejected with this guidance rather than silently
+        returning empty (CDI-1255).
+
         Args:
             query: Search text (matches title and notes)
             status: Filter by status - incomplete, completed, canceled
             tag: Filter by tag (context)
-            area: Filter by area
+            area: Filter by area of responsibility (name or UUID), NOT a built-in
+                list. For Inbox/Today/Anytime/etc. use get-tasks(view=...).
             deadline: Filter by deadline date
             limit: Maximum results to return (default 20, max 200)
         """
         if ctx:
             await ctx.info("Searching tasks...")
+
+        # Built-in Things lists are not areas. Reject area="Inbox" (and the other
+        # list names) with a clear redirect instead of silently returning empty.
+        # CDI-1255 secondary fix.
+        _BUILTIN_LISTS = {
+            "inbox": "inbox",
+            "today": "today",
+            "tomorrow": "tomorrow",
+            "upcoming": "upcoming",
+            "anytime": "anytime",
+            "someday": "someday",
+            "logbook": "logbook",
+            "trash": "trash",
+            "deadlines": "deadlines",
+        }
+        if area and area.strip().lower() in _BUILTIN_LISTS:
+            view = _BUILTIN_LISTS[area.strip().lower()]
+            _error_result(
+                f"'{area}' is a built-in Things list, not an area. "
+                f"Use get-tasks(view='{view}') to list its contents. "
+                "The `area` filter is for areas of responsibility only."
+            )
 
         try:
             kwargs = {}
@@ -112,10 +142,22 @@ def register_utility_tools(mcp: FastMCP):
                 )
 
             if not todos:
+                # CDI-1255: distinguish a genuine empty result from a possibly
+                # stale index (something written but not yet flushed to SQLite).
+                stale = db.index_stale()
+                if stale:
+                    msg = (
+                        "No tasks found matching your criteria yet — a task was "
+                        "captured very recently and Things may not have flushed it "
+                        "to the read index. Retry in a moment."
+                    )
+                else:
+                    msg = "No tasks found matching your criteria."
                 return make_result(
                     data=[],
-                    summary="No tasks found matching your criteria.",
-                    text="No tasks found matching your criteria.",
+                    summary=msg,
+                    text=msg,
+                    meta={"index_stale": stale},
                 )
 
             effective_limit = min(max(1, limit), 200)

@@ -29,6 +29,7 @@ from .applescript_bridge import run_applescript, escape_applescript_string
 from .triage_tracker import triage_tracker
 from .input_validation import validate_tag_names, validate_name, validate_notes_length
 from .resolvers import resolve_list_id
+from .write_overlay import record_write
 
 logger = get_logger(__name__)
 
@@ -68,10 +69,41 @@ def _normalize_clearable_date(value: Optional[str]) -> Optional[str]:
 
 
 def _resolve_task_by_title(task_title: str) -> str:
-    """Resolve a task_title to a UUID. Returns UUID or raises ToolError."""
-    matches = things.todos(status="incomplete")
+    """Resolve a task_title to a UUID. Returns UUID or raises ToolError.
+
+    Reads through the overlay-aware ``reader`` (CDI-1255) so a task captured a
+    moment ago is matchable even before Things flushes it to SQLite. A
+    provisional overlay match has only a synthetic ``overlay:`` id (the write
+    path never returns a real UUID), so it cannot be mutated by id — we surface a
+    staleness-aware error telling the caller to retry shortly rather than a flat
+    false "No task found".
+    """
+    from . import reader as db
+
+    matches = db.todos(status="incomplete")
     matches = [t for t in matches if task_title.lower() in t.get("title", "").lower()]
+
+    # An overlay-only match means the item exists but isn't yet persisted, so we
+    # have no real UUID to act on. Treat it as "stale index", not "not found".
+    real_matches = [
+        m for m in matches if not str(m.get("uuid", "")).startswith("overlay:")
+    ]
+
+    if len(matches) >= 1 and len(real_matches) == 0:
+        _error_result(
+            f"'{task_title}' was just captured but Things has not flushed it to "
+            "the read index yet, so it has no addressable id. Wait a moment and "
+            "retry, or pass task_id directly."
+        )
+    matches = real_matches
     if len(matches) == 0:
+        stale = db.index_stale()
+        if stale:
+            _error_result(
+                f"No task found matching '{task_title}' yet — a task was captured "
+                "very recently and may not be in the read index. Retry shortly, "
+                "or pass task_id directly."
+            )
         _error_result(
             f"No task found matching '{task_title}'.\n"
             "Use search-tasks to find the correct task."
@@ -165,6 +197,11 @@ def register_gtd_organize_tools(mcp: FastMCP):
             invalidate_caches_for(
                 ["get-tasks", "get-today", "get-upcoming", "get-anytime"]
             )
+
+            # Record in the write overlay for read-your-writes consistency
+            # (CDI-1255): a scheduled task is a brand-new item the read index may
+            # not have flushed yet.
+            record_write(title, when=when, tags=tags, notes=notes)
 
             text_body = f"Scheduled: {title}\n"
             text_body += f"- When: {when}\n"

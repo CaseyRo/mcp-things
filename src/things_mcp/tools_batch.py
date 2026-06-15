@@ -34,6 +34,7 @@ from .utils import app_state
 from .input_validation import validate_uuid_list, validate_tag_names
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .resolvers import resolve_list_id
+from .write_overlay import record_write
 
 logger = get_logger(__name__)
 
@@ -196,6 +197,18 @@ def register_batch_tools(mcp: FastMCP):
                 )
 
             invalidate_caches_for(["get-inbox", "get-tasks"])
+
+            # Record each item in the write overlay for read-your-writes
+            # consistency (CDI-1255): the JSON URL scheme returns no UUIDs and
+            # Things may not flush to SQLite immediately, so same-session reads
+            # would otherwise miss these freshly captured items.
+            for item in items:
+                record_write(
+                    item.title,
+                    when=item.when or default_when,
+                    tags=item.tags,
+                    notes=item.notes,
+                )
 
             titles = [item.title for item in items]
             text_body = f"Captured {len(items)} items"

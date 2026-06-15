@@ -32,13 +32,52 @@ def _get_sqlite_reader():
     return _reader if _reader is not False else None
 
 
+def _merge_overlay(
+    rows: list[dict[str, Any]],
+    *,
+    query: str | None = None,
+    status: str | None = None,
+) -> list[dict[str, Any]]:
+    """Fold just-written (not-yet-persisted) items into a read result.
+
+    See ``write_overlay`` and CDI-1255: Things does not flush URL-scheme writes
+    to SQLite immediately, so same-session reads merge the in-process overlay to
+    achieve read-your-writes consistency. De-dupes by title against ``rows`` so
+    a persisted item is never double-counted.
+    """
+    try:
+        from .write_overlay import get_overlay
+
+        return get_overlay().merge_into(rows, query=query, status=status)
+    except Exception:
+        logger.debug("reader: overlay merge skipped (non-critical)")
+        return rows
+
+
+def index_stale() -> bool:
+    """True if the SQLite snapshot is behind a recent write (CDI-1255).
+
+    Lets read tools distinguish a genuine "not found" from "the index may be
+    stale because something was just written". Best-effort; returns False on any
+    error so callers default to treating reads as authoritative.
+    """
+    try:
+        from .write_overlay import get_overlay
+
+        return get_overlay().is_index_stale()
+    except Exception:
+        return False
+
+
 def inbox() -> list[dict[str, Any]]:
     r = _get_sqlite_reader()
     if r:
-        return r.get_inbox()
-    import things
+        rows = r.get_inbox()
+    else:
+        import things
 
-    return things.inbox()
+        rows = things.inbox()
+    return _merge_overlay(rows, status="incomplete")
 
 
 def today() -> list[dict[str, Any]]:
@@ -80,10 +119,21 @@ def someday() -> list[dict[str, Any]]:
 def todos(**kwargs) -> list[dict[str, Any]]:
     r = _get_sqlite_reader()
     if r:
-        return r.get_todos(**kwargs)
-    import things
+        rows = r.get_todos(**kwargs)
+    else:
+        import things
 
-    return things.todos(**kwargs)
+        rows = things.todos(**kwargs)
+    # Only merge the overlay for broad incomplete queries: a freshly captured
+    # item has no project/area/tag/deadline yet, so a filtered query for those
+    # should not surface it (it would be a false match).
+    status = kwargs.get("status", "incomplete")
+    has_narrow_filter = any(
+        kwargs.get(k) is not None for k in ("project", "area", "tag", "deadline")
+    )
+    if has_narrow_filter:
+        return rows
+    return _merge_overlay(rows, status=status)
 
 
 def projects(**kwargs) -> list[dict[str, Any]]:
@@ -116,10 +166,12 @@ def tags() -> list[dict[str, Any]]:
 def search(query: str) -> list[dict[str, Any]]:
     r = _get_sqlite_reader()
     if r:
-        return r.search(query)
-    import things
+        rows = r.search(query)
+    else:
+        import things
 
-    return things.search(query)
+        rows = things.search(query)
+    return _merge_overlay(rows, query=query, status="incomplete")
 
 
 # Pass-through for write-adjacent reads that need things-py directly

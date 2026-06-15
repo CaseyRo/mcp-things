@@ -11,6 +11,41 @@ This file tracks the agent's thoughts, ideas, and work flow for the `mcp_things`
 
 ## Log
 
+### 2026-06-15 — CDI-1255: read-after-write staleness + Inbox-as-area
+
+- **Problem:** Tasks created via the write path (capture-task / bulk-capture /
+  schedule-task → Things URL scheme) were not reliably visible to the read path
+  (search-tasks, get-tasks, fuzzy task_title lookup → direct SQLite via the
+  reader, CDI-711). Things 3 does not flush URL-scheme writes to the on-disk
+  store immediately, so reads saw a stale snapshot → confident false "No task
+  found".
+- **Decision:** The write path uses the Things URL/JSON scheme, which returns no
+  UUID — so the ticket's option #1 (AppleScript read-back by id) is not cleanly
+  possible. Implemented option #2 (in-process write overlay, title-keyed, TTL
+  90s) + option #4 (staleness-aware "not found" signalling), with a touch of #3
+  (DB-file mtime comparison) to make the staleness signal accurate.
+- **Changes:**
+  - New `write_overlay.py`: thread-safe TTL store of just-written items keyed by
+    synthetic `overlay:` id; de-dupes by title against persisted rows; exposes
+    `is_index_stale()` (compares DB mtime captured at write vs. now).
+  - `reader.py`: `inbox()` / `todos()` / `search()` now fold matching overlay
+    rows in (narrow project/area/tag/deadline filters are skipped to avoid false
+    matches). Added `index_stale()` passthrough.
+  - `capture-task`, `bulk-capture`, `schedule-task` record into the overlay
+    after a successful write (best-effort, never fails the write).
+  - `search-tasks`, `complete-task`, `modify-task` (`_resolve_task_by_title`)
+    distinguish "not found" from "index may be stale" (text + `meta.index_stale`).
+  - **Inbox-as-area fix:** `search-tasks` and `get-tasks` now reject a built-in
+    list name (Inbox/Today/Anytime/…) passed as `area=` with a clear redirect to
+    `get-tasks(view=…)`, instead of silently returning empty. The documented
+    correct usage: Inbox is a LIST → `get-tasks(view="inbox")`; `area` is for
+    areas of responsibility only.
+- **Tests:** `tests/test_write_overlay.py` (overlay unit) +
+  `tests/test_read_after_write.py` (tool-level Inbox guard, staleness signalling,
+  reader merge). Full suite: 502 passed, 14 skipped, 36 deselected (real).
+  `ruff check` + `ruff format` clean. Could NOT exercise the live Things app
+  here (macOS app + real SQLite); overlay/staleness logic verified via mocks.
+
 ### 2025-10-16 (continued)
 
 - Implemented OpenSpec change `add-mcp-crud-tests` - Comprehensive test suite for MCP operations
