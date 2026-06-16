@@ -1,6 +1,6 @@
 [project]
 name = "mcp-things"
-version = "2.1.6"
+version = "2.1.7"
 description = "Production-ready Model Context Protocol server for Things 3, enabling AI assistants to interact with your task management system through natural language"
 readme = "README.md"
 requires-python = ">=3.12"
