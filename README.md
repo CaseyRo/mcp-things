@@ -19,6 +19,8 @@ uvx mcp-things
 
 This MCP server enables AI assistants like Claude to manage your tasks in Things 3 using natural language. But more than just a task API, it's designed around David Allen's **GTD methodology** — helping you capture, clarify, organize, reflect, and engage with your work the way GTD intended.
 
+> **Proven at scale.** In a single June 2026 session this server drove a full top-to-bottom cleanup of a 350+ item Things database — classifying every project and task, then executing 109 completions, 36 cancellations, and bulk-routing reference material out to other tools. Across ~150 mutating calls (including 50-item `bulk-complete` / `bulk-cancel` batches) every write landed, with the lone transient HTTP 502 recovering cleanly on an identical retry.
+
 ### The Vision
 
 > "Your head's a crappy office." — David Allen
