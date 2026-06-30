@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.8] - 2026-06-30
+
+- docs: hygiene pass — fix clone path, document batch tools, sanitize infra refs
+
+
 ## [2.1.6] - 2026-06-10
 
 - fix(things): harden ToolEnvelope (optional summary, extra=ignore) (shelf) (#36)
