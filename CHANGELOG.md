@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.9] - 2026-06-30
+
+- chore(deps): security upgrades (pip-audit)
+
+
 ## [2.1.8] - 2026-06-30
 
 - docs: hygiene pass — fix clone path, document batch tools, sanitize infra refs
