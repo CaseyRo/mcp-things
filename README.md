@@ -70,7 +70,7 @@ Contributions and ideas welcome.
 ```bash
 # Clone and install
 git clone https://github.com/CaseyRo/mcp-things.git
-cd mcp_things
+cd mcp-things
 uv pip install -e .
 
 # Configure Things 3 authentication token
@@ -165,7 +165,7 @@ Per-tool payload types are defined in `src/things_mcp/models.py` (`Todo`, `Proje
 
 ## GTD Tools
 
-The server provides **27 GTD-native tools** organized by methodology stage:
+The server provides **32 GTD-native tools** organized by methodology stage:
 
 ### Capture
 
@@ -211,7 +211,19 @@ The server provides **27 GTD-native tools** organized by methodology stage:
 | `focus-mode` | Get single most important task for current context |
 | `complete-task` | Mark task done by ID or fuzzy title match |
 
-Plus `search-tasks`, `triage-insights`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+### Batch
+
+N-item versions of the singular tools for high-throughput cleanups (each returns per-item `succeeded_ids` / `failed_ids`):
+
+| Tool | Purpose |
+|------|---------|
+| `bulk-capture` | Capture many tasks to the Inbox in one call |
+| `bulk-complete` | Complete many tasks by ID |
+| `bulk-cancel` | Cancel many tasks by ID |
+| `bulk-modify` | Apply the same property changes to many tasks |
+| `bulk-triage` | Record triage decisions (complete/cancel/defer/delegate) across many inbox items |
+
+Plus the utility tools `search-tasks`, `triage-insights`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
 
 ## GTD Health Dashboard
 

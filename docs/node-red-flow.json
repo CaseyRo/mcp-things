@@ -32,7 +32,7 @@
         "type": "function",
         "z": "cb7107b4f7646076",
         "name": "Setup API config",
-        "func": "var API_ENDPOINT = \"http://100.93.89.102\";\nvar API_PORT = \"8009\";\n\nflow.set(\"API_endpoint\", `${API_ENDPOINT}:${API_PORT}`);\nflow.set(\"API_host\", API_ENDPOINT);\nflow.set(\"API_port\", API_PORT);\n\nnode.status({fill:\"green\", shape:\"dot\", text:`${API_ENDPOINT}:${API_PORT}`});\nnode.warn(`Things MCP API configured: ${API_ENDPOINT}:${API_PORT}`);\n\nreturn msg;",
+        "func": "var API_ENDPOINT = \"http://127.0.0.1\";\nvar API_PORT = \"8009\";\n\nflow.set(\"API_endpoint\", `${API_ENDPOINT}:${API_PORT}`);\nflow.set(\"API_host\", API_ENDPOINT);\nflow.set(\"API_port\", API_PORT);\n\nnode.status({fill:\"green\", shape:\"dot\", text:`${API_ENDPOINT}:${API_PORT}`});\nnode.warn(`Things MCP API configured: ${API_ENDPOINT}:${API_PORT}`);\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,

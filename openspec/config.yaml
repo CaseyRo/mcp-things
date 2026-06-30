@@ -1,5 +1,10 @@
 schema: spec-driven
 
+# Reference the central fleet planning store (OpenSpec 1.5 stores beta).
+# Pulls the mcp-fleet spec index into this repo's agent context.
+references:
+  - mcp-fleet
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.

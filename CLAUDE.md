@@ -14,7 +14,7 @@ Things MCP is a Model Context Protocol server for Things 3 (macOS task managemen
 ```bash
 # Clone and install
 git clone https://github.com/CaseyRo/mcp-things.git
-cd mcp_things
+cd mcp-things
 uv pip install -e .
 
 # Configure authentication token

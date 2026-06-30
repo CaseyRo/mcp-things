@@ -1,6 +1,6 @@
 ## Context
 
-The Things MCP server (FastMCP 3.1.0, streamable-http) exposes 21 GTD tools with zero authentication for incoming requests. The `THINGS_AUTH_TOKEN` only authenticates outbound calls to Things 3 via URL scheme. The server is internet-facing via Caddy reverse proxy at `mcp-things-tmp.cdit-dev.de`. When the upstream is running, all tools — including write operations (capture, modify, complete, delete tasks) — are callable by anyone.
+The Things MCP server (FastMCP 3.1.0, streamable-http) exposes 21 GTD tools with zero authentication for incoming requests. The `THINGS_AUTH_TOKEN` only authenticates outbound calls to Things 3 via URL scheme. The server is internet-facing via a Caddy reverse proxy at a public hostname. When the upstream is running, all tools — including write operations (capture, modify, complete, delete tasks) — are callable by anyone.
 
 A security audit revealed additional vulnerabilities beyond missing auth: AppleScript injection via tag names (RCE), world-readable sensitive files, fragile log redaction, exception details leaked to clients, dashboard input validation gaps, PII in triage data, and missing security headers.
 

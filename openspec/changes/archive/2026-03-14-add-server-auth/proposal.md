@@ -2,7 +2,7 @@
 
 The MCP server has **zero authentication for incoming client requests**. The existing `THINGS_AUTH_TOKEN` is only used outbound (authenticating this server to Things 3 via URL scheme). Any client that can reach the server's network address can call all 21 tools — including write operations that create, modify, and delete tasks.
 
-**Exposure is critical**: the server is reverse-proxied through Caddy at `mcp-things-tmp.cdit-dev.de` (resolved to `0.0.0.0`, TLS via Let's Encrypt) — meaning it is **internet-facing**. Beyond the LAN exposure at `192.168.1.24:8009`, when the upstream is running, the public internet can reach all 21 tools with zero authentication. Caddy itself returns 403 when the upstream is down, but provides no auth layer when it's up.
+**Exposure is critical**: the server is reverse-proxied through Caddy at a public hostname (TLS via Let's Encrypt) — meaning it is **internet-facing**. Beyond LAN exposure on the server's bind port, when the upstream is running, the public internet can reach all 21 tools with zero authentication. Caddy itself returns 403 when the upstream is down, but provides no auth layer when it's up.
 
 A full security audit surfaced additional findings beyond the missing auth:
 
