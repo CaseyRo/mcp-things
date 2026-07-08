@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.11] - 2026-07-08
+
+- openspec: reference consolidated cdit store
+
+
 ## [2.1.10] - 2026-07-08
 
 - fix: fastmcp>=3.4.3 + allowed_hosts=["*"] — 3.4.3 rejects non-localhost Host with 421 (edge CF-Access/Tailscale gated)
