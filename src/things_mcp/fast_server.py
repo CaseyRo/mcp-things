@@ -346,6 +346,9 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
         stateless_http=True,
+        # fastmcp >=3.4.3 rejects non-localhost Host with 421 unless allowed_hosts
+        # set (edge is CF-Access/Tailscale gated). Requires fastmcp>=3.4.3.
+        allowed_hosts=["*"],
     )
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(
