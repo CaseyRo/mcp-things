@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.12] - 2026-07-08
+
+- Pin Python 3.12.11: TCC AppleEvents grants are keyed to the interpreter binary; 3.13 venv hangs osascript under launchd
+
+
 ## [2.1.11] - 2026-07-08
 
 - openspec: reference consolidated cdit store
