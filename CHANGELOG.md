@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.13] - 2026-07-11
+
+- Bump fastmcp 3.4.3->3.4.4
+
+
 ## [2.1.12] - 2026-07-08
 
 - Pin Python 3.12.11: TCC AppleEvents grants are keyed to the interpreter binary; 3.13 venv hangs osascript under launchd
