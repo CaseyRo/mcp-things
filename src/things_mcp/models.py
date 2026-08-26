@@ -95,6 +95,14 @@ class Todo(BaseModel):
     checklist: list[ChecklistItem] = Field(default_factory=list)
     start: str | None = None
     start_date: str | None = None
+    reminder_time: str | None = Field(
+        default=None,
+        description=(
+            'Time-of-day reminder as "HH:MM", or None when the to-do has no '
+            "reminder. Set it by passing a time on `when` (e.g. "
+            '"today@16:00" or "2026-08-03@09:30").'
+        ),
+    )
     deadline: str | None = None
     stop_date: str | None = None
     created: str | None = None
@@ -129,6 +137,10 @@ class Project(BaseModel):
     tags: list[str] = Field(default_factory=list)
     start: str | None = None
     start_date: str | None = None
+    reminder_time: str | None = Field(
+        default=None,
+        description='Time-of-day reminder as "HH:MM", or None when unset.',
+    )
     deadline: str | None = None
     stop_date: str | None = None
     created: str | None = None

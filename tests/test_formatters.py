@@ -272,6 +272,76 @@ class TestToDictTodoListField:
         assert to_dict_todo(todo)["list"] == "Inbox"
 
 
+class TestReminderTime:
+    """`reminder_time` must survive the SQL decode and the dict projections.
+
+    Regression guard for CDI-1543: Things stored the reminder correctly and
+    `sqlite_reader` decoded it correctly, but the hand-written allowlists in
+    `to_dict_todo` / `to_dict_project` silently dropped the field, so a
+    reminder set through the MCP could never be read back through the MCP.
+    """
+
+    def test_sql_decodes_things_time_encoding(self):
+        """hour = value >> 26, minute = (value >> 20) & 0x3F."""
+        import sqlite3
+
+        from things_mcp.sqlite_reader import _thingstime_to_iso_sql
+
+        conn = sqlite3.connect(":memory:")
+        expr = _thingstime_to_iso_sql("t")
+
+        def decode(raw):
+            return conn.execute(
+                f"SELECT {expr} FROM (SELECT ? AS t)", (raw,)
+            ).fetchone()[0]
+
+        assert decode(16 << 26) == "16:00"  # the live 2026-08-03 value, 0x40000000
+        assert decode((9 << 26) | (30 << 20)) == "09:30"
+        assert decode(0) is None  # no reminder -> NULL, not "00:00"
+        assert decode(None) is None
+
+        conn.close()
+
+    def test_to_dict_todo_carries_reminder_time(self):
+        from things_mcp.formatters import to_dict_todo
+
+        todo = {"uuid": "t1", "title": "Close the day", "reminder_time": "16:00"}
+        assert to_dict_todo(todo)["reminder_time"] == "16:00"
+
+    def test_to_dict_todo_reminder_time_absent_is_none(self):
+        from things_mcp.formatters import to_dict_todo
+
+        assert (
+            to_dict_todo({"uuid": "t2", "title": "No reminder"})["reminder_time"]
+            is None
+        )
+
+    def test_to_dict_project_carries_reminder_time(self):
+        from things_mcp.formatters import to_dict_project
+
+        project = {"uuid": "p1", "title": "Ship it", "reminder_time": "07:45"}
+        assert to_dict_project(project)["reminder_time"] == "07:45"
+
+    def test_todo_model_accepts_the_projection(self):
+        """`Todo` is extra="forbid" — the projection must validate against it."""
+        from things_mcp.formatters import to_dict_todo
+        from things_mcp.models import Todo
+
+        todo = to_dict_todo(
+            {"uuid": "t3", "title": "Close the day", "reminder_time": "16:00"}
+        )
+        assert Todo.model_validate(todo).reminder_time == "16:00"
+
+    def test_project_model_accepts_the_projection(self):
+        from things_mcp.formatters import to_dict_project
+        from things_mcp.models import Project
+
+        project = to_dict_project(
+            {"uuid": "p2", "title": "Ship it", "reminder_time": "07:45"}
+        )
+        assert Project.model_validate(project).reminder_time == "07:45"
+
+
 class TestFormatProject:
     """Tests for render_project()."""
 
