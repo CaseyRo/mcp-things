@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.14] - 2026-08-26
+
+- fix(formatters): carry reminder_time through to_dict projections (CDI-1543)
+
+
 ## [2.1.13] - 2026-07-11
 
 - Bump fastmcp 3.4.3->3.4.4
