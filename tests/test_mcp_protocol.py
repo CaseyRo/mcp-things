@@ -195,3 +195,22 @@ async def test_a_tool_call_round_trips(monkeypatch):
     assert not result.is_error
     assert "Errand" in result.content[0].text
     assert "tag-1" in result.content[0].text
+
+
+@pytest.mark.asyncio
+async def test_a_tool_call_writes_one_usage_line(monkeypatch, capsys):
+    import json
+
+    monkeypatch.setattr("things_mcp.tools_utility.db", SimpleNamespace(tags=lambda: []))
+    capsys.readouterr()
+    async with Client(mcp) as client:
+        await client.call_tool("get-tags", {})
+    lines = [
+        json.loads(line)
+        for line in capsys.readouterr().err.splitlines()
+        if '"mcp_usage"' in line
+    ]
+    assert len(lines) == 1
+    assert lines[0]["server"] == "things"
+    assert lines[0]["tool"] == "get-tags"
+    assert lines[0]["outcome"] == "ok"

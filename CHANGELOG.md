@@ -1,5 +1,7 @@
 # Changelog
 
+From here on, versions are git tags (`v*`), cut by the release workflow; entries below this line are the last committed bumps.
+
 ## [2.1.15] - 2026-09-27
 
 - chore(ci): phase-0 safety net — CI job 'test', fail-closed release tests, in-memory protocol tests (#37)
