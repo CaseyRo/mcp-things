@@ -20,6 +20,7 @@ import mcp.types as types
 
 from .logging_config import get_logger
 from .settings import get_settings
+from .usage import UsageMiddleware
 
 logger = get_logger(__name__)
 
@@ -489,5 +490,8 @@ def create_mcp_server() -> FastMCP:
         logger.info("Client compatibility middleware registered (n8n/ChatGPT)")
     except Exception as e:
         logger.warning(f"Could not register client compatibility middleware: {e}")
+
+    # Usage telemetry: one JSON line per tool call on stderr.
+    server.add_middleware(UsageMiddleware("things"))
 
     return server
