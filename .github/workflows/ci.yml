@@ -1,0 +1,25 @@
+# CI: lint and run tests on ubuntu. Things 3 isn't available here — tests that
+# need it are marked `real` and deselected by pytest.ini.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [source]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - run: uv sync --group dev
+      - run: uvx pip-audit
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest

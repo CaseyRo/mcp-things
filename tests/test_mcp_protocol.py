@@ -131,3 +131,67 @@ class TestMCPProtocol:
         assert request["params"]["sessionId"] == "test-session"
         assert request["params"]["action"] == "execute"
         assert request["params"]["chatInput"] == "test input"
+
+
+# ---------------------------------------------------------------------------
+# The MCP surface over a real in-memory client (fastmcp.Client(mcp)).
+#
+# Everything above only checks request shapes built by a hand-rolled client.
+# These go through the actual server — middleware included — the way a caller
+# does, so a framework upgrade that stops the server importing, drops a tool,
+# loses annotations on the wire, or breaks dispatch shows up here.
+# ---------------------------------------------------------------------------
+
+from types import SimpleNamespace  # noqa: E402
+
+from fastmcp import Client  # noqa: E402
+
+from things_mcp.fast_server import mcp  # noqa: E402
+
+EXPECTED_TOOLS = {
+    "get-tasks",
+    "search-tasks",
+    "get-projects",
+    "get-areas",
+    "get-tags",
+    "capture-task",
+    "modify-task",
+    "complete-task",
+    "modify-project",
+    "schedule-task",
+}
+
+
+@pytest.mark.asyncio
+async def test_server_registers_its_tools():
+    # Listed through the client so ClientCompatibilityMiddleware.on_list_tools
+    # runs, as it does for every real caller.
+    async with Client(mcp) as client:
+        names = {t.name for t in await client.list_tools()}
+    assert EXPECTED_TOOLS <= names, f"missing: {EXPECTED_TOOLS - names}"
+
+
+@pytest.mark.asyncio
+async def test_read_only_annotations_survive_the_wire():
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+    ann = tools["get-tags"].annotations
+    assert ann is not None
+    assert ann.readOnlyHint is True
+    assert ann.openWorldHint is False
+
+
+@pytest.mark.asyncio
+async def test_a_tool_call_round_trips(monkeypatch):
+    # get-tags reads through `things_mcp.tools_utility.db`; swap it so the call
+    # never touches Things' SQLite DB and runs on Linux CI.
+    fake_db = SimpleNamespace(
+        tags=lambda: [{"uuid": "tag-1", "title": "Errand", "shortcut": None}]
+    )
+    monkeypatch.setattr("things_mcp.tools_utility.db", fake_db)
+
+    async with Client(mcp) as client:
+        result = await client.call_tool("get-tags", {})
+    assert not result.is_error
+    assert "Errand" in result.content[0].text
+    assert "tag-1" in result.content[0].text

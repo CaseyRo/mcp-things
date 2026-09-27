@@ -32,7 +32,7 @@ jobs:
       - name: Install and test
         run: |
           uv sync
-          uv run pytest -x || echo "Tests skipped or failed"
+          uv run pytest -x
 
       - name: Bump version
         id: version
