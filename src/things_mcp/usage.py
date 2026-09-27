@@ -9,6 +9,7 @@ Works unchanged on fastmcp 3.x and 4.x (`on_call_tool` is the same hook).
 Register:  mcp.add_middleware(UsageMiddleware("siyuan"))
 Spec:      openspec/changes/upgrade-fleet-fastmcp-4/specs/mcp-usage-telemetry/spec.md
 """
+
 from __future__ import annotations
 
 import json
@@ -32,14 +33,21 @@ class UsageMiddleware(Middleware):
             return result
         finally:
             try:
-                sys.stderr.write(json.dumps({
-                    "mcp_usage": 1,
-                    "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                    "server": self.server,
-                    "tool": getattr(context.message, "name", "?"),
-                    "duration_ms": round((time.perf_counter() - start) * 1000),
-                    "outcome": outcome,
-                }) + "\n")
+                sys.stderr.write(
+                    json.dumps(
+                        {
+                            "mcp_usage": 1,
+                            "ts": datetime.now(timezone.utc).isoformat(
+                                timespec="seconds"
+                            ),
+                            "server": self.server,
+                            "tool": getattr(context.message, "name", "?"),
+                            "duration_ms": round((time.perf_counter() - start) * 1000),
+                            "outcome": outcome,
+                        }
+                    )
+                    + "\n"
+                )
                 sys.stderr.flush()
             except Exception:
                 pass
