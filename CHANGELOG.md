@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.15] - 2026-09-27
+
+- chore(ci): phase-0 safety net — CI job 'test', fail-closed release tests, in-memory protocol tests (#37)
+
+
 ## [2.1.14] - 2026-08-26
 
 - fix(formatters): carry reminder_time through to_dict projections (CDI-1543)
