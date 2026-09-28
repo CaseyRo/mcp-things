@@ -99,7 +99,7 @@ class TestModifyProject:
     async def test_rename(self):
         self.things.get.return_value = create_mock_project(uuid_str="p1")
         result = await self.modify_project(name_or_uuid="p1", title="New Name")
-        assert "title updated" in tool_text(result)
+        assert "renamed → New Name" in tool_text(result)
         self.mock_execute.assert_called_once()
 
     @pytest.mark.asyncio
@@ -112,7 +112,7 @@ class TestModifyProject:
             create_mock_area(uuid_str="area-1", title="Work")
         ]
         result = await self.modify_project(name_or_uuid="p1", area="Work")
-        assert "moved to area" in tool_text(result)
+        assert "area → Work" in tool_text(result)
 
     @pytest.mark.asyncio
     async def test_complete_with_incomplete_tasks_warning(self):
@@ -130,9 +130,15 @@ class TestModifyProject:
         self.things.get.return_value = create_mock_project(uuid_str="p1")
         url = mock.Mock(return_value="things:///update-project")
         monkeypatch.setattr("things_mcp.tools_gtd_organize.update_project", url)
-        await self.modify_project(name_or_uuid="p1", deadline="none", when="Clear")
+        result = await self.modify_project(
+            name_or_uuid="p1", deadline="none", when="Clear"
+        )
         assert url.call_args.kwargs["deadline"] == ""
         assert url.call_args.kwargs["when"] == ""
+        assert result.structured_content["meta"]["changes"] == [
+            "when cleared",
+            "deadline cleared",
+        ]
 
     @pytest.mark.asyncio
     async def test_not_found(self):

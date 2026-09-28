@@ -451,6 +451,24 @@ class TestModifyTaskClearDates:
         assert proj_kwargs["deadline"] == ""
 
     @pytest.mark.asyncio
+    async def test_project_routing_reports_changes(self, monkeypatch):
+        """The routed project update lists what changed, clears included."""
+        self.things.get.return_value = create_mock_project(uuid_str="p1")
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.update_project", mock.Mock(return_value="u")
+        )
+        result = await self.modify_task(
+            task_id="p1", title="New name", when="2026-10-01", deadline="none"
+        )
+        changes = result.structured_content["meta"]["changes"]
+        assert changes == [
+            "renamed → New name",
+            "when → 2026-10-01",
+            "deadline cleared",
+        ]
+        assert "deadline cleared" in result.structured_content["summary"]
+
+    @pytest.mark.asyncio
     async def test_project_id_rejects_checklist(self):
         self.things.get.return_value = create_mock_project(uuid_str="p1")
         with pytest.raises(ToolError, match="modify-project"):
