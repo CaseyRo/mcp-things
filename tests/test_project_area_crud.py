@@ -125,6 +125,16 @@ class TestModifyProject:
         assert "2 incomplete tasks" in tool_text(result)
 
     @pytest.mark.asyncio
+    async def test_clear_deadline_sentinel(self, monkeypatch):
+        """CDI-1880: "none" must clear, not be sent as a literal date."""
+        self.things.get.return_value = create_mock_project(uuid_str="p1")
+        url = mock.Mock(return_value="things:///update-project")
+        monkeypatch.setattr("things_mcp.tools_gtd_organize.update_project", url)
+        await self.modify_project(name_or_uuid="p1", deadline="none", when="Clear")
+        assert url.call_args.kwargs["deadline"] == ""
+        assert url.call_args.kwargs["when"] == ""
+
+    @pytest.mark.asyncio
     async def test_not_found(self):
         self.things.get.return_value = None
         self.things.projects.return_value = []

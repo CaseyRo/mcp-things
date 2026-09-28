@@ -171,12 +171,13 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if tags:
                 ensure_tags_exist(tags)
 
-            # Resolve project or area to list_id/list_title
+            # Resolve project or area to a list_id (CDI-1587: a raw project
+            # UUID passed as list_title matched nothing in Things).
             list_id = None
-            list_title = project  # project name passed directly
-            if area:
+            if project:
+                list_id = resolve_list_id(project, "project")
+            elif area:
                 list_id = resolve_list_id(area, "area")
-                list_title = None  # area uses list_id, not list_title
 
             # Build URL
             url = add_todo(
@@ -187,7 +188,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 tags=tags,
                 checklist_items=checklist,
                 list_id=list_id,
-                list_title=list_title,
             )
 
             success = execute_url(url)
@@ -612,6 +612,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
         Instead use: complete-task for completing, defer-task for rescheduling,
                      delegate-task for delegation.
 
+        A project UUID passed as task_id is routed to modify-project (checklist
+        and project moves are rejected for projects).
+
         Clearing a deadline or schedule (CDI-1167):
             To CLEAR an existing deadline or start date, pass one of the
             clear-sentinels as the value (case-insensitive): "none", "clear",
@@ -658,6 +661,28 @@ def register_gtd_organize_tools(mcp: FastMCP):
         try:
             if task_title and not task_id:
                 task_id = _resolve_task_by_title(task_title)
+
+            # CDI-1880: a project id sent through the to-do `update` URL is a
+            # silent no-op in Things. Route it to modify-project instead.
+            if (things.get(task_id) or {}).get("type") == "project":
+                if checklist or add_checklist or project:
+                    _error_result(
+                        f"'{task_id}' is a project, not a task: checklist and "
+                        "project moves don't apply. Use modify-project."
+                    )
+                return await modify_project(
+                    name_or_uuid=task_id,
+                    title=title,
+                    notes=notes,
+                    append_notes=add_notes,
+                    when=when,
+                    deadline=deadline,
+                    tags=tags,
+                    add_tags=add_tags,
+                    area=area,
+                    canceled=canceled,
+                    ctx=ctx,
+                )
 
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -901,8 +926,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
             notes: New notes (replaces existing)
             prepend_notes: Text to add before existing notes
             append_notes: Text to add after existing notes
-            when: Schedule date (today, tomorrow, evening, anytime, someday, YYYY-MM-DD)
-            deadline: Deadline date (YYYY-MM-DD)
+            when: Schedule date (today, tomorrow, evening, anytime, someday,
+                YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it.
+            deadline: Deadline date (YYYY-MM-DD). Pass "none"/"clear"/"remove"/
+                "null" to clear an existing deadline.
             tags: Tags to set (replaces existing)
             add_tags: Tags to add without replacing
             area: Area name or UUID to move project to
@@ -911,6 +938,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
         """
         if ctx:
             await ctx.info("Modifying project...")
+
+        # CDI-1880: same clear-sentinels as modify-task ("none" -> "").
+        when = _normalize_clearable_date(when)
+        deadline = _normalize_clearable_date(deadline)
 
         try:
             # Ensure Things app is running

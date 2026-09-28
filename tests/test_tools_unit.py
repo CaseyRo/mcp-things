@@ -360,6 +360,16 @@ class TestScheduleTask:
         )
         assert "Deadline: 2026-03-20" in tool_text(result)
 
+    @pytest.mark.asyncio
+    async def test_project_uuid_resolved_to_list_id(self, monkeypatch):
+        """CDI-1587: a project UUID goes out as list-id, not a raw list title."""
+        self.things.get.return_value = create_mock_project(uuid_str="p1")
+        add = mock.Mock(return_value="things:///add")
+        monkeypatch.setattr("things_mcp.tools_gtd_organize.add_todo", add)
+        await self.schedule_task(title="T", when="today", project="p1")
+        assert add.call_args.kwargs["list_id"] == "p1"
+        assert "list_title" not in add.call_args.kwargs
+
 
 class TestModifyTaskClearDates:
     """Test modify-task clearing of deadline / when (CDI-1167)."""
@@ -425,6 +435,26 @@ class TestModifyTaskClearDates:
         await self.modify_task(task_id="abc", title="Renamed")
         assert self.captured["deadline"] is None
         assert self.captured["when"] is None
+
+    @pytest.mark.asyncio
+    async def test_project_id_routes_to_update_project(self, monkeypatch):
+        """CDI-1880: a project id must not go through the to-do update URL."""
+        self.things.get.return_value = create_mock_project(uuid_str="p1")
+        proj_kwargs = {}
+        monkeypatch.setattr(
+            "things_mcp.tools_gtd_organize.update_project",
+            mock.Mock(side_effect=lambda **kw: proj_kwargs.update(kw) or "u"),
+        )
+        await self.modify_task(task_id="p1", deadline="none")
+        assert self.captured == {}  # update_todo never called
+        assert proj_kwargs["id"] == "p1"
+        assert proj_kwargs["deadline"] == ""
+
+    @pytest.mark.asyncio
+    async def test_project_id_rejects_checklist(self):
+        self.things.get.return_value = create_mock_project(uuid_str="p1")
+        with pytest.raises(ToolError, match="modify-project"):
+            await self.modify_task(task_id="p1", add_checklist=["x"])
 
 
 class TestDelegateTask:
