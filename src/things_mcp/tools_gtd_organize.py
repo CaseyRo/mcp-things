@@ -983,24 +983,28 @@ def register_gtd_organize_tools(mcp: FastMCP):
             invalidate_caches_for(["get-projects", "get-tasks", "get-areas"])
 
             # Build result message
+            # `is not None`: a cleared date is "" and must still be reported.
             changes = []
             if title:
-                changes.append("title updated")
-            if notes or prepend_notes or append_notes:
+                changes.append(f"renamed → {title}")
+            if notes is not None or prepend_notes or append_notes:
                 changes.append("notes updated")
-            if when:
-                changes.append(f"scheduled: {when}")
-            if deadline:
-                changes.append(f"deadline: {deadline}")
-            if tags or add_tags:
+            for label, value in (("when", when), ("deadline", deadline)):
+                if value is not None:
+                    changes.append(
+                        f"{label} cleared" if value == "" else f"{label} → {value}"
+                    )
+            if tags is not None or add_tags:
                 changes.append("tags updated")
             if area:
-                changes.append(f"moved to area: {area}")
+                changes.append(f"area → {area}")
             if completed:
                 changes.append("marked completed")
             if canceled:
                 changes.append("marked canceled")
 
+            if not changes:
+                changes.append("nothing to change")
             text_body = f"Modified project. Changes: {', '.join(changes)}."
             text_body += completion_note
 
