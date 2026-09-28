@@ -2,16 +2,11 @@
 
 A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.com/things/) that brings GTD (Getting Things Done) methodology to AI assistants.
 
-[![PyPI](https://img.shields.io/pypi/v/mcp-things)](https://pypi.org/project/mcp-things/)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/caseyberlin)
 
 ## Installation
 
-```bash
-pip install mcp-things
-# or run directly without installing:
-uvx mcp-things
-```
+Not published to PyPI (dropped 2026-06). Install from source; see [Quick Start](#quick-start).
 
 > **Note:** Review the [Privacy Notice](PRIVACY.md) and [Terms of Use](TERMS_OF_USE.md) before installation.
 
