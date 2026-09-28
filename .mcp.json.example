@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "things": {
+      "url": "https://mcp.example.com/mcp"
+    }
+  }
+}

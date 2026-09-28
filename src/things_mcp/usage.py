@@ -5,7 +5,7 @@ One JSON line per tool call on stderr (stdout would corrupt stdio transports):
      "duration_ms": 42, "outcome": "ok", "protocol": "2026-07-28"}
 
 No arguments, no results. A failure inside telemetry never touches the call.
-Works unchanged on fastmcp 3.x and 4.x (`on_call_tool` is the same hook).
+Works on fastmcp 4.x (`on_call_tool` hook).
 
 Register:  mcp.add_middleware(UsageMiddleware("siyuan"))
 Spec:      openspec/changes/upgrade-fleet-fastmcp-4/specs/mcp-usage-telemetry/spec.md

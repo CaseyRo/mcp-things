@@ -201,3 +201,6 @@ videos/
 
 # Runtime data files
 things_dlq.json
+
+# Local MCP client config (copy from .mcp.json.example)
+.mcp.json
