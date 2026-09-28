@@ -76,6 +76,11 @@ def _write_env_var(env_path: Path, key: str, value: str) -> bool:
         return False
 
 
+def _redact(key: str) -> str:
+    """First 5 chars + ellipsis: enough to tell keys apart, never the secret."""
+    return f"{key[:5]}…"
+
+
 def ensure_api_key() -> str:
     """Return the configured API key, auto-generating one if needed.
 
@@ -89,9 +94,9 @@ def ensure_api_key() -> str:
     api_key = settings.things_mcp_api_key.get_secret_value()
 
     if api_key:
-        logger.warning(
-            "MCP API key: %s (configure clients with Authorization: Bearer <key>)",
-            api_key,
+        logger.info(
+            "MCP API key loaded (%s); clients send Authorization: Bearer <key>",
+            _redact(api_key),
         )
         return api_key
 
@@ -102,14 +107,14 @@ def ensure_api_key() -> str:
     env_path = _find_env_file()
     if _write_env_var(env_path, "THINGS_MCP_API_KEY", api_key):
         logger.warning(
-            "Generated new MCP API key and saved to %s: %s",
-            env_path,
-            api_key,
+            "Generated new MCP API key (%s); saved to %s", _redact(api_key), env_path
         )
     else:
         logger.warning(
-            "Generated new MCP API key (could not save to .env): %s",
-            api_key,
+            "Generated new MCP API key (%s); could not save it to %s, "
+            "set THINGS_MCP_API_KEY yourself",
+            _redact(api_key),
+            env_path,
         )
 
     # Update environment so pydantic-settings picks it up
