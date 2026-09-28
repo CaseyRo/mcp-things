@@ -83,12 +83,12 @@ src/things_mcp/
 1. Read operations: FastMCP → things-py (SQLite) → cache → format response
 2. Write operations: FastMCP → URL scheme builder → macOS `open -g` → Things app
 
-## Key Patterns (FastMCP 3.x)
+## Key Patterns
 
 - **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"], output_schema=output_schema_for(ToolEnvelope[<DataT>]))`. The `output_schema=` kwarg is **mandatory** for every tool — auto-derivation does not apply when the return type is `ToolResult`.
 - **Async tools**: All tool functions must be `async def` with `ctx: Context` parameter for logging
 - **Return shape**: Every tool returns a `ToolResult` built via `make_result(...)`, `write_result(...)`, or `bulk_result(...)` from `tool_results.py`. The structured payload is a `ToolEnvelope[DataT]` with three fields — `data` (typed payload), `summary` (one-sentence headline), `meta` (free-form bag for warnings/truncation/cache info). The text block is always explicit; FastMCP's auto-derived text would emit raw JSON and regress text-only clients.
-- **Error handling**: Raise `ToolError("message")` for failures (FastMCP 3 pattern). MCP's protocol-level `isError: true` is the source of truth — the envelope deliberately has no `ok` / `success` field.
+- **Error handling**: Raise `ToolError("message")` for failures. MCP's protocol-level `isError: true` is the source of truth — the envelope deliberately has no `ok` / `success` field.
 - **Context logging**: Use `await ctx.info("message")` for operation logging within tools
 - **Tool timeouts**: Write tools use `timeout=30`, read tools use `timeout=5`
 - **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
@@ -166,7 +166,7 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 
 ## Client Compatibility Middleware
 
-`ClientCompatibilityMiddleware` in `server_core.py` handles all client-specific quirks using FastMCP 3.x middleware hooks:
+`ClientCompatibilityMiddleware` in `server_core.py` handles all client-specific quirks using FastMCP middleware hooks:
 
 **`on_list_tools` — Client-aware schema transforms:**
 
@@ -188,3 +188,14 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 - **Python 3.12+**: Uses modern type hints and f-strings
 - **Log redaction**: Never log task titles, notes, or user content
 - **Things URL scheme**: Write operations have no direct response; assume success unless app fails
+
+## fastmcp 4 idioms
+
+- `fastmcp>=4.0.10,<5.0.0`; streamable-http with `stateless_http=True` passed to `run()`/`http_app()`, never the constructor (v4 rejects it). No `allowed_hosts` workaround: that was the 3.4.3 host guard.
+- Annotations are snake_case (`read_only_hint`, `destructive_hint`, ...). CI runs with `FASTMCP_MCP_CAMELCASE_COMPAT=false`, so camelCase access fails the build.
+- Failures raise `ToolError`. A returned error payload is logged by usage telemetry as `outcome: ok`.
+- `src/things_mcp/usage.py` is vendored verbatim from `CDiT-infrastructure/scripts/mcp_usage_middleware.py`; re-copy it, never edit it here.
+- Releases are tag-only: the release workflow pushes the next `v*` tag and commits nothing to the protected branch. Never bump `version` in `pyproject.toml`. No PyPI publishing (dropped 2026-06).
+- Testing: the `mcp-testing` skill. Release/deploy: the `cdit-release-pipeline` skill. Fleet conventions: `CDiT-infrastructure/docs/wiki/topics/mcp-fleet.md`.
+- launchd runs the live server from this checkout's `.venv/bin/python` (`de.cdit.mcp-things`, port 8009). Work in a `git worktree` with its own venv; never touch the live checkout's venv, never restart the launchd job, and never `pkill -f` (it killed the live apple-notes server on 2026-09-28). Run test servers on another port and stop them by PID.
+- Interpreter: the Things/Notes Automation TCC grants are keyed to uv's `cpython-3.12.11`; don't let `uv` re-resolve the live venv onto another Python.

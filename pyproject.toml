@@ -94,3 +94,7 @@ dev = [
     "ruff>=0.15.0",
     "jsonschema>=4.26.0",  # Used by tests/test_structured_output.py to validate outputSchemas
 ]
+
+[tool.ruff.format]
+# Vendored verbatim from CDiT-infrastructure/scripts/mcp_usage_middleware.py.
+exclude = ["src/things_mcp/usage.py"]
