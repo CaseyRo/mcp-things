@@ -55,7 +55,7 @@ Defined in `pytest.ini`:
 
 ### Default (CI and pre-commit)
 
-- **`uv run python -m pytest tests`** or **`uv run test`** runs all tests **except** `real`.
+- **`uv run pytest`** (or `uv run python -m pytest tests`) runs all tests **except** `real`.
 - This is the default and is safe for CI and pre-commit (Things 3 is not required).
 
 ### Pre-commit hooks
@@ -84,9 +84,7 @@ On `git commit`, when relevant files change:
 ### CI-safe (default)
 
 ```bash
-uv run python -m pytest tests
-# or
-uv run test
+uv run pytest
 ```
 
 ### Unit tests only (fastest)

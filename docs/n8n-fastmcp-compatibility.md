@@ -1,10 +1,10 @@
-# n8n + FastMCP 3.0 Compatibility Guide
+# n8n + FastMCP Compatibility Guide
 
-This document describes the compatibility issues between n8n's MCP Client Tool and FastMCP 3.0 servers, along with the workarounds implemented in this project.
+This document describes the compatibility issues between n8n's MCP Client Tool and FastMCP servers, along with the workarounds implemented in this project. The code samples are simplified; the real implementation is `ClientCompatibilityMiddleware` in `src/things_mcp/server_core.py`.
 
 ## Background
 
-n8n (v1.70+) includes an MCP Client Tool that can connect to Model Context Protocol servers. However, there are several compatibility issues when using it with FastMCP 3.0 servers.
+n8n (v1.70+) includes an MCP Client Tool that can connect to Model Context Protocol servers. However, there are several compatibility issues when using it with FastMCP servers.
 
 ## Issue 1: Extra Parameters in Tool Calls
 
@@ -113,31 +113,7 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
     return result
 ```
 
-**Patching the Handler:**
-
-```python
-import mcp.types as mcp_types
-
-def _patch_tool_serialization_for_n8n(mcp: FastMCP):
-    """Patch ListToolsRequest to flatten anyOf for n8n."""
-    request_handlers = mcp._mcp_server.request_handlers
-    original_handler = request_handlers[mcp_types.ListToolsRequest]
-
-    async def patched_list_tools_handler(request):
-        result = await original_handler(request)
-        tools = result.root.tools
-
-        for tool in tools:
-            if hasattr(tool, "inputSchema") and tool.inputSchema:
-                flattened = _flatten_anyof_for_n8n(tool.inputSchema)
-                if isinstance(tool.inputSchema, dict):
-                    tool.inputSchema.clear()
-                    tool.inputSchema.update(flattened)
-
-        return result
-
-    request_handlers[mcp_types.ListToolsRequest] = patched_list_tools_handler
-```
+**Applying it:** `ClientCompatibilityMiddleware.on_list_tools` runs the flattener over every tool's input and output schema before `tools/list` is returned. No request handler is patched.
 
 ## Issue 3: Explicit Null Values
 
@@ -164,40 +140,19 @@ class N8NCompatibilityMiddleware(Middleware):
         return await call_next(context)
 ```
 
-Also patch the `CallToolRequest` handler for defense in depth:
-
-```python
-def _patch_tool_serialization_for_n8n(mcp: FastMCP):
-    # ... ListToolsRequest patch ...
-
-    # Patch CallToolRequest
-    original_call_tool = request_handlers[mcp_types.CallToolRequest]
-
-    async def patched_call_tool_handler(request):
-        if request.params and request.params.arguments:
-            args = request.params.arguments
-            null_keys = [k for k, v in args.items() if v is None]
-            for key in null_keys:
-                del args[key]
-        return await original_call_tool(request)
-
-    request_handlers[mcp_types.CallToolRequest] = patched_call_tool_handler
-```
-
 ## Complete Implementation
 
 See `src/things_mcp/server_core.py` for the complete implementation including:
 
-- `N8NCompatibilityMiddleware` class
+- `ClientCompatibilityMiddleware` class (`on_list_tools` schema transforms, `on_call_tool` parameter and null stripping)
 - `_flatten_anyof_for_n8n()` function
-- `_patch_tool_serialization_for_n8n()` function
 
 ## Testing n8n Compatibility
 
 1. Enable debug logging:
 
    ```bash
-   export THINGS_MCP_DEBUG_SCHEMA=1
+   export THINGS_MCP_DEBUG=true
    ```
 
 2. Start the server and check logs for schema transformations

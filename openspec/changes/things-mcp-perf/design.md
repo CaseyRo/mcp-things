@@ -1,6 +1,6 @@
 ## Context
 
-Things MCP is a 27-tool FastMCP 3.x server bridging AI assistants to Things 3 via AppleScript and the Things URL scheme. The full call chain for remote clients is: Claude → Hetzner (Caddy) → Tailscale → Mac → Python → osascript/URL scheme → Things. Each write operation incurs a mandatory 0.5–0.7s sleep (`url_scheme.py:111`) plus rate limiter overhead (`utils.py` RateLimiter at 30/min). Read operations go through the `things-py` library which queries Things' SQLite database, but `format_todo` then makes N+1 `things.get()` calls to resolve project/area titles.
+Things MCP is a 27-tool FastMCP server bridging AI assistants to Things 3 via AppleScript and the Things URL scheme. The full call chain for remote clients is: Claude → reverse proxy → private network → Mac → Python → osascript/URL scheme → Things. Each write operation incurs a mandatory 0.5–0.7s sleep (`url_scheme.py:111`) plus rate limiter overhead (`utils.py` RateLimiter at 30/min). Read operations go through the `things-py` library which queries Things' SQLite database, but `format_todo` then makes N+1 `things.get()` calls to resolve project/area titles.
 
 An MCP tool review identified that a 24-item inbox triage session requires 25+ sequential MCP round-trips. The JSON URL scheme infrastructure (`construct_json_url`, `execute_json`, `build_todo_object`) already exists and supports N-item atomic creation in a single URL open — `plan-project` already uses this. AppleScript supports multi-item loops in a single subprocess call.
 
