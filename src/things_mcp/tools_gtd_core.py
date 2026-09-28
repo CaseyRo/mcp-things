@@ -113,9 +113,6 @@ def register_gtd_core_tools(mcp: FastMCP):
             get_tasks(view="anytime", context="@errands") - What can I do while out?
             get_tasks(context="waiting-for") - What am I waiting on others for?
         """
-        if ctx:
-            await ctx.info(f"Fetching tasks (view={view}, context={context})...")
-
         # CDI-1255: built-in lists (Inbox, Today, ...) are not areas. If someone
         # passes a list name as `area`, redirect them to the matching `view`
         # rather than filtering by a non-existent area and returning empty.
@@ -318,9 +315,6 @@ def register_gtd_core_tools(mcp: FastMCP):
             energy: Current energy level (e.g., "high-energy", "low-energy")
             time_available: Available time (e.g., "5min", "15min", "30min")
         """
-        if ctx:
-            await ctx.info("Finding your most important task...")
-
         try:
             from datetime import date
 
@@ -478,9 +472,6 @@ def register_gtd_core_tools(mcp: FastMCP):
             task_title: Title to search for (fuzzy match). If multiple match, returns list.
             completion_notes: Optional notes to append before completing
         """
-        if ctx:
-            await ctx.info("Completing task...")
-
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
 
@@ -630,9 +621,6 @@ def register_gtd_core_tools(mcp: FastMCP):
             tags: Context tags like @computer, @phone (optional)
             when: Optional schedule (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD). If omitted, goes to inbox.
         """
-        if ctx:
-            await ctx.info(f"Capturing to inbox: {title[:30]}...")
-
         try:
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -708,9 +696,6 @@ def register_gtd_core_tools(mcp: FastMCP):
 
         Returns the oldest inbox item with GTD decision guidance (default), or all items in compact format.
         """
-        if ctx:
-            await ctx.info("Processing inbox...")
-
         try:
             inbox_items = db.inbox()
 
@@ -881,9 +866,6 @@ def register_gtd_core_tools(mcp: FastMCP):
             task_id: UUID of the task to convert
             first_action: Title of the first next action (added before checklist items)
         """
-        if ctx:
-            await ctx.info("Converting task to project...")
-
         try:
             # Get the original task
             task = db.get(task_id)

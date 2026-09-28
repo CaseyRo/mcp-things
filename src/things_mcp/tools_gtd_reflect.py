@@ -45,9 +45,6 @@ def register_gtd_reflect_tools(mcp: FastMCP):
         - Overdue tasks requiring attention
         - Inbox count (items awaiting clarification)
         """
-        if ctx:
-            await ctx.info("Running daily review...")
-
         try:
             from datetime import date
 
@@ -185,9 +182,6 @@ def register_gtd_reflect_tools(mcp: FastMCP):
         - Completed this week (celebration!)
         - Inbox status
         """
-        if ctx:
-            await ctx.info("Running weekly review...")
-
         try:
             from datetime import date
 

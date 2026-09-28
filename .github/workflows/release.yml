@@ -30,6 +30,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - name: Install and test
+        env:
+          FASTMCP_MCP_CAMELCASE_COMPAT: "false"
         run: |
           uv sync
           uv run pytest -x

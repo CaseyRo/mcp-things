@@ -149,7 +149,6 @@ def register_batch_tools(mcp: FastMCP):
             default_when: Default schedule for items without an explicit 'when' value.
         """
         if ctx:
-            await ctx.info(f"Bulk capturing {len(items)} items...")
             await ctx.report_progress(
                 progress=0, total=len(items), message="Preparing capture"
             )
@@ -256,7 +255,6 @@ def register_batch_tools(mcp: FastMCP):
             task_ids: List of task UUIDs to complete (1-50).
         """
         if ctx:
-            await ctx.info(f"Completing {len(task_ids)} tasks...")
             await ctx.report_progress(
                 progress=0, total=len(task_ids), message="Completing tasks"
             )
@@ -346,7 +344,6 @@ def register_batch_tools(mcp: FastMCP):
             task_ids: List of task UUIDs to cancel (1-50).
         """
         if ctx:
-            await ctx.info(f"Canceling {len(task_ids)} tasks...")
             await ctx.report_progress(
                 progress=0, total=len(task_ids), message="Canceling tasks"
             )
@@ -442,9 +439,6 @@ def register_batch_tools(mcp: FastMCP):
             project: Move all tasks to this project (name or UUID). Mutually exclusive with area.
             area: Move all tasks to this area (name or UUID). Mutually exclusive with project.
         """
-        if ctx:
-            await ctx.info(f"Modifying {len(task_ids)} tasks...")
-
         validate_uuid_list(task_ids)
 
         if project and area:
@@ -561,9 +555,6 @@ def register_batch_tools(mcp: FastMCP):
         Args:
             decisions: List of triage decisions (1-100). Each has task_id, action, and action-specific fields.
         """
-        if ctx:
-            await ctx.info(f"Triaging {len(decisions)} items...")
-
         if not decisions:
             _error_result("decisions cannot be empty")
 

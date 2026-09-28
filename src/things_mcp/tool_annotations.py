@@ -38,9 +38,9 @@ def _read_only(title: str) -> types.ToolAnnotations:
     """Read tool: no mutation, idempotent, local app."""
     return types.ToolAnnotations(
         title=title,
-        readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=True,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
 
@@ -48,10 +48,10 @@ def _add(title: str) -> types.ToolAnnotations:
     """Create tool: mutates, not idempotent (re-running creates duplicates)."""
     return types.ToolAnnotations(
         title=title,
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=False,
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=False,
+        open_world_hint=False,
     )
 
 
@@ -59,10 +59,10 @@ def _update(title: str) -> types.ToolAnnotations:
     """Update tool: mutates, idempotent, not destructive."""
     return types.ToolAnnotations(
         title=title,
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+        read_only_hint=False,
+        destructive_hint=False,
+        idempotent_hint=True,
+        open_world_hint=False,
     )
 
 
@@ -70,10 +70,10 @@ def _destructive(title: str) -> types.ToolAnnotations:
     """Destructive tool: irreversible-ish mutation (delete/cancel/merge)."""
     return types.ToolAnnotations(
         title=title,
-        readOnlyHint=False,
-        destructiveHint=True,
-        idempotentHint=False,
-        openWorldHint=False,
+        read_only_hint=False,
+        destructive_hint=True,
+        idempotent_hint=False,
+        open_world_hint=False,
     )
 
 
@@ -81,30 +81,30 @@ def _destructive(title: str) -> types.ToolAnnotations:
 # per bucket). Kept so any external importer still resolves the names; these
 # carry no per-tool title.
 READ_ONLY_ANNOTATIONS = types.ToolAnnotations(
-    readOnlyHint=True,
-    idempotentHint=True,
-    openWorldHint=False,
+    read_only_hint=True,
+    idempotent_hint=True,
+    open_world_hint=False,
 )
 
 ADD_ANNOTATIONS = types.ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=False,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=False,
 )
 
 UPDATE_ANNOTATIONS = types.ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=False,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
 )
 
 DESTRUCTIVE_ANNOTATIONS = types.ToolAnnotations(
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=False,
-    openWorldHint=False,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=False,
+    open_world_hint=False,
 )
 
 
