@@ -157,9 +157,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
             checklist: Subtasks/checklist items
             notes: Additional notes
         """
-        if ctx:
-            await ctx.info(f"Scheduling task for {when}...")
-
         try:
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -263,9 +260,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
         """
         if not delegated_to:
             _error_result("delegated_to is required — who are you handing this off to?")
-
-        if ctx:
-            await ctx.info(f"Delegating task to {delegated_to}...")
 
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
@@ -379,9 +373,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
         """
         if not defer_to:
             _error_result("defer_to is required — when should this task reappear?")
-
-        if ctx:
-            await ctx.info(f"Deferring task to {defer_to}...")
 
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
@@ -517,9 +508,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 {"title": "Review with team"}
             ]
         """
-        if ctx:
-            await ctx.info(f"Creating project: {title}...")
-
         try:
             # Validate inputs
             validate_name(title, "title")
@@ -648,9 +636,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
         """
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
-
-        if ctx:
-            await ctx.info("Updating task...")
 
         # Normalize clearable date fields: map clear-sentinels to "" so the
         # URL scheme emits `when=`/`deadline=` (Things clears the field).
@@ -796,9 +781,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
             tags: Optional tags to assign to the area
             projects: Optional list of project names to create within the area
         """
-        if ctx:
-            await ctx.info(f"Creating area: {name}...")
-
         try:
             validate_name(name, "name")
             if projects:
@@ -936,9 +918,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
             completed: Mark as completed (Things 3 feature)
             canceled: Mark as canceled (Things 3 feature)
         """
-        if ctx:
-            await ctx.info("Modifying project...")
-
         # CDI-1880: same clear-sentinels as modify-task ("none" -> "").
         when = _normalize_clearable_date(when)
         deadline = _normalize_clearable_date(deadline)
@@ -1061,9 +1040,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
             new_name: New name for the area
             tags: Tags to set on the area
         """
-        if ctx:
-            await ctx.info("Modifying area...")
-
         try:
             if not app_state.update_app_state():
                 if not launch_things():
@@ -1159,9 +1135,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
         Args:
             name_or_uuid: Area name (case-insensitive) or UUID
         """
-        if ctx:
-            await ctx.info("Checking area contents...")
-
         try:
             if not app_state.update_app_state():
                 if not launch_things():
@@ -1265,9 +1238,6 @@ def register_gtd_organize_tools(mcp: FastMCP):
             source: Source area name or UUID (will be deleted)
             target: Target area name or UUID (will receive all items)
         """
-        if ctx:
-            await ctx.info("Preparing area merge...")
-
         try:
             if not app_state.update_app_state():
                 if not launch_things():

@@ -92,7 +92,7 @@ async def test_open_world_hint_false_everywhere():
     offenders = [
         name
         for name, tool in tools.items()
-        if tool.annotations is None or tool.annotations.openWorldHint is not False
+        if tool.annotations is None or tool.annotations.open_world_hint is not False
     ]
     assert not offenders, (
         f"openWorldHint must be False (local app) but these tools differ: {offenders}"
@@ -110,7 +110,7 @@ async def test_read_only_tools_are_read_only_and_tagged_read():
     for name in READ_ONLY_TOOLS:
         tool = tools[name]
         ann = tool.annotations
-        assert ann.readOnlyHint is True, f"{name} should set readOnlyHint=True"
+        assert ann.read_only_hint is True, f"{name} should set readOnlyHint=True"
         assert "read" in tool.tags, f"{name} should carry the 'read' tag"
         assert "write" not in tool.tags, f"{name} must NOT carry the 'write' tag"
         assert "destructive" not in tool.tags, (
@@ -124,8 +124,8 @@ async def test_destructive_tools_flagged_and_tagged():
     for name in DESTRUCTIVE_TOOLS:
         tool = tools[name]
         ann = tool.annotations
-        assert ann.destructiveHint is True, f"{name} should set destructiveHint=True"
-        assert ann.readOnlyHint is False, f"{name} must not be readOnly"
+        assert ann.destructive_hint is True, f"{name} should set destructiveHint=True"
+        assert ann.read_only_hint is False, f"{name} must not be readOnly"
         assert {"write", "destructive"} <= set(tool.tags), (
             f"{name} should carry both 'write' and 'destructive' tags, got {tool.tags}"
         )
@@ -136,8 +136,8 @@ async def test_complete_task_is_idempotent_not_destructive():
     """complete-task is reversible in Things 3 → idempotent, never destructive."""
     tools = await _tools_by_name()
     ann = tools["complete-task"].annotations
-    assert ann.idempotentHint is True
-    assert ann.destructiveHint in (False, None)
+    assert ann.idempotent_hint is True
+    assert ann.destructive_hint in (False, None)
     assert "destructive" not in tools["complete-task"].tags
     assert "write" in tools["complete-task"].tags
 
@@ -149,7 +149,7 @@ async def test_write_tools_never_read_only():
     offenders = [
         name
         for name, tool in tools.items()
-        if "write" in tool.tags and tool.annotations.readOnlyHint is True
+        if "write" in tool.tags and tool.annotations.read_only_hint is True
     ]
     assert not offenders, f"Write tools wrongly marked readOnly: {offenders}"
 

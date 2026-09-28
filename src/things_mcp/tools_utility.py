@@ -96,9 +96,6 @@ def register_utility_tools(mcp: FastMCP):
             deadline: Filter by deadline date
             limit: Maximum results to return (default 20, max 200)
         """
-        if ctx:
-            await ctx.info("Searching tasks...")
-
         # Built-in Things lists are not areas. Reject area="Inbox" (and the other
         # list names) with a clear redirect instead of silently returning empty.
         # CDI-1255 secondary fix.
@@ -209,8 +206,6 @@ def register_utility_tools(mcp: FastMCP):
         Args:
             include_items: Include tasks within projects
         """
-        if ctx:
-            await ctx.info("Fetching projects...")
         projects = db.projects() or []
 
         if not projects:
@@ -238,8 +233,6 @@ def register_utility_tools(mcp: FastMCP):
         Args:
             include_items: Include projects and tasks within areas
         """
-        if ctx:
-            await ctx.info("Fetching areas...")
         areas = db.areas() or []
 
         if not areas:
@@ -266,9 +259,6 @@ def register_utility_tools(mcp: FastMCP):
         Args:
             name_or_uuid: Project name (case-insensitive) or UUID
         """
-        if ctx:
-            await ctx.info("Looking up project...")
-
         try:
             project = resolve_item(name_or_uuid, "project")
             uuid = project["uuid"]
@@ -375,9 +365,6 @@ def register_utility_tools(mcp: FastMCP):
             name_or_uuid: Area name (case-insensitive) or UUID
             include_items: Include full project and to-do listings
         """
-        if ctx:
-            await ctx.info("Looking up area...")
-
         try:
             area = resolve_item(name_or_uuid, "area")
             uuid = area["uuid"]
@@ -446,8 +433,6 @@ def register_utility_tools(mcp: FastMCP):
         Args:
             include_items: Include items tagged with each tag
         """
-        if ctx:
-            await ctx.info("Fetching tags...")
         tags = db.tags() or []
 
         if not tags:
@@ -475,9 +460,6 @@ def register_utility_tools(mcp: FastMCP):
             id: Item UUID, or list name: inbox, today, upcoming, anytime, someday, logbook,
                 tomorrow, deadlines, repeating, all-projects, logged-projects
         """
-        if ctx:
-            await ctx.info(f"Opening '{id}' in Things...")
-
         validate_show_id(id)
 
         try:
@@ -508,8 +490,6 @@ def register_utility_tools(mcp: FastMCP):
     )
     async def get_cache_statistics(ctx: Context = None) -> ToolResult:
         """[tasks-gtd] Get cache performance statistics."""
-        if ctx:
-            await ctx.info("Fetching cache statistics...")
         stats = get_cache_stats()
 
         payload = CacheStats(
@@ -558,9 +538,6 @@ def register_utility_tools(mcp: FastMCP):
             action: Filter by action (completed, canceled, deferred-someday, delegated, etc.)
             show_trends: Show week-over-week trends (4 weeks)
         """
-        if ctx:
-            await ctx.info("Analyzing triage patterns...")
-
         try:
             summary_data = triage_tracker.get_summary(days=days)
             total = summary_data["total"]

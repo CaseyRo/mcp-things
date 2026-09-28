@@ -23,3 +23,5 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
+        env:
+          FASTMCP_MCP_CAMELCASE_COMPAT: "false"

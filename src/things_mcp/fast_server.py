@@ -29,7 +29,6 @@ from .server_core import (
     GTD_QUOTES,
 )
 from .client_compat import (
-    patch_accept_headers,
     get_streamable_http_middleware,
 )
 from .settings import get_transport, is_debug_enabled
@@ -333,11 +332,9 @@ def _create_combined_app(mcp_instance, transport_mode: str):
 
     routes = [Route("/health", _health), Route("/healthz", _health)]
 
-    # Apply Accept header patch for streamable-http transport
-    patch_accept_headers()
-
-    # Streamable-HTTP transport for Claude Desktop/n8n/ChatGPT
-    # Includes middleware for Accept header fixes as fallback.
+    # Streamable-HTTP transport for Claude Desktop/n8n/ChatGPT.
+    # mcp>=2 handles wildcard Accept headers itself; the middleware still fills
+    # in a missing or single-type Accept header, which the SDK would 406.
     # stateless_http=True → no orphaned SSE sessions after idle disconnect.
     # See openspec mcp-stateless-transport.
     http_middleware = get_streamable_http_middleware()
@@ -346,9 +343,6 @@ def _create_combined_app(mcp_instance, transport_mode: str):
         path="/",
         middleware=http_middleware,
         stateless_http=True,
-        # fastmcp >=3.4.3 rejects non-localhost Host with 421 unless allowed_hosts
-        # set (edge is CF-Access/Tailscale gated). Requires fastmcp>=3.4.3.
-        allowed_hosts=["*"],
     )
     routes.append(Mount("/mcp", app=http_app, name="streamable-http"))
     logger.info(

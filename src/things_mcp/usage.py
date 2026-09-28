@@ -1,7 +1,7 @@
 """Canonical MCP usage-telemetry middleware. Vendor this file into each fleet server.
 
 One JSON line per tool call on stderr (stdout would corrupt stdio transports):
-    {"mcp_usage": 1, "ts": "...", "server": "siyuan", "tool": "get_block", "duration_ms": 42, "outcome": "ok"}
+    {"mcp_usage": 1, "ts": "...", "server": "siyuan", "tool": "get_block", "duration_ms": 42, "outcome": "ok", "protocol": "2026-07-28"}
 
 No arguments, no results. A failure inside telemetry never touches the call.
 Works unchanged on fastmcp 3.x and 4.x (`on_call_tool` is the same hook).
@@ -44,6 +44,14 @@ class UsageMiddleware(Middleware):
                             "tool": getattr(context.message, "name", "?"),
                             "duration_ms": round((time.perf_counter() - start) * 1000),
                             "outcome": outcome,
+                            # Negotiated MCP era (e.g. 2026-07-28 vs 2025-06-18); pilot smoke reads this.
+                            "protocol": getattr(
+                                getattr(
+                                    context.fastmcp_context, "request_context", None
+                                ),
+                                "protocol_version",
+                                None,
+                            ),
                         }
                     )
                     + "\n"
