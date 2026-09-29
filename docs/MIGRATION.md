@@ -77,13 +77,14 @@ THINGS_MCP_HOST=0.0.0.0 THINGS_MCP_PORT=9000 uv run server
 - Configuration via `.env` files
 - No bash script maintenance overhead
 
-## FastMCP 3.0 (Current)
+## FastMCP 4 (Current)
 
-The project now uses FastMCP 3.0.0b1. Key changes for developers:
+The project now runs on FastMCP 4 (`fastmcp>=4.0.10,<5.0.0`). Nothing changes for MCP clients: tool names, parameters and the `/mcp` endpoint are the same. For developers:
 
-- Tool functions are now `async def`
-- Context dependency injection via `ctx: Context` parameter
-- Error handling uses `raise ToolError("message")`
+- Tool functions are `async def` and take `ctx: Context`
+- Failures raise `ToolError("message")`
+- Every tool declares an `output_schema` and returns a structured `ToolEnvelope`
+- Tool annotations are read snake_case (`read_only_hint`, ...); CI fails on camelCase access
 - Tool timeouts: write operations (30s), read operations (5s)
 
-See [CHANGELOG.md](CHANGELOG.md) for full details.
+See [CHANGELOG.md](../CHANGELOG.md) for full details.

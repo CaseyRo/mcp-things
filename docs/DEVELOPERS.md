@@ -16,34 +16,41 @@ Understanding GTD (Getting Things Done) helps you contribute effectively. The co
 
 When adding or modifying tools, consider which GTD stage they support and ensure tool descriptions help AI assistants route user requests appropriately.
 
-## FastMCP 3.0
+## FastMCP 4
 
-This project uses **FastMCP 3.0**, the modern async-first MCP framework. Key patterns:
+This project uses **FastMCP 4** (`fastmcp>=4.0.10,<5.0.0`). Key patterns:
 
 ### Tool Registration
 
 ```python
-@mcp.tool(name="kebab-case-name", annotations=TOOL_ANNOTATIONS["name"], timeout=5)
+@mcp.tool(
+    name="kebab-case-name",
+    annotations=TOOL_ANNOTATIONS["kebab-case-name"],
+    tags=tags_for("kebab-case-name"),
+    timeout=5,  # 30 for write tools
+    output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
+)
 async def tool_name(
     param: str,
     optional_param: Optional[str] = None,
-    ctx: Context = None,  # Required for logging
-) -> str:
+    ctx: Context = None,
+) -> ToolResult:
     """Tool description for AI assistants.
 
     GTD Stage: [Capture|Clarify|Organize|Reflect|Engage]
     Use when: [specific user intents this tool handles]
     Instead use: [alternative tool] if [different situation]
     """
-    await ctx.info("Starting operation")
     # ... implementation
-    return "Result for AI assistant"
+    return make_result(data, summary="One-sentence headline")
 ```
+
+`output_schema=` is mandatory: every tool returns a `ToolResult` built by `make_result`, `write_result` or `bulk_result` (`tool_results.py`).
 
 ### Error Handling
 
 ```python
-from mcp.server.fastmcp import ToolError
+from fastmcp.exceptions import ToolError
 
 # Raise ToolError for operation failures
 raise ToolError("Task not found. Use get-tasks to find available tasks.")
@@ -84,11 +91,11 @@ TOOL_ANNOTATIONS = {
 
 ```bash
 git clone https://github.com/CaseyRo/mcp-things.git
-cd mcp_things
-uv pip install -e .
+cd mcp-things
+uv sync
 
 # Configure authentication token
-python scripts/configure_token.py
+uv run python scripts/configure_token.py
 ```
 
 ### Environment Variables
@@ -107,7 +114,13 @@ Key variables:
 | `THINGS_MCP_PORT` | `8009` | Server port |
 | `THINGS_MCP_TRANSPORT` | `streamable-http` | Transport protocol (streamable-http only) |
 | `THINGS_AUTH_TOKEN` | (required) | Things URL scheme auth token |
+| `THINGS_MCP_API_KEY` | auto-generated | Bearer token clients must send |
+| `THINGS_MCP_PUBLIC_URL` | unset | Public HTTPS URL used as the auth base URL |
+| `THINGS_MCP_DEBUG` | `false` | Verbose console logging |
 | `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | unset | Show Things in foreground for debugging |
+| `RETRY_ATTEMPTS` | `3` | Retries for failed operations |
+| `RETRY_DELAY` | `1.0` | Seconds between retries |
+| `THINGSDB` | auto-detected | Path to the Things SQLite database |
 
 **Transport Configuration:**
 
@@ -121,11 +134,8 @@ Key variables:
 # Production mode
 uv run server
 
-# Development mode with auto-reload
+# Same entry point under another name (no auto-reload)
 uv run dev
-
-# Alternative: MCP CLI development helper
-mcp dev src/things_mcp/things_fast_server.py
 ```
 
 ## Architecture
@@ -273,7 +283,7 @@ pre-commit install
 
 - Use `get_logger(__name__)` for module loggers
 - Never log task titles, notes, or user content (privacy)
-- Use `await ctx.info()` inside tools for operation logging
+- Use `get_logger(__name__)` for operational logging; batch tools report progress with `ctx.report_progress()`
 
 ```python
 from things_mcp.logging_config import get_logger
@@ -349,7 +359,7 @@ See `openspec/AGENTS.md` for detailed instructions.
 ### Operations Failing
 
 - Check circuit breaker status in logs
-- Review Dead Letter Queue: `cat things_dlq.json`
+- Review Dead Letter Queue: `cat ~/.things-mcp/things_dlq.json`
 - Verify Things has automation permissions (System Settings → Privacy & Security)
 
 ### Performance Issues

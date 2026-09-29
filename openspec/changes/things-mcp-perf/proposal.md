@@ -1,6 +1,6 @@
 ## Why
 
-Interactive GTD sessions are slow. Triaging a 24-item inbox requires 25+ sequential MCP round-trips, each spawning `osascript` with a mandatory 0.5–0.7s sleep. The full chain (Claude → Hetzner/Caddy → Tailscale → Mac → Python → osascript → Apple Events → Things) amplifies per-call latency. There is no instrumentation to quantify bottlenecks, read operations go through AppleScript when a direct SQLite path exists, and several tools have N+1 query patterns that compound under load. (Linear: CDI-708, CDI-709, CDI-710, CDI-711)
+Interactive GTD sessions are slow. Triaging a 24-item inbox requires 25+ sequential MCP round-trips, each spawning `osascript` with a mandatory 0.5–0.7s sleep. The full chain (Claude → reverse proxy → private network → Mac → Python → osascript → Apple Events → Things) amplifies per-call latency. There is no instrumentation to quantify bottlenecks, read operations go through AppleScript when a direct SQLite path exists, and several tools have N+1 query patterns that compound under load. (Linear: CDI-708, CDI-709, CDI-710, CDI-711)
 
 ## What Changes
 

@@ -1,6 +1,8 @@
 # Things 3 GTD MCP Server
 
-A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.com/things/) that brings GTD (Getting Things Done) methodology to AI assistants.
+A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.com/things/) that brings GTD (Getting Things Done) methodology to AI assistants. It is for Things 3 users on a Mac who want Claude, ChatGPT, n8n or any other MCP client to capture, organize and review their tasks.
+
+This repository is a fork of [excelsier/things-fastmcp](https://github.com/excelsier/things-fastmcp) by Yaroslav Krempovych, which is itself based on [hald/things-mcp](https://github.com/hald/things-mcp) by Harald Lindstrøm. See [History](#history) and [Credits](#credits).
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/caseyberlin)
 
@@ -35,7 +37,7 @@ The goal isn't to expose database operations to an AI. It's to give AI assistant
 This project evolved through several stages:
 
 1. **[things-mcp](https://github.com/hald/things-mcp)** by Harald Lindstrøm — Original MCP implementation exposing Things 3 operations
-2. **FastMCP Migration** — Modernized to FastMCP framework with async tools, caching, and reliability features
+2. **[things-fastmcp](https://github.com/excelsier/things-fastmcp)** by Yaroslav Krempovych: moved to the FastMCP framework with async tools, caching and reliability features (this repo's fork parent)
 3. **GTD-Native Tools** — Redesigned from REST-style CRUD operations to intent-based tools aligned with GTD's five stages
 
 The shift from "database wrapper" to "GTD assistant" reflects a key insight about MCP design: **tools should match how agents think about problems**, not how APIs are structured.
@@ -44,7 +46,6 @@ The shift from "database wrapper" to "GTD assistant" reflects a key insight abou
 
 This is an evolving experiment in GTD-native AI tooling. Potential directions:
 
-- **MCP Resources** for ambient GTD state (inbox count, stalled projects)
 - **Smarter context detection** based on time, location, calendar
 - **GTD coaching** — proactive suggestions during reviews
 - **Multi-app GTD** — extending the pattern beyond Things 3
@@ -57,8 +58,9 @@ Contributions and ideas welcome.
 
 - **macOS** (required — uses AppleScript and URL schemes)
 - **Things 3** with scripting permissions enabled
-- **Python 3.12+**
-- **uv** package manager
+- **Things URL scheme token** (Things > Settings > General > Enable Things URLs), needed for write tools
+- **Python 3.12+** and the **uv** package manager
+- **FastMCP 4** (`fastmcp>=4.0.10,<5.0.0`, installed by `uv sync`)
 
 ### Installation
 
@@ -66,21 +68,61 @@ Contributions and ideas welcome.
 # Clone and install
 git clone https://github.com/CaseyRo/mcp-things.git
 cd mcp-things
-uv pip install -e .
+uv sync
 
 # Configure Things 3 authentication token
-python scripts/configure_token.py
+uv run python scripts/configure_token.py
 ```
 
 ### Running
 
 ```bash
-# Production mode (binds to 127.0.0.1:8009)
+# Binds to 127.0.0.1:8009 (`uv run dev` is an alias for the same entry point)
 uv run server
-
-# Development mode with auto-reload
-uv run dev
 ```
+
+The MCP endpoint is `http://127.0.0.1:8009/mcp` (streamable HTTP, stateless). `GET /health` and `GET /healthz` return a small JSON status document.
+
+### Running under launchd
+
+The server must run as a native macOS process (not in Docker) because it drives Things through AppleScript and the Things URL scheme. To keep it running, add a LaunchAgent such as `~/Library/LaunchAgents/com.example.mcp-things.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.example.mcp-things</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/mcp-things/.venv/bin/server</string>
+  </array>
+  <key>WorkingDirectory</key><string>/path/to/mcp-things</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+```
+
+Load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.mcp-things.plist`. Settings are read from `.env` in the working directory. macOS asks for Automation access to Things the first time; the grant is tied to the Python interpreter in `.venv`, so re-grant it if you recreate the environment with a different Python.
+
+### Configuration
+
+Settings come from environment variables or `.env` (see `.env.example`).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `THINGS_MCP_HOST` | `127.0.0.1` | Bind address |
+| `THINGS_MCP_PORT` | `8009` | Listen port |
+| `THINGS_MCP_TRANSPORT` | `streamable-http` | Transport (the only supported value) |
+| `THINGS_AUTH_TOKEN` | empty | Things URL scheme token; required for write tools |
+| `THINGS_MCP_API_KEY` | auto-generated | Bearer token clients must send (see below) |
+| `THINGS_MCP_PUBLIC_URL` | unset | Public HTTPS URL of the server, used as the auth base URL when it sits behind a proxy |
+| `THINGS_MCP_DEBUG` | `false` | Verbose console logging |
+| `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | `false` | Bring Things to the foreground during AppleScript calls (debugging) |
+| `RETRY_ATTEMPTS` | `3` | Retries for failed operations (1 to 10) |
+| `RETRY_DELAY` | `1.0` | Seconds between retries |
+| `THINGSDB` | auto-detected | Path to the Things SQLite database |
 
 On first startup, the server auto-generates a secure API key and saves it to `.env`. The key is printed to the console:
 
@@ -98,7 +140,7 @@ All MCP endpoints require bearer token authentication (`THINGS_MCP_API_KEY`). Wr
 - **Regenerate:** Delete the `THINGS_MCP_API_KEY=` line from `.env` and restart — a new key is generated
 - **Manual set:** Set `THINGS_MCP_API_KEY=your-key` in `.env` before starting
 
-The dashboard at `/dashboard` is currently disabled (code preserved, routes commented out in `fast_server.py`).
+Only the health endpoints are unauthenticated. To reach the server from another machine, keep it on loopback and put an authenticating tunnel or reverse proxy in front of it; set `THINGS_MCP_PUBLIC_URL` to its public URL.
 
 ### Claude Desktop Integration
 
@@ -218,26 +260,20 @@ N-item versions of the singular tools for high-throughput cleanups (each returns
 | `bulk-modify` | Apply the same property changes to many tasks |
 | `bulk-triage` | Record triage decisions (complete/cancel/defer/delegate) across many inbox items |
 
-Plus the utility tools `search-tasks`, `triage-insights`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+Plus the utility tools `search-tasks`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
 
-## GTD Health Dashboard
+## Resources and Prompts
 
-The server includes a built-in dashboard at `/dashboard` that tracks your inbox triage patterns over time.
+- Resources: `things://inbox/count`, `things://today`, `things://stalled-projects`, `things://triage/stats`, `things://contexts`, `things://config`
+- Prompts: `weekly-review`, `process-inbox-to-zero`, `plan-project`
+
+## GTD Health Dashboard (disabled)
+
+`src/things_mcp/dashboard.html` is a triage-pattern dashboard (KPIs, action and category breakdowns, weekly trend). Its `/dashboard` routes are currently commented out in `fast_server.py`, so it is not served. The same triage data is available through the `triage-insights` tool and the `things://triage/stats` resource.
 
 ![GTD Health Dashboard](docs/images/dashboard-full.png)
 
-**Features:**
-
-- KPI cards: total triaged, sessions, avg/day, vague capture rate
-- Action breakdown: completed, canceled, deferred, delegated
-- Category breakdown: repo-research, web-reference, client-person, and more
-- Weekly trend chart
-- Actionable insights based on your triage behavior
-- Period selector (7 days, 30 days, 90 days, all time)
-
-Access it at `http://<host>:<port>/dashboard` when the server is running.
-
-### GTD Context Tags
+## GTD Context Tags
 
 For best results, use consistent GTD tags in Things 3:
 
@@ -254,7 +290,8 @@ People:   @person-name (for agenda items)
 | File/Directory | Purpose |
 |----------------|---------|
 | `README.md` | This file — project overview and quick start |
-| `docs/` | Documentation (DEVELOPERS.md, CLAUDE.md, MIGRATION.md, TESTING.md, compatibility guides) |
+| `docs/` | Documentation (DEVELOPERS.md, MIGRATION.md, TESTING.md, compatibility guides) |
+| `CLAUDE.md` | Guidance for AI coding agents working on this repo |
 | `openspec/` | Spec-driven development framework and change proposals |
 | `src/things_mcp/` | Main source code |
 | `tests/` | Test suite (unit + integration) |
@@ -267,7 +304,7 @@ People:   @person-name (for agenda items)
 
 ```
 src/things_mcp/
-├── fast_server.py        # Entry point, ASGI app, dashboard endpoint
+├── fast_server.py        # Entry point, ASGI app, health endpoints
 ├── server_core.py        # Server factory, client middleware, schema transforms
 ├── auth.py               # Bearer token auth (BearerTokenVerifier for FastMCP)
 ├── input_validation.py   # Input validation (tag names, show-in-app IDs)
@@ -290,7 +327,6 @@ src/things_mcp/
 This project uses **OpenSpec** for spec-driven development. The `openspec/` directory contains:
 
 - `project.md` — Project conventions and architecture
-- `AGENTS.md` — Instructions for AI assistants working on changes
 - `changes/` — Active and archived change proposals
 
 When planning significant changes, create a proposal in `openspec/changes/<change-id>/` with design docs and requirement specs before implementation.
@@ -302,8 +338,10 @@ For development setup, architecture details, testing, and contribution guideline
 Quick commands:
 
 ```bash
+uv sync
+
 # Run tests (default is CI-safe: excludes Things 3 / real tests)
-uv run python -m pytest tests
+uv run pytest
 
 # Run real integration tests only (Things 3 required, local/deployment)
 uv run python -m pytest tests -m real
@@ -312,17 +350,32 @@ uv run python -m pytest tests -m real
 uv run ruff check . && uv run ruff format .
 ```
 
+CI (`.github/workflows/ci.yml`) runs `pip-audit`, ruff and the tests as the `test` check, which is required before a pull request can merge into the default branch, `source`.
+
+## Usage Telemetry
+
+A small middleware (`src/things_mcp/usage.py`) writes one JSON line per tool call to stderr: server name, tool name, duration, outcome and MCP protocol version. It never records arguments or results. Tool failures raise `ToolError`, so they are logged with `outcome: error`.
+
+## Releases
+
+Releases are git tags only and are not published to PyPI. After a change lands on `source`, the release workflow runs the tests and a `pip-audit`, then pushes the next `v*` patch tag. No commit bumps the version in `pyproject.toml`.
+
 ## Credits
 
-- **[Harald Lindstrøm](https://github.com/hald)** — Original things-mcp
+- **[Harald Lindstrøm](https://github.com/hald)**: original [things-mcp](https://github.com/hald/things-mcp)
+- **[Yaroslav Krempovych](https://github.com/excelsier)**: [things-fastmcp](https://github.com/excelsier/things-fastmcp), the upstream of this fork
 - **[Jonathan Lowin](https://github.com/jlowin)** — FastMCP framework
 - **[things.py](https://github.com/thingsapi/things.py)** — Things 3 Python library
 - **[David Allen](https://gettingthingsdone.com/)** — GTD methodology
 - **[Cultured Code](https://culturedcode.com)** — Things 3
 
+## Support
+
+If this server saves you time, you can [buy me a coffee](https://buymeacoffee.com/caseyberlin).
+
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+MIT License, see [LICENSE](LICENSE).
 
 ## Links
 

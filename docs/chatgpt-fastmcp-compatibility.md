@@ -1,6 +1,6 @@
-# ChatGPT + FastMCP 3.0 Compatibility Guide
+# ChatGPT + FastMCP Compatibility Guide
 
-This document describes the compatibility issues between ChatGPT's MCP integration and FastMCP 3.0 servers, along with the solutions implemented in this project.
+This document describes the compatibility issues between ChatGPT's MCP integration and FastMCP servers, along with the solutions implemented in this project.
 
 ## Background
 
@@ -139,19 +139,20 @@ Invalid schema: anyOf is not supported in strict mode
 
 ## Complete Transformation Pipeline
 
-We apply all transformations to all requests (ChatGPT requirements are a superset of n8n):
+`ClientCompatibilityMiddleware` detects the client from the `User-Agent` header. Every client gets `anyOf` flattening; only ChatGPT gets the strict-mode steps, so other clients keep genuinely optional parameters:
 
 ```python
-def _transform_schema_for_clients(schema: dict) -> dict:
-    """Apply all client compatibility transformations."""
+def _transform_schema_for_client(schema: dict, is_chatgpt: bool) -> dict:
+    """Apply client compatibility transformations."""
     # Step 1: Flatten anyOf (needed for both n8n and ChatGPT)
     schema = _flatten_anyof_for_n8n(schema)
 
-    # Step 2: Add additionalProperties: false (ChatGPT)
-    schema = _add_additional_properties_false(schema)
+    if is_chatgpt:
+        # Step 2: Add additionalProperties: false (ChatGPT)
+        schema = _add_additional_properties_false(schema)
 
-    # Step 3: Make all fields required (ChatGPT)
-    schema = _make_all_fields_required(schema)
+        # Step 3: Make all fields required (ChatGPT)
+        schema = _make_all_fields_required(schema)
 
     return schema
 ```
@@ -170,7 +171,7 @@ def _transform_schema_for_clients(schema: dict) -> dict:
 1. **Enable debug logging:**
 
    ```bash
-   export THINGS_MCP_DEBUG_SCHEMA=1
+   export THINGS_MCP_DEBUG=true
    ```
 
 2. **Use ngrok for HTTPS** (ChatGPT requires HTTPS):

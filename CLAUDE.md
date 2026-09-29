@@ -15,10 +15,10 @@ Things MCP is a Model Context Protocol server for Things 3 (macOS task managemen
 # Clone and install
 git clone https://github.com/CaseyRo/mcp-things.git
 cd mcp-things
-uv pip install -e .
+uv sync
 
 # Configure authentication token
-python scripts/configure_token.py
+uv run python scripts/configure_token.py
 ```
 
 ## Common Commands
@@ -26,16 +26,14 @@ python scripts/configure_token.py
 ```bash
 # Run server
 uv run server                    # Production mode (binds to 127.0.0.1:8009)
-uv run dev                       # Development mode
-mcp dev src/things_mcp/things_fast_server.py  # Dev mode with auto-reload
+uv run dev                       # Same entry point as `server` (no auto-reload)
 
 # Lint and format
-ruff check .
-ruff format .
+uv run ruff check .
+uv run ruff format .
 
 # Run tests
-uv run python -m pytest tests                    # All tests (requires Things 3)
-uv run python -m pytest tests -m "not real"      # Unit tests only (CI/CD safe)
+uv run pytest                                    # Default: excludes `real` tests (CI-safe, what the `test` check runs)
 uv run python -m pytest tests -m real            # Real integration tests only
 uv run python -m pytest tests --cov=src/things_mcp --cov-report=term-missing  # With coverage
 ```
@@ -86,10 +84,10 @@ src/things_mcp/
 ## Key Patterns
 
 - **Tool registration**: Use `@mcp.tool(name="kebab-case", annotations=TOOL_ANNOTATIONS["name"], output_schema=output_schema_for(ToolEnvelope[<DataT>]))`. The `output_schema=` kwarg is **mandatory** for every tool — auto-derivation does not apply when the return type is `ToolResult`.
-- **Async tools**: All tool functions must be `async def` with `ctx: Context` parameter for logging
+- **Async tools**: All tool functions must be `async def` and take a `ctx: Context` parameter
 - **Return shape**: Every tool returns a `ToolResult` built via `make_result(...)`, `write_result(...)`, or `bulk_result(...)` from `tool_results.py`. The structured payload is a `ToolEnvelope[DataT]` with three fields — `data` (typed payload), `summary` (one-sentence headline), `meta` (free-form bag for warnings/truncation/cache info). The text block is always explicit; FastMCP's auto-derived text would emit raw JSON and regress text-only clients.
 - **Error handling**: Raise `ToolError("message")` for failures. MCP's protocol-level `isError: true` is the source of truth — the envelope deliberately has no `ok` / `success` field.
-- **Context logging**: Use `await ctx.info("message")` for operation logging within tools
+- **Progress**: Batch tools report progress with `await ctx.report_progress(...)`; operational logging goes through `get_logger(__name__)`, not the MCP context
 - **Tool timeouts**: Write tools use `timeout=30`, read tools use `timeout=5`
 - **Caching**: Use `@cached(ttl=CACHE_TTL.get("operation", 30))` for read operations
 - **Logging**: Use `get_logger(__name__)`, redact sensitive data (never log task titles/notes)
@@ -110,6 +108,10 @@ THINGS_AUTH_TOKEN=your-token     # REQUIRED: Get from Things → Settings → Ge
 THINGS_MCP_API_KEY=tmcp_xxx      # Server API key for bearer-token clients (auto-generated on first run)
 THINGS_MCP_DEBUG=false           # Enable verbose debug logging to console (default: INFO only)
 THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT=1  # Debug: show Things in foreground
+THINGS_MCP_PUBLIC_URL=           # Public HTTPS URL used as the auth base_url (default: http://host:port)
+RETRY_ATTEMPTS=3                 # Retries for failed operations (1-10)
+RETRY_DELAY=1.0                  # Seconds between retries (0.1-30)
+THINGSDB=                        # Override path to the Things SQLite database (read layer)
 ```
 
 **Important:** The `THINGS_AUTH_TOKEN` is required for all write operations (create, update, delete, modify, merge). This includes the CRUD tools: `modify-project`, `modify-area`, `delete-area`, `merge-areas`, and enhanced `create-area`/`plan-project`. Without it, write operations will fail silently. Configure via `.env` file or environment variable.
@@ -191,7 +193,7 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 
 ## fastmcp 4 idioms
 
-- `fastmcp>=4.0.10,<5.0.0`; streamable-http with `stateless_http=True` passed to `run()`/`http_app()`, never the constructor (v4 rejects it). No `allowed_hosts` workaround: that was the 3.4.3 host guard.
+- `fastmcp>=4.0.10,<5.0.0`; streamable-http with `stateless_http=True` passed to `run()`/`http_app()`, never the constructor (v4 rejects it).
 - Annotations are snake_case (`read_only_hint`, `destructive_hint`, ...). CI runs with `FASTMCP_MCP_CAMELCASE_COMPAT=false`, so camelCase access fails the build.
 - Failures raise `ToolError`. A returned error payload is logged by usage telemetry as `outcome: ok`.
 - `src/things_mcp/usage.py` is vendored verbatim from `CDiT-infrastructure/scripts/mcp_usage_middleware.py`; re-copy it, never edit it here.

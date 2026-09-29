@@ -10,14 +10,14 @@ This project provides a **Model Context Protocol (MCP) server** for the [Things 
 - Provide comprehensive access to Things 3 data (tasks, projects, areas, tags)
 - Deliver reliable, production-ready MCP integration with caching and error handling
 - Maintain privacy and security by operating entirely locally on macOS
-- Support both modern FastMCP and legacy MCP implementations during transition
+- Run as a single FastMCP 4 server over streamable HTTP
 
 ## Tech Stack
 
 ### Core Technologies
 
 - **Python 3.12+** - Primary language (requires `>=3.12` per pyproject.toml)
-- **FastMCP** - Modern MCP server framework from Anthropic's `mcp` library
+- **FastMCP 4** - MCP server framework (`fastmcp>=4.0.10,<5.0.0`)
 - **things-py** - Official Things 3 Python library for database queries
 - **Rich** - Terminal UI and colorful logging
 - **httpx** - HTTP client for async operations
@@ -28,7 +28,7 @@ This project provides a **Model Context Protocol (MCP) server** for the [Things 
 - **Ruff** - Fast Python linter and formatter (replaces Black, flake8, isort)
 - **pytest** - Testing framework with coverage support
 - **Hatchling** - Modern build backend for packaging
-- **Twine** - PyPI package publishing
+- **Tag-only releases** - a `v*` git tag per release; not published to PyPI
 
 ### Platform Requirements
 
@@ -184,7 +184,7 @@ things:///show?id=today&query=search
 - HTTP transport via "streamable-http"
 - Automatic JSON schema generation from type hints
 - Tool annotations for optimization hints (read-only, idempotent, destructive)
-- Backward compatibility checks for newer metadata fields
+- Middleware hooks for client compatibility and usage telemetry
 
 ### macOS-Specific Behavior
 
@@ -247,26 +247,20 @@ things:///show?id=today&query=search
 
 ### Python Libraries
 
-- **mcp[cli]** `>=1.2.0` - Anthropic's Model Context Protocol implementation
-  - Provides FastMCP framework and MCP development tools
-  - CLI tools: `mcp dev` for auto-reload during development
+- **fastmcp** `>=4.0.10,<5.0.0` - MCP server framework
+  - Tools, resources, prompts, middleware, bearer-token auth
 
-- **things-py** `>=0.0.15` - Official Things 3 Python library
+- **things-py** `>=1.0.1` - Community Things 3 Python library (thingsapi)
   - SQLite database access layer for read operations
-  - Maintained by Cultured Code
 
 - **httpx** `>=0.28.1` - Modern async HTTP client
   - Used for HTTP transport in MCP server
 
-- **rich** `>=13.7.0` - Terminal formatting and logging
-  - Colorful output in `run_things_fastmcp.sh`
-  - Progress indicators and tables
+- **rich** `>=14.0.0` - Terminal formatting and logging
 
 ### Development Tools
 
-- **uv** - Fast package installer (optional but recommended)
-  - Bootstrapped by `run_things_fastmcp.sh` if available
-  - Falls back to system Python if unavailable
+- **uv** - Package and virtual environment manager (`uv sync`, `uv run`)
 
 - **ruff** `>=0.1.0` - Python linter and formatter
   - Replaces Black, flake8, isort with single fast tool
@@ -278,5 +272,5 @@ things:///show?id=today&query=search
 
 - **MCP Specification**: <https://github.com/anthropics/mcp>
 - **Things URL Scheme**: <https://culturedcode.com/things/support/articles/2803573/>
-- **OpenSpec**: Change proposal workflow (see `openspec/AGENTS.md`)
+- **OpenSpec**: Change proposal workflow (see `openspec/changes/`)
 - **Project Issues**: <https://github.com/CaseyRo/mcp-things/issues>
