@@ -276,6 +276,14 @@ def skip_real_tests_if_unavailable(request, things_available):
         pytest.skip("Things 3 is not available for real integration tests")
 
 
+@pytest.fixture(autouse=True)
+def instant_readback(request, monkeypatch):
+    """One immediate read-back attempt after creates (CDI-1588) outside real tests,
+    so a dev Mac with a live Things DB doesn't wait out the poll window."""
+    if "real" not in request.keywords:
+        monkeypatch.setattr("things_mcp.reader.READBACK_DELAYS", (0,))
+
+
 class TestDataTracker:
     """Track created test items for automatic cleanup."""
 

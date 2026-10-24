@@ -189,7 +189,7 @@ THINGS_MCP_TRANSPORT=streamable-http  # Default: streamable-http transport (only
 - **macOS required**: No Docker support due to AppleScript/URL scheme dependencies
 - **Python 3.12+**: Uses modern type hints and f-strings
 - **Log redaction**: Never log task titles, notes, or user content
-- **Things URL scheme**: Write operations have no direct response; assume success unless app fails
+- **Things URL scheme**: Write operations have no direct response. Create tools read the new to-do back by exact title + creation time (`reader.read_back`, CDI-1588) to return its real `thing_id`; null means "not yet confirmed", not failure
 
 ## fastmcp 4 idioms
 

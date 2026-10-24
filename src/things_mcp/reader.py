@@ -9,6 +9,7 @@ The SQLite reader is preferred for performance; things-py is the fallback.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Optional
 
@@ -67,6 +68,43 @@ def index_stale() -> bool:
         return get_overlay().is_index_stale()
     except Exception:
         return False
+
+
+# Waits between read-back attempts after a URL-scheme create (CDI-1588). Things
+# commits the new row a moment after `open` returns (see CDI-1255), so poll
+# briefly; the sum is the confirmation window.
+READBACK_DELAYS = (0.25, 0.25, 0.5, 0.5, 1.0, 1.0)
+
+
+async def read_back(titles: list[str], since: float) -> dict[str, dict[str, Any]]:
+    """Find just-created to-dos by exact title + creation time (CDI-1588).
+
+    The URL scheme returns no UUID, so after a create we look for the newest
+    to-do with that exact title created at/after ``since``. Returns
+    ``{title: row}`` for each title confirmed within the window; a missing title
+    means "created, not yet confirmed", never "failed".
+
+    ponytail: two creates with the same title inside one window both resolve
+    to the newest row; match on more fields if that ever matters.
+    """
+    r = _get_sqlite_reader()
+    found: dict[str, dict[str, Any]] = {}
+    if not (r and r.is_available):
+        return found
+    wanted = set(titles)
+    for delay in READBACK_DELAYS:
+        await asyncio.sleep(delay)
+        for title in wanted - found.keys():
+            try:
+                row = r.find_created(title, since)
+            except Exception:
+                logger.debug("reader: read-back query failed (non-critical)")
+                return found
+            if row:
+                found[title] = row
+        if found.keys() == wanted:
+            break
+    return found
 
 
 def inbox() -> list[dict[str, Any]]:

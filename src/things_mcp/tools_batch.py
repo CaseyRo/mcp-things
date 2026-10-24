@@ -8,6 +8,7 @@ The `bulk-*` prefix denotes the N-item version of a singular tool:
 - bulk-triage = N x (complete|cancel|defer|schedule|delegate|assign) grouped by action
 """
 
+import time
 from typing import Optional, List, Literal
 
 import things
@@ -17,7 +18,8 @@ from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
 from .models import BulkItemError, BulkResult, ToolEnvelope, output_schema_for
-from .tool_results import bulk_result
+from .reader import read_back
+from .tool_results import bulk_result, readback
 from .url_scheme import (
     build_todo_object,
     execute_json,
@@ -186,6 +188,7 @@ def register_batch_tools(mcp: FastMCP):
                 todo_objects.append(todo_obj)
 
             # Single JSON URL scheme call for all items
+            since = time.time() - 1
             success = execute_json(todo_objects)
             if not success:
                 _error_result("Failed to create items via Things JSON API")
@@ -210,23 +213,50 @@ def register_batch_tools(mcp: FastMCP):
                 )
 
             titles = [item.title for item in items]
+            # CDI-1588: the JSON URL scheme returns no UUIDs; read the rows back.
+            found = await read_back(titles, since)
+            thing_ids, unapplied = [], {}
             text_body = f"Captured {len(items)} items"
             if default_when:
                 text_body += f" (default schedule: {default_when})"
             text_body += ":\n"
-            for title in titles:
-                text_body += f"- {title}\n"
+            for item in items:
+                row = found.get(item.title)
+                _, rb = readback(
+                    row,
+                    tags=item.tags,
+                    when=item.when or default_when,
+                    deadline=item.deadline,
+                )
+                thing_ids.append(row["uuid"] if row else None)
+                if rb.get("unapplied"):
+                    unapplied[item.title] = rb["unapplied"]
+                text_body += f"- {item.title}"
+                text_body += f" ({row['uuid']})\n" if row else " (not yet confirmed)\n"
+                for miss in unapplied.get(item.title, []):
+                    text_body += f"  NOT applied: {miss}\n"
 
-            # Things JSON URL scheme returns no UUIDs; report titles as proxy IDs
-            # so consumers can still correlate per-item success.
+            summary = f"Captured {len(items)} items."
+            pending = thing_ids.count(None)
+            if pending:
+                summary += f" {pending} not yet confirmed in Things (no thing_id yet)."
+            if unapplied:
+                summary += f" {len(unapplied)} with fields NOT applied."
+
+            # succeeded_ids keeps titles as proxy IDs (unchanged contract);
+            # meta.thing_ids carries the real UUIDs in item order.
             return bulk_result(
                 requested=len(items),
                 succeeded_ids=titles,
                 failed_ids=[],
                 errors=[],
-                summary=f"Captured {len(items)} items.",
+                summary=summary,
                 text=text_body,
-                meta={"default_when": default_when},
+                meta={
+                    "default_when": default_when,
+                    "thing_ids": thing_ids,
+                    "unapplied": unapplied,
+                },
             )
 
         except ToolError:
