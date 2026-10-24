@@ -441,6 +441,11 @@ def run_things_mcp_server():
     # Create ASGI app with streamable-http transport support
     combined_app = _create_combined_app(mcp, transport_mode)
 
+    # Server-side repeating to-dos (CDI-2076): spawn next occurrences.
+    from .repeat import start_sweeper
+
+    start_sweeper()
+
     port = get_binding_port()
     logger.info("Server endpoints:")
     logger.info(f"  - Streamable-HTTP:      http://{host}:{port}/mcp")

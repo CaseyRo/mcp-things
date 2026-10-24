@@ -104,6 +104,14 @@ class Todo(BaseModel):
         ),
     )
     deadline: str | None = None
+    repeat: str | None = Field(
+        default=None,
+        description=(
+            'Server-side repeat rule carried in the notes, e.g. "monthly:2nd-saturday '
+            'fixed". mcp-things creates the next occurrence after this one is '
+            "completed; Things itself does not show it as repeating."
+        ),
+    )
     stop_date: str | None = None
     created: str | None = None
     modified: str | None = None

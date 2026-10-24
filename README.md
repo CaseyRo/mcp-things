@@ -246,10 +246,10 @@ The server provides **32 GTD-native tools** organized by methodology stage:
 
 | Tool | Purpose |
 |------|---------|
-| `schedule-task` | Create organized tasks with context, dates, projects |
+| `schedule-task` | Create organized tasks with context, dates, projects, and an optional server-side `repeat` rule |
 | `delegate-task` | Mark task as "Waiting For" with person and follow-up |
 | `defer-task` | Move to Someday/Maybe or schedule for future date |
-| `modify-task` | Update task properties (title, notes, tags, cancel) |
+| `modify-task` | Update task properties (title, notes, tags, cancel, server-side `repeat`) |
 | `modify-project` | Update project properties (title, notes, area, complete/cancel) |
 | `plan-project` | Create project with initial tasks atomically |
 | `create-area` | Create a new area of responsibility (optionally with projects) |

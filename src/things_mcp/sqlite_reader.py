@@ -839,6 +839,44 @@ class ThingsSQLiteReader:
         )
         return self._enrich_tasks(result)
 
+    def get_completed_with_notes(self, fragment: str) -> list[dict[str, Any]]:
+        """Completed to-dos whose notes contain ``fragment`` (repeat sweep)."""
+        sql = f"""
+            {_TASK_SELECT}
+            WHERE
+                {_NOT_RECURRING}
+                AND {_NOT_TRASHED}
+                AND TASK.type = {TYPE_TODO}
+                AND TASK.status = {STATUS_COMPLETED}
+                AND TASK.notes LIKE ?
+                {_CONTEXT_NOT_TRASHED}
+        """
+
+        def _fallback():
+            import things
+
+            return [
+                t
+                for t in things.todos(status="completed")
+                if fragment in (t.get("notes") or "")
+            ]
+
+        result = self._execute_with_fallback(sql, (f"%{fragment}%",), _fallback)
+        return self._enrich_tasks(result)
+
+    def is_native_repeat(self, task_uuid: str) -> bool:
+        """True for a Things-native repeating template or one of its copies."""
+        sql = f"""
+            SELECT 1 FROM {TABLE_TASK}
+            WHERE uuid = ? AND (rt1_recurrenceRule IS NOT NULL
+                OR rt1_repeatingTemplate IS NOT NULL OR repeater IS NOT NULL)
+        """
+        try:
+            return bool(self._execute(sql, (task_uuid,), row_factory=lambda _c, r: r))
+        except Exception:
+            logger.debug("Native-repeat check unavailable", exc_info=True)
+            return False
+
     def get_tags(self) -> list[dict[str, Any]]:
         """All tags."""
         sql = f"""
