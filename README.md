@@ -184,6 +184,31 @@ Copy the API key from the console output, then add to `~/Library/Application Sup
 claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key-here" things http://127.0.0.1:8009/mcp
 ```
 
+## Update runbook (launchd, cc1)
+
+A merge to `source` does **not** deploy this server: launchd runs the live checkout,
+and nothing restarts it. Update by hand, and only from a clean default branch:
+
+    cd /Users/caseyromkes/dev/CDiT-infrastructure/mcp/mcp-things
+    git status --porcelain            # must print nothing
+    git branch --show-current         # must be source
+    git pull --ff-only
+    uv sync --locked                  # keeps .python-version (3.12.11): do NOT change it
+    launchctl kickstart -k gui/501/de.cdit.mcp-things
+    launchctl print gui/501/de.cdit.mcp-things | grep -E 'pid =|state ='
+    curl -s http://100.93.89.102:8009/health
+    tail -n 50 ~/Library/Logs/mcp-things.err.log
+
+Never `pkill -f` this server. A `pkill -f` pattern has matched and killed the live
+sibling service before. Use `launchctl kickstart` only.
+
+If a tool call **hangs** after the restart (osascript waits forever), the Things
+Automation grant has moved off the interpreter. Roll back to the previous checkout
+and restart:
+
+    git checkout <previous-sha> && uv sync --locked
+    launchctl kickstart -k gui/501/de.cdit.mcp-things
+
 ## Tool response shape
 
 Every tool returns both a human-readable text block (the existing markdown formatting) and a JSON `structuredContent` envelope so MCP clients can read fields without parsing prose. The envelope is uniform across all 32 tools:
