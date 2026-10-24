@@ -265,6 +265,21 @@ class TestToDictTodoListField:
             todo = {"uuid": "tx", "title": "x", "start": bucket}
             assert to_dict_todo(todo)["list"] == bucket
 
+    def test_scheduled_someday_row_reads_as_upcoming(self):
+        """Things stores a to-do scheduled for a later date as start=Someday plus a
+        start date; the app shows it under Upcoming, so the label must too."""
+        from things_mcp.formatters import to_dict_todo
+
+        todo = {
+            "uuid": "t4",
+            "title": "x",
+            "start": "Someday",
+            "start_date": "2026-10-25",
+        }
+        out = to_dict_todo(todo)
+        assert (out["start"], out["list"]) == ("Upcoming", "Upcoming")
+        assert to_dict_todo({**todo, "start_date": None})["list"] == "Someday"
+
     def test_list_falls_back_to_inbox_when_unscheduled(self):
         from things_mcp.formatters import to_dict_todo
 
