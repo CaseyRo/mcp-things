@@ -435,6 +435,8 @@ def register_batch_tools(mcp: FastMCP):
         Args:
             task_ids: List of task UUIDs to modify (1-50).
             when: Reschedule all tasks (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD).
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
             add_tags: Tags to add to all tasks (e.g. ["@computer"]).
             project: Move all tasks to this project (name or UUID). Mutually exclusive with area.
             area: Move all tasks to this area (name or UUID). Mutually exclusive with project.
