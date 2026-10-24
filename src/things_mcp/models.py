@@ -106,6 +106,10 @@ class Todo(BaseModel):
     deadline: str | None = None
     repeat: str | None = Field(
         default=None,
+        # Omitted when unset: Todo is additionalProperties:false, and a portal
+        # catalog cached before this field existed rejects every to-do that
+        # carries it, even as null (CDI-2076 deploy, 2026-10-24).
+        exclude_if=lambda v: v is None,
         description=(
             'Server-side repeat rule carried in the notes, e.g. "monthly:2nd-saturday '
             'fixed". mcp-things creates the next occurrence after this one is '
