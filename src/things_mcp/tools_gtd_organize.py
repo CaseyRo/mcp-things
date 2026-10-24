@@ -3,6 +3,7 @@
 These tools handle the "Organize" stage of GTD - putting things where they belong.
 """
 
+import time
 from typing import Optional, List, Dict, Any
 
 import things
@@ -11,7 +12,8 @@ from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
 from .models import ToolEnvelope, WriteResult, output_schema_for
-from .tool_results import write_result
+from .reader import read_back
+from .tool_results import readback, write_result
 from .utils import app_state
 from .url_scheme import (
     add_todo,
@@ -219,6 +221,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 list_id=list_id,
             )
 
+            since = time.time() - 1
             success = execute_url(url)
             if not success:
                 _error_result("Failed to schedule task")
@@ -243,12 +246,24 @@ def register_gtd_organize_tools(mcp: FastMCP):
             if rule:
                 text_body += f"- Repeat: {rule.text} ({_REPEAT_DOC})\n"
 
+            # CDI-1588: the URL scheme returns no UUID; read the new row back.
+            row = (await read_back([title], since)).get(title)
+            note, readback_meta = readback(
+                row,
+                list_id=list_id,
+                list_type="project" if project else "area",
+                tags=tags,
+                when=when,
+                deadline=deadline,
+            )
+            summary = f"Scheduled: {title} ({when})"
+            if rule:
+                summary += f", server-side repeat {rule.text}"
             return write_result(
-                summary=f"Scheduled: {title} ({when})"
-                + (f", server-side repeat {rule.text}" if rule else ""),
-                thing_id=None,
+                summary=f"{summary}. {note}",
+                thing_id=row["uuid"] if row else None,
                 acknowledged=True,
-                text=text_body,
+                text=f"{text_body}\n{note}",
                 meta={
                     "when": when,
                     "deadline": deadline,
@@ -256,6 +271,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
                     "area": area,
                     "repeat": rule.text if rule else None,
                     "repeat_kind": "server-side" if rule else None,
+                    **readback_meta,
                 },
             )
 

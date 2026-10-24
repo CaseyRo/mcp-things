@@ -839,6 +839,26 @@ class ThingsSQLiteReader:
         )
         return self._enrich_tasks(result)
 
+    def find_created(self, title: str, since: float) -> dict[str, Any] | None:
+        """Newest to-do titled exactly ``title`` created at/after ``since`` (CDI-1588).
+
+        ``since`` is a Unix timestamp, the same clock as ``creationDate``.
+        Raises when the database is unavailable; no things-py fallback, since
+        things-py cannot filter by creation time.
+        """
+        sql = f"""
+            {_TASK_SELECT}
+            WHERE
+                TASK.type = {TYPE_TODO}
+                AND {_NOT_TRASHED}
+                AND TASK.title = ?
+                AND TASK.{DATE_CREATED} >= ?
+            ORDER BY TASK.{DATE_CREATED} DESC
+            LIMIT 1
+        """
+        rows = self._execute(sql, (title, since))
+        return self._enrich_tasks(rows)[0] if rows else None
+
     def get_completed_with_notes(self, fragment: str) -> list[dict[str, Any]]:
         """Completed to-dos whose notes contain ``fragment`` (repeat sweep)."""
         sql = f"""

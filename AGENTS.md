@@ -11,6 +11,22 @@ This file tracks the agent's thoughts, ideas, and work flow for the `mcp_things`
 
 ## Log
 
+### 2026-10-24 — CDI-1588: create tools return the real thing_id
+
+- **Problem:** `capture-task` / `schedule-task` / `bulk-capture` returned
+  `thing_id: null`; the URL scheme gives no UUID, so a create was unverifiable
+  and a silently dropped field (CDI-1587) looked like success.
+- **Decision:** read the new to-do back server-side: newest to-do with the exact
+  title created since just before the write (`sqlite_reader.find_created`),
+  polled over `reader.READBACK_DELAYS` (~3.5s) because Things commits a beat
+  late (CDI-1255). Live: found on the first attempt, ~1-2s after the call.
+  Not found → `thing_id` stays null and the summary says "created, not yet
+  confirmed". Requested project/area, tags, when/reminder and deadline the row
+  doesn't show are listed as "NOT applied". No output model changed: the
+  portal caches output schemas, so details go in `meta` (open object) and the
+  summary; `bulk-capture` keeps titles in `succeeded_ids` and adds
+  `meta.thing_ids`.
+
 ### 2026-06-15 — CDI-1255: read-after-write staleness + Inbox-as-area
 
 - **Problem:** Tasks created via the write path (capture-task / bulk-capture /

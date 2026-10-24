@@ -6,16 +6,18 @@ These tools form the "input" side of GTD:
 - Clarify: process-inbox, convert-to-project
 """
 
+import time
 from typing import Literal, Optional, List, Union
 
 from . import reader as db
+from .reader import read_back
 from fastmcp import FastMCP, Context
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
 from .formatters import render_todo, to_dict_todo
 from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
-from .tool_results import make_result, write_result
+from .tool_results import make_result, readback, write_result
 from .utils import app_state
 from .url_scheme import (
     add_todo,
@@ -635,6 +637,7 @@ def register_gtd_core_tools(mcp: FastMCP):
 
             # Create task (no when/list specified = inbox)
             url = add_todo(title=title, notes=notes, tags=tags, when=when)
+            since = time.time() - 1
             success = execute_url(url)
 
             if not success:
@@ -659,11 +662,15 @@ def register_gtd_core_tools(mcp: FastMCP):
                     f"Captured to Inbox: {title}\n\n"
                     "Use process-inbox or schedule-task to clarify and organize."
                 )
+            # CDI-1588: the URL scheme returns no UUID; read the new row back.
+            row = (await read_back([title], since)).get(title)
+            note, meta = readback(row, tags=tags, when=when)
             return write_result(
-                summary=summary,
-                thing_id=None,
+                summary=f"{summary}. {note}",
+                thing_id=row["uuid"] if row else None,
                 acknowledged=True,
-                text=text_body,
+                text=f"{text_body}\n\n{note}",
+                meta=meta,
             )
 
         except ToolError:
