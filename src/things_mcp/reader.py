@@ -203,6 +203,26 @@ def trash() -> list[dict[str, Any]]:
     return things.trash()
 
 
+def logbook_with_notes(fragment: str) -> list[dict[str, Any]]:
+    """Completed to-dos whose notes contain ``fragment`` (repeat sweep, CDI-2076)."""
+    r = _get_sqlite_reader()
+    if r:
+        return r.get_completed_with_notes(fragment)
+    import things
+
+    return [
+        t
+        for t in things.todos(status="completed")
+        if fragment in (t.get("notes") or "")
+    ]
+
+
+def is_native_repeat(uuid: str) -> bool:
+    """True if Things itself repeats this to-do (template or copy)."""
+    r = _get_sqlite_reader()
+    return bool(r and r.is_native_repeat(uuid))
+
+
 def logbook() -> list[dict[str, Any]]:
     """Get logbook items — uses things-py."""
     import things

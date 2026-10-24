@@ -17,6 +17,8 @@ from typing import Any
 
 import things
 
+from .repeat import rule_in
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,6 +66,11 @@ def _normalise_checklist(raw: Any) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+def _repeat_text(todo: dict[str, Any]) -> str | None:
+    rule = rule_in(todo.get("notes"))
+    return rule.text if rule else None
+
+
 def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
     """Project a things-py todo row into the canonical Todo shape.
 
@@ -102,6 +109,7 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
         "start_date": todo.get("start_date") or None,
         "reminder_time": todo.get("reminder_time") or None,
         "deadline": todo.get("deadline") or None,
+        "repeat": _repeat_text(todo),
         "stop_date": todo.get("stop_date") or None,
         "created": todo.get("created") or todo.get("creation_date") or None,
         "modified": todo.get("modified") or todo.get("modification_date") or None,
@@ -141,6 +149,8 @@ def render_todo(todo: dict[str, Any]) -> str:
         todo_text += f"\nDeadline: {todo['deadline']}"
     if todo.get("stop_date"):
         todo_text += f"\nCompleted: {todo['stop_date']}"
+    if _repeat_text(todo):
+        todo_text += f"\nRepeat: {_repeat_text(todo)} (server-side)"
 
     if todo.get("notes"):
         todo_text += f"\nNotes: {todo['notes']}"

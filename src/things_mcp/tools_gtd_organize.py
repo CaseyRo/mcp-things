@@ -30,6 +30,7 @@ from .triage_tracker import triage_tracker
 from .input_validation import validate_tag_names, validate_name, validate_notes_length
 from .resolvers import resolve_list_id
 from .write_overlay import record_write
+from .repeat import Rule, parse_rule, with_rule
 
 logger = get_logger(__name__)
 
@@ -66,6 +67,20 @@ def _normalize_clearable_date(value: Optional[str]) -> Optional[str]:
     if value.strip().lower() in _CLEAR_DATE_SENTINELS:
         return ""
     return value
+
+
+_REPEAT_DOC = (
+    "server-side repeat: mcp-things creates the next occurrence within ~10 "
+    "minutes of this one being completed; Things itself shows no repeat"
+)
+
+
+def _parse_repeat(repeat: str) -> Rule:
+    """Parse a ``repeat`` argument or raise ToolError with the grammar."""
+    try:
+        return parse_rule(repeat)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from None
 
 
 def _resolve_task_by_title(task_title: str) -> str:
@@ -139,6 +154,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         context: Optional[List[str]] = None,
         checklist: Optional[List[str]] = None,
         notes: Optional[str] = None,
+        repeat: Optional[str] = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Create a task with specific scheduling and organization.
@@ -156,7 +172,21 @@ def register_gtd_organize_tools(mcp: FastMCP):
             context: GTD context tags (e.g., ["@computer", "high-energy"])
             checklist: Subtasks/checklist items
             notes: Additional notes
+            repeat: Make it a repeating to-do. This is a SERVER-SIDE repeat:
+                Things has no API for repeat rules, so the rule is stored as a
+                "🔁 repeat:" line in the notes and mcp-things creates the next
+                occurrence (same title, notes, tags, checklist, project/area;
+                the deadline keeps its offset from `when`) within ~10 minutes
+                of this one being completed. Canceling or deleting an
+                occurrence ends the series. Grammar: daily, weekly:mon[,thu],
+                monthly:15, monthly:last, monthly:2nd-saturday,
+                monthly:last-friday, every:14d, every:2w, every:3m, every:1y;
+                append " after-completion" to count from the completion day
+                instead of the schedule (default "fixed").
         """
+        rule = _parse_repeat(repeat) if repeat else None
+        if rule:
+            notes = with_rule(notes, rule)
         try:
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -208,9 +238,12 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 text_body += f"- Project: {project}\n"
             if context:
                 text_body += f"- Context: {', '.join(context)}\n"
+            if rule:
+                text_body += f"- Repeat: {rule.text} ({_REPEAT_DOC})\n"
 
             return write_result(
-                summary=f"Scheduled: {title} ({when})",
+                summary=f"Scheduled: {title} ({when})"
+                + (f", server-side repeat {rule.text}" if rule else ""),
                 thing_id=None,
                 acknowledged=True,
                 text=text_body,
@@ -219,6 +252,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
                     "deadline": deadline,
                     "project": project,
                     "area": area,
+                    "repeat": rule.text if rule else None,
+                    "repeat_kind": "server-side" if rule else None,
                 },
             )
 
@@ -592,6 +627,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
         project: Optional[str] = None,
         area: Optional[str] = None,
         canceled: Optional[bool] = None,
+        repeat: Optional[str] = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] General task modification for updates not covered by specific tools.
@@ -633,6 +669,11 @@ def register_gtd_organize_tools(mcp: FastMCP):
             project: Project name or UUID to move task to
             area: Area name or UUID to move task to
             canceled: Set to true to trash/cancel the task
+            repeat: Set a SERVER-SIDE repeat rule (same grammar as
+                schedule-task, e.g. "monthly:2nd-saturday"); the rule goes into
+                a "🔁 repeat:" notes line and mcp-things creates the next
+                occurrence after this one is completed. Pass "none" to stop.
+                Rejected for to-dos that Things already repeats natively.
         """
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
@@ -642,6 +683,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
         # CDI-1167: enables clearing a stale deadline / start date.
         when = _normalize_clearable_date(when)
         deadline = _normalize_clearable_date(deadline)
+        stop_repeat = repeat is not None and _normalize_clearable_date(repeat) == ""
+        rule = _parse_repeat(repeat) if repeat is not None and not stop_repeat else None
 
         try:
             if task_title and not task_id:
@@ -649,11 +692,12 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
             # CDI-1880: a project id sent through the to-do `update` URL is a
             # silent no-op in Things. Route it to modify-project instead.
-            if (things.get(task_id) or {}).get("type") == "project":
-                if checklist or add_checklist or project:
+            item = things.get(task_id) or {}
+            if item.get("type") == "project":
+                if checklist or add_checklist or project or repeat is not None:
                     _error_result(
-                        f"'{task_id}' is a project, not a task: checklist and "
-                        "project moves don't apply. Use modify-project."
+                        f"'{task_id}' is a project, not a task: checklist, "
+                        "repeat and project moves don't apply. Use modify-project."
                     )
                 return await modify_project(
                     name_or_uuid=task_id,
@@ -668,6 +712,23 @@ def register_gtd_organize_tools(mcp: FastMCP):
                     canceled=canceled,
                     ctx=ctx,
                 )
+
+            if repeat is not None:
+                from . import reader as db
+
+                if not item:
+                    _error_result(f"No task found with id '{task_id}'.")
+                if rule and db.is_native_repeat(task_id):
+                    _error_result(
+                        "This to-do already repeats natively in Things; edit its "
+                        "repeat rule in the Things app instead."
+                    )
+                # Rewrite the notes with the repeat line, keeping what's there.
+                current = notes if notes is not None else item.get("notes") or ""
+                if add_notes:
+                    current = f"{current}\n{add_notes}" if current else add_notes
+                    add_notes = None
+                notes = with_rule(current, rule)
 
             # Ensure Things app is running
             if not app_state.update_app_state():
@@ -738,6 +799,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 text_body += f" Moved to project: {project}"
             elif area:
                 text_body += f" Moved to area: {area}"
+            if rule:
+                text_body += f"\nRepeat: {rule.text} ({_REPEAT_DOC})."
+            elif stop_repeat:
+                text_body += "\nServer-side repeat removed."
 
             return write_result(
                 summary="Task canceled." if canceled else "Task updated.",
@@ -748,6 +813,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
                     "canceled": bool(canceled),
                     "moved_to_project": project,
                     "moved_to_area": area,
+                    "repeat": rule.text if rule else None,
+                    "repeat_kind": "server-side" if repeat is not None else None,
                 },
             )
 
