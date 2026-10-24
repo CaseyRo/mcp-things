@@ -620,6 +620,8 @@ def register_gtd_core_tools(mcp: FastMCP):
             notes: Additional details (optional)
             tags: Context tags like @computer, @phone (optional)
             when: Optional schedule (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD). If omitted, goes to inbox.
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
         """
         try:
             # Ensure Things app is running

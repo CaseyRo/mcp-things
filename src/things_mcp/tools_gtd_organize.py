@@ -165,7 +165,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         Args:
             title: What needs to be done
-            when: Schedule - today, tomorrow, evening, anytime, someday, or YYYY-MM-DD
+            when: Schedule - today, tomorrow, evening, anytime, someday, or YYYY-MM-DD.
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
             deadline: Hard deadline (YYYY-MM-DD)
             project: Project name or UUID to add to
             area: Area name or UUID
@@ -403,7 +405,9 @@ def register_gtd_organize_tools(mcp: FastMCP):
         Args:
             task_id: UUID of the task to defer (preferred if known)
             task_title: Title to search for (fuzzy match). If multiple match, returns list.
-            defer_to: When - "someday", "tomorrow", "next_week", or YYYY-MM-DD (required)
+            defer_to: When - "someday", "tomorrow", "next_week", or YYYY-MM-DD (required).
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
             reason: Why you're deferring (appended to notes)
         """
         if not defer_to:
@@ -431,16 +435,18 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 "next_week": None,  # Calculate date
             }
 
-            when_value = when_map.get(defer_to, defer_to)
+            day, at, clock = defer_to.partition("@")  # keep an @HH:MM reminder
+            when_value = when_map.get(day, day)
 
             # Handle next_week specially
-            if defer_to == "next_week":
+            if day == "next_week":
                 from datetime import date, timedelta
 
                 next_monday = date.today() + timedelta(
                     days=(7 - date.today().weekday())
                 )
                 when_value = next_monday.isoformat()
+            when_value += at + clock
 
             # Build notes update
             notes_update = None
@@ -660,6 +666,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
             add_notes: Notes to append (preserves existing)
             when: New schedule (today, tomorrow, evening, anytime, someday,
                 YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it.
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
             deadline: New deadline (YYYY-MM-DD). Pass "none"/"clear"/"remove"/
                 "null" to clear an existing deadline.
             tags: New tags (replaces existing)
@@ -977,6 +985,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
             append_notes: Text to add after existing notes
             when: Schedule date (today, tomorrow, evening, anytime, someday,
                 YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it.
+                Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
+                a plain date keeps an existing reminder, anytime/someday removes it.
             deadline: Deadline date (YYYY-MM-DD). Pass "none"/"clear"/"remove"/
                 "null" to clear an existing deadline.
             tags: Tags to set (replaces existing)

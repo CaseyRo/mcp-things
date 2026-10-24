@@ -290,3 +290,32 @@ def test_formatters_show_the_rule():
     assert to_dict_todo(row)["repeat"] == "monthly:2nd-saturday fixed"
     assert "Repeat: monthly:2nd-saturday fixed (server-side)" in render_todo(row)
     assert to_dict_todo({**row, "notes": "plain"})["repeat"] is None
+
+
+# -- reminder times ---------------------------------------------------------------
+
+
+async def test_reminder_time_reaches_things(write_path, monkeypatch):
+    """`when`/`defer_to` take @HH:MM for a reminder; next_week keeps the time."""
+    from things_mcp.fast_server import mcp
+
+    todo = {"uuid": "9LQY", "type": "to-do", "title": "T"}
+    monkeypatch.setattr(
+        "things_mcp.tools_gtd_organize.things", SimpleNamespace(get=lambda _id: todo)
+    )
+    async with Client(mcp) as client:
+        tools = {t.name: t for t in await client.list_tools()}
+        when_doc = tools["schedule-task"].input_schema["properties"]["when"]
+        assert "@HH:MM" in when_doc["description"]
+
+        await client.call_tool(
+            "schedule-task", {"title": "x", "when": "tomorrow@08:30"}
+        )
+        assert _sent(write_path)["when"] == "tomorrow@08:30"
+
+        await client.call_tool(
+            "defer-task", {"task_id": "9LQY", "defer_to": "next_week@09:00"}
+        )
+        when = _sent(write_path)["when"]
+        assert when.endswith("@09:00")
+        assert date.fromisoformat(when[:10]).weekday() == 0  # next Monday
