@@ -33,7 +33,7 @@ jobs:
         env:
           FASTMCP_MCP_CAMELCASE_COMPAT: "false"
         run: |
-          uv sync
+          uv sync --locked
           uv run pytest -x
 
       - name: Tag
