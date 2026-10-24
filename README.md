@@ -196,7 +196,7 @@ and nothing restarts it. Update by hand, and only from a clean default branch:
     uv sync --locked                  # keeps .python-version (3.12.11): do NOT change it
     launchctl kickstart -k gui/501/de.cdit.mcp-things
     launchctl print gui/501/de.cdit.mcp-things | grep -E 'pid =|state ='
-    curl -s http://100.93.89.102:8009/health
+    curl -s http://<cc1-tailnet-ip>:8009/health
     tail -n 50 ~/Library/Logs/mcp-things.err.log
 
 Never `pkill -f` this server. A `pkill -f` pattern has matched and killed the live
