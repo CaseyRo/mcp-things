@@ -95,6 +95,8 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
         status = "incomplete"
 
     start = todo.get("start") or None
+    if start == "Someday" and todo.get("start_date"):
+        start = "Upcoming"  # Things stores a scheduled to-do as Someday + a start date
     list_label = project_title or area_title or start or "Inbox"
 
     return {
