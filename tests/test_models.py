@@ -52,6 +52,19 @@ class TestModelRoundTrips:
         restored = Todo.model_validate(payload)
         assert restored == todo
 
+    def test_todo_omits_unset_repeat(self):
+        """A catalog cached before `repeat` existed is additionalProperties:false
+        and rejects any to-do carrying the key, even as null (CDI-2076)."""
+        todo = Todo(uuid="ABC-1", title="Buy milk")
+        envelope = ToolEnvelope[list[Todo]](data=[todo], summary="1 task")
+        assert (
+            "repeat" not in envelope.model_dump(mode="json", by_alias=True)["data"][0]
+        )
+        repeating = todo.model_copy(update={"repeat": "monthly:2nd-saturday fixed"})
+        assert (
+            repeating.model_dump(mode="json")["repeat"] == "monthly:2nd-saturday fixed"
+        )
+
     def test_project_round_trip(self):
         project = Project(uuid="P1", title="Q2 Plan", tags=["work"])
         assert Project.model_validate(project.model_dump(mode="json")) == project
