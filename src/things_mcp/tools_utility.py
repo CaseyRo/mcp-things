@@ -7,13 +7,12 @@ All tools in this module return ``ToolResult`` with a ``ToolEnvelope`` in
 See ``openspec/changes/structured-json-tool-output/`` for the contract.
 """
 
-from typing import Optional
-
-from . import reader as db
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
+from . import reader as db
+from .cache import get_cache_stats
 from .formatters import (
     render_area,
     render_project,
@@ -24,6 +23,8 @@ from .formatters import (
     to_dict_tag,
     to_dict_todo,
 )
+from .input_validation import validate_show_id
+from .logging_config import get_logger
 from .models import (
     Area,
     CacheStats,
@@ -36,16 +37,13 @@ from .models import (
     TriageInsights,
     output_schema_for,
 )
-from .tool_results import make_result
-from .utils import app_state
-from .url_scheme import show, launch_things
-from .logging_config import get_logger
-from .cache import get_cache_stats
-from .tool_annotations import TOOL_ANNOTATIONS, tags_for
-from .triage_tracker import triage_tracker
-from .settings import get_dashboard_url
-from .input_validation import validate_show_id
 from .resolvers import resolve_item
+from .settings import get_dashboard_url
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
+from .tool_results import make_result
+from .triage_tracker import triage_tracker
+from .url_scheme import launch_things, show
+from .utils import app_state
 
 logger = get_logger(__name__)
 
@@ -66,11 +64,11 @@ def register_utility_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
     async def search_tasks(
-        query: Optional[str] = None,
-        status: Optional[str] = None,
-        tag: Optional[str] = None,
-        area: Optional[str] = None,
-        deadline: Optional[str] = None,
+        query: str | None = None,
+        status: str | None = None,
+        tag: str | None = None,
+        area: str | None = None,
+        deadline: str | None = None,
         limit: int = 20,
         ctx: Context = None,
     ) -> ToolResult:
@@ -522,8 +520,8 @@ def register_utility_tools(mcp: FastMCP):
     )
     async def triage_insights_tool(
         days: int = 7,
-        category: Optional[str] = None,
-        action: Optional[str] = None,
+        category: str | None = None,
+        action: str | None = None,
         show_trends: bool = False,
         ctx: Context = None,
     ) -> ToolResult:

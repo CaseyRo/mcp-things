@@ -7,31 +7,31 @@ These tools form the "input" side of GTD:
 """
 
 import time
-from typing import Literal, Optional, List, Union
+from typing import Literal
 
-from . import reader as db
-from .reader import read_back
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
-from .formatters import render_todo, to_dict_todo
-from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
-from .tool_results import make_result, readback, write_result
-from .utils import app_state
-from .url_scheme import (
-    add_todo,
-    update_todo,
-    execute_url,
-    launch_things,
-    add_project_with_tasks,
-)
-from .logging_config import get_logger
+from . import reader as db
 from .cache import invalidate_caches_for
+from .formatters import render_todo, to_dict_todo
+from .logging_config import get_logger
+from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
+from .reader import read_back
+from .settings import get_dashboard_url
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
+from .tool_results import make_result, readback, write_result
 from .triage_tracker import triage_tracker
-from .settings import get_dashboard_url
+from .url_scheme import (
+    add_project_with_tasks,
+    add_todo,
+    execute_url,
+    launch_things,
+    update_todo,
+)
+from .utils import app_state
 from .write_overlay import record_write
 
 logger = get_logger(__name__)
@@ -55,24 +55,23 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
     async def get_tasks(
-        view: Optional[
-            Literal[
-                "inbox",
-                "today",
-                "tomorrow",
-                "upcoming",
-                "anytime",
-                "someday",
-                "logbook",
-                "trash",
-                "deadlines",
-            ]
-        ] = None,
-        context: Optional[Union[str, List[str]]] = None,
-        energy: Optional[str] = None,
-        time_available: Optional[str] = None,
-        area: Optional[str] = None,
-        project: Optional[str] = None,
+        view: Literal[
+            "inbox",
+            "today",
+            "tomorrow",
+            "upcoming",
+            "anytime",
+            "someday",
+            "logbook",
+            "trash",
+            "deadlines",
+        ]
+        | None = None,
+        context: str | list[str] | None = None,
+        energy: str | None = None,
+        time_available: str | None = None,
+        area: str | None = None,
+        project: str | None = None,
         include_completed: bool = False,
         limit: int = 50,
         ctx: Context = None,
@@ -296,9 +295,9 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[FocusResult]),
     )
     async def focus_mode(
-        context: Optional[str] = None,
-        energy: Optional[str] = None,
-        time_available: Optional[str] = None,
+        context: str | None = None,
+        energy: str | None = None,
+        time_available: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Get the single most important task to work on right now.
@@ -323,9 +322,9 @@ def register_gtd_core_tools(mcp: FastMCP):
             today_str = date.today().isoformat()
             selected_task = None
             selection_reason = ""
-            selection_kind: Optional[
-                Literal["overdue", "today_with_deadline", "today", "anytime"]
-            ] = None
+            selection_kind: (
+                Literal["overdue", "today_with_deadline", "today", "anytime"] | None
+            ) = None
 
             # 1. Check for overdue tasks with deadlines
             all_todos = db.todos(status="incomplete")
@@ -458,9 +457,9 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def complete_task(
-        task_id: Optional[str] = None,
-        task_title: Optional[str] = None,
-        completion_notes: Optional[str] = None,
+        task_id: str | None = None,
+        task_title: str | None = None,
+        completion_notes: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Mark a task as complete.
@@ -606,9 +605,9 @@ def register_gtd_core_tools(mcp: FastMCP):
     )
     async def capture_task(
         title: str,
-        notes: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        when: Optional[str] = None,
+        notes: str | None = None,
+        tags: list[str] | None = None,
+        when: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Quick capture a task to Inbox for later processing.
@@ -686,7 +685,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         annotations=TOOL_ANNOTATIONS["process-inbox"],
         tags=tags_for("process-inbox"),
         timeout=5,
-        output_schema=output_schema_for(ToolEnvelope[Union[Todo, list[Todo]]]),
+        output_schema=output_schema_for(ToolEnvelope[Todo | list[Todo]]),
     )
     async def process_inbox(
         all: bool = False,
@@ -856,7 +855,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     )
     async def convert_to_project(
         task_id: str,
-        first_action: Optional[str] = None,
+        first_action: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Convert a task into a project when it requires multiple steps.

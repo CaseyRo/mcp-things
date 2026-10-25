@@ -12,15 +12,17 @@ Tests require Things 3 to be running. Test data uses MCP-TEST- prefix
 and is automatically cleaned up.
 """
 
-import pytest
 import time
-import things
 from datetime import date, timedelta
+
+import pytest
+import things
+
+from tests.conftest import generate_test_title
 
 # Import the mcp instance to get tool functions
 from things_mcp.fast_server import mcp
 from things_mcp.url_scheme import add_todo, execute_url
-from tests.conftest import generate_test_title
 
 
 # Helper to get tool function from FastMCP

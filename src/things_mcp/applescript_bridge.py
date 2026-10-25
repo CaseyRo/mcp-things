@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
+import logging
 import re
 import subprocess
-import logging
-from typing import Dict, Any, Union
+from typing import Any
 
 from .settings import get_settings
 
 logger = logging.getLogger(__name__)
 
 
-def _script_metadata(command: str, script: str) -> Dict[str, Any]:
+def _script_metadata(command: str, script: str) -> dict[str, Any]:
     """Return metadata about an AppleScript command without exposing content."""
     return {
         "command": command,
@@ -50,7 +50,7 @@ def _wrap_script_for_background(script: str) -> str:
     return script
 
 
-def run_applescript(script: str) -> Union[str, bool]:
+def run_applescript(script: str) -> str | bool:
     """Run an AppleScript command and return the result.
 
     Automatically wraps commands targeting Things3 with 'without activating' to prevent

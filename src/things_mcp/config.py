@@ -39,7 +39,7 @@ def _load_legacy_config() -> dict:
         return {}
 
     try:
-        with open(CONFIG_FILE, "r") as f:
+        with open(CONFIG_FILE) as f:
             return json.load(f)
     except Exception as e:
         logger.warning(f"Failed to load legacy config file: {e}")

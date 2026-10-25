@@ -349,7 +349,7 @@ class ThingsSQLiteReader:
 
         if version not in KNOWN_SCHEMA_VERSIONS:
             logger.warning(
-                "Things database schema version %d is not in the known-good set (%d–%d). "
+                "Things database schema version %d is not in the known-good set (%d-%d). "
                 "Proceeding with caution — will fall back to things-py on query errors.",
                 version,
                 min(KNOWN_SCHEMA_VERSIONS),

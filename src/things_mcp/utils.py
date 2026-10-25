@@ -3,13 +3,12 @@ Utility classes and functions for enhancing Things MCP reliability.
 """
 
 import json
-import time
 import logging
 import os
 import platform
 import subprocess
+import time
 from pathlib import Path
-from typing import Optional
 
 _DEFAULT_DLQ_FILE = Path.home() / ".things-mcp" / "things_dlq.json"
 
@@ -66,7 +65,7 @@ def is_things_running() -> bool:
         logger.warning("Things app check timed out")
         return False
     except Exception as e:
-        logger.error(f"Error checking if Things is running: {str(e)}")
+        logger.error(f"Error checking if Things is running: {e!s}")
         return False
 
 
@@ -161,11 +160,11 @@ class DeadLetterQueue:
         """Load persisted queue"""
         try:
             if os.path.exists(self.dlq_file):
-                with open(self.dlq_file, "r") as f:
+                with open(self.dlq_file) as f:
                     return json.load(f)
             return []
         except Exception as e:
-            logger.error(f"Error loading DLQ: {str(e)}")
+            logger.error(f"Error loading DLQ: {e!s}")
             return []
 
     def _save_queue(self):
@@ -177,15 +176,17 @@ class DeadLetterQueue:
                 json.dump(self.queue, f)
             os.chmod(self.dlq_file, stat.S_IRUSR | stat.S_IWUSR)  # 0600
         except Exception as e:
-            logger.error(f"Error saving DLQ: {str(e)}")
+            logger.error(f"Error saving DLQ: {e!s}")
 
-    _SENSITIVE_PARAMS = {
-        "title",
-        "notes",
-        "checklist-items",
-        "prepend-notes",
-        "append-notes",
-    }
+    _SENSITIVE_PARAMS = frozenset(
+        {
+            "title",
+            "notes",
+            "checklist-items",
+            "prepend-notes",
+            "append-notes",
+        }
+    )
 
     def _sanitize_params(self, params: dict) -> dict:
         """Strip task content from params before persisting."""
@@ -207,7 +208,7 @@ class DeadLetterQueue:
 
         self.queue.append(entry)
         self._save_queue()
-        logger.warning(f"Added to DLQ: {operation} with error: {str(error)}")
+        logger.warning(f"Added to DLQ: {operation} with error: {error!s}")
 
     def retry_all(self):
         """Attempt to retry all operations in the DLQ"""
@@ -276,7 +277,7 @@ class RateLimiter:
         return wrapper
 
 
-def get_auth_token() -> Optional[str]:
+def get_auth_token() -> str | None:
     """Get the Things authentication token.
 
     Delegates to config.get_things_auth_token() which checks:
@@ -305,7 +306,7 @@ def detect_things_version():
         if result:
             return str(result).strip()
     except Exception as e:
-        logger.error(f"Error detecting Things version: {str(e)}")
+        logger.error(f"Error detecting Things version: {e!s}")
 
     return None
 

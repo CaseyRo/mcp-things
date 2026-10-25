@@ -1,24 +1,24 @@
 """Tests for SQLite reader checklist enrichment."""
 
-import sqlite3
 import plistlib
+import sqlite3
 
 import pytest
 
 from things_mcp.sqlite_reader import (
-    ThingsSQLiteReader,
-    TABLE_TASK,
+    START_ANYTIME,
+    START_INBOX,
+    STATUS_COMPLETED,
+    STATUS_INCOMPLETE,
     TABLE_AREA,
-    TABLE_TAG,
-    TABLE_TASKTAG,
     TABLE_AREATAG,
     TABLE_CHECKLIST_ITEM,
     TABLE_META,
-    STATUS_INCOMPLETE,
-    STATUS_COMPLETED,
-    START_ANYTIME,
-    START_INBOX,
+    TABLE_TAG,
+    TABLE_TASK,
+    TABLE_TASKTAG,
     TYPE_TODO,
+    ThingsSQLiteReader,
 )
 
 pytestmark = [pytest.mark.unit]
@@ -120,8 +120,8 @@ def _insert_task(conn, uuid, title, **kwargs):
         "index": 0,
     }
     defaults.update(kwargs)
-    cols = ["uuid", "title"] + list(defaults.keys())
-    vals = [uuid, title] + list(defaults.values())
+    cols = ["uuid", "title", *list(defaults.keys())]
+    vals = [uuid, title, *list(defaults.values())]
     placeholders = ", ".join(["?"] * len(cols))
     col_names = ", ".join(f'"{c}"' if c == "index" else c for c in cols)
     conn.execute(

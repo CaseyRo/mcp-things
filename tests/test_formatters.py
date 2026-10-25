@@ -1,8 +1,8 @@
 """Tests for formatters module - output formatting for todos, projects, areas, tags."""
 
-import pytest
 from unittest.mock import patch
 
+import pytest
 
 pytestmark = [pytest.mark.unit]
 

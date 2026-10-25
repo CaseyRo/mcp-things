@@ -4,8 +4,6 @@ Shared by tools_utility.py (read tools) and tools_gtd_organize.py (write tools).
 Depends only on `things` (third-party) and `ToolError` (FastMCP) — no tool-module imports.
 """
 
-from typing import List
-
 import things
 from fastmcp.exceptions import ToolError
 
@@ -86,7 +84,7 @@ def resolve_item(name_or_uuid: str, item_type: str) -> dict:
         raise ToolError(f"{item_type.capitalize()} not found: {name_or_uuid}")
 
 
-def _format_disambiguation(matches: List[dict], item_type: str) -> List[str]:
+def _format_disambiguation(matches: list[dict], item_type: str) -> list[str]:
     """Format a disambiguation list matching complete-task's bulleted format."""
     lines = []
     for m in matches:

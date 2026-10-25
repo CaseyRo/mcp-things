@@ -11,9 +11,8 @@ import json
 import stat
 import threading
 import uuid
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from .logging_config import get_logger
 
@@ -25,7 +24,7 @@ HISTORY_FILE = DATA_DIR / "triage_history.json"
 
 
 def categorize_task(
-    title: str, notes: Optional[str] = None, tags: Optional[list[str]] = None
+    title: str, notes: str | None = None, tags: list[str] | None = None
 ) -> tuple[str, float]:
     """Classify a task into a category using heuristic rules.
 
@@ -58,7 +57,7 @@ def categorize_task(
     # Rule 3: Person name pattern (e.g., "Marcel: ...", "Alice - ...")
     import re
 
-    if re.match(r"^[A-Z][a-z]+[\s]*[:\-–—]", title or ""):
+    if re.match(r"^[A-Z][a-z]+[\s]*[:\-–—]", title or ""):  # noqa: RUF001 - matches real en/em dashes
         return ("client-person", 0.7)
 
     # Rule 4: Waiting-for tag
@@ -90,12 +89,12 @@ class TriageTracker:
     Thread-safe via a lock that wraps all load+modify+save operations.
     """
 
-    def __init__(self, history_file: Optional[Path] = None):
+    def __init__(self, history_file: Path | None = None):
         self._file = history_file or HISTORY_FILE
         self._lock = threading.Lock()
-        self._last_inbox_view: Optional[datetime] = None
-        self._current_session_id: Optional[str] = None
-        self._session_start: Optional[datetime] = None
+        self._last_inbox_view: datetime | None = None
+        self._current_session_id: str | None = None
+        self._session_start: datetime | None = None
 
     def record_inbox_view(self) -> None:
         """Track when process-inbox was called (for source detection)."""
@@ -114,10 +113,10 @@ class TriageTracker:
         self,
         task_id: str,
         task_title: str,
-        task_notes: Optional[str] = None,
-        task_tags: Optional[list[str]] = None,
+        task_notes: str | None = None,
+        task_tags: list[str] | None = None,
         action: str = "modified",
-        action_details: Optional[dict] = None,
+        action_details: dict | None = None,
     ) -> None:
         """Record a triage action. Categorizes at write time, stores only the result.
 
@@ -166,8 +165,8 @@ class TriageTracker:
     def get_records(
         self,
         days: int = 7,
-        action: Optional[str] = None,
-        category: Optional[str] = None,
+        action: str | None = None,
+        category: str | None = None,
     ) -> list[dict]:
         """Get filtered triage records.
 
@@ -297,7 +296,7 @@ class TriageTracker:
 
         return trends
 
-    def purge(self, before_date: Optional[str] = None, task_id: Optional[str] = None):
+    def purge(self, before_date: str | None = None, task_id: str | None = None):
         """Delete records matching criteria. If no criteria, deletes all.
 
         Args:

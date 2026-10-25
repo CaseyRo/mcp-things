@@ -95,6 +95,29 @@ dev = [
     "jsonschema>=4.26.0",  # Used by tests/test_structured_output.py to validate outputSchemas
 ]
 
+[tool.ruff.lint]
+# Pinned explicitly rather than inheriting ruff's defaults, which widen between
+# releases (CDI-1783: a 0.15 -> 0.16 bump turned mcp-stolperfalle's clean tree
+# into 46 findings). Same list as the rest of the fleet; adopting a new rule
+# family is a decision, not whatever the last ruff release shipped.
+# BLE001 stays unselected: the defensive `except Exception` catches are
+# deliberate in a server that must not die on one bad tool call.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "RUF"]
+ignore = [
+    # UP042 wants StrEnum, which changes str() of an enum value from
+    # "TaskStatus.incomplete" to "incomplete". These values go out on the wire,
+    # so that is a data-format decision; the fleet decision is no.
+    "UP042",
+]
+# The vendored usage.py carries `noqa: BLE001, S110` for fleet repos that select
+# those rules; declaring them external keeps RUF100 from flagging the directive.
+external = ["BLE001", "S110"]
+
+[tool.ruff.lint.flake8-bugbear]
+# `param: T = Field(...)` in a tool signature is FastMCP's documented way to
+# attach constraints to a tool argument; the call is evaluated once, on purpose.
+extend-immutable-calls = ["pydantic.Field"]
+
 [tool.ruff.format]
 # Vendored verbatim from CDiT-infrastructure/scripts/mcp_usage_middleware.py.
 exclude = ["src/things_mcp/usage.py"]

@@ -18,9 +18,8 @@ from typing import Any
 import jsonschema
 import pytest
 
-from things_mcp.models import ToolEnvelope, output_schema_for
 from things_mcp.fast_server import mcp
-
+from things_mcp.models import ToolEnvelope, output_schema_for
 
 # ---------------------------------------------------------------------------
 # 10.1 — Startup audit

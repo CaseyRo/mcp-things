@@ -9,14 +9,14 @@ Tests cover:
 - bulk-triage: grouped action processing (AppleScript + URL scheme)
 """
 
-import pytest
 from unittest import mock
-from pydantic import ValidationError
+
+import pytest
 from fastmcp.exceptions import ToolError
+from pydantic import ValidationError
 
-from things_mcp.tools_batch import CaptureItem, TriageDecision
 from tests.conftest import create_mock_todo, tool_text
-
+from things_mcp.tools_batch import CaptureItem, TriageDecision
 
 # ============================================================================
 # Helpers

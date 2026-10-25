@@ -11,12 +11,12 @@ This module contains:
 
 import time
 from collections import defaultdict
-from typing import Dict, Any, Optional, List, Union
+from typing import Any
 
+import mcp.types as types
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware import Middleware
-import mcp.types as types
 
 from .logging_config import get_logger
 from .settings import get_settings
@@ -48,7 +48,7 @@ class ServerStats:
 
     def __init__(self):
         self.start_time: float = time.time()
-        self.tool_calls: Dict[str, int] = defaultdict(int)
+        self.tool_calls: dict[str, int] = defaultdict(int)
         self.total_calls: int = 0
         self.errors: int = 0
 
@@ -71,7 +71,7 @@ class ServerStats:
             hours = elapsed / 3600
             return f"{hours:.1f}h"
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get statistics summary."""
         top_tools = sorted(self.tool_calls.items(), key=lambda x: x[1], reverse=True)[
             :5
@@ -118,11 +118,11 @@ HOST_ENV_VAR = "THINGS_MCP_HOST"
 
 # Type alias supporting both newer FastMCP installs (with mcp.types.Icon)
 # and older releases that still expect simple dictionaries for icon metadata.
-IconLike = Union[Any, Dict[str, Any]]
+IconLike = Any | dict[str, Any]
 
 
 def _build_icon(
-    src: str, *, sizes: Optional[List[str]] = None, mime_type: Optional[str] = None
+    src: str, *, sizes: list[str] | None = None, mime_type: str | None = None
 ) -> IconLike:
     """Create an icon instance compatible with the available MCP types module."""
     icon_cls = getattr(types, "Icon", None)
@@ -131,7 +131,7 @@ def _build_icon(
 
     # Fall back to a plain dictionary for environments running an older MCP build
     # that predates the Icon model.
-    icon_data: Dict[str, Any] = {"src": src}
+    icon_data: dict[str, Any] = {"src": src}
     if sizes:
         icon_data["sizes"] = sizes
     if mime_type:
@@ -139,7 +139,7 @@ def _build_icon(
     return icon_data
 
 
-ICONS: List[IconLike] = [
+ICONS: list[IconLike] = [
     _build_icon(
         src="https://culturedcode.com/things/2024-01-20/images/hero-logo-things-io90.png",
         mime_type="image/png",
@@ -201,7 +201,7 @@ def _flatten_anyof_for_n8n(schema: dict) -> dict:
                     if isinstance(current_type, str):
                         result["type"] = [current_type, "null"]
                     elif isinstance(current_type, list) and "null" not in current_type:
-                        result["type"] = current_type + ["null"]
+                        result["type"] = [*current_type, "null"]
             elif len(non_null_types) > 1:
                 flattened = _flatten_anyof_for_n8n(non_null_types[0])
                 result.update(flattened)
@@ -309,7 +309,7 @@ def _make_all_fields_required(schema: dict) -> dict:
                     if isinstance(current_type, str) and current_type != "null":
                         prop_schema["type"] = [current_type, "null"]
                     elif isinstance(current_type, list) and "null" not in current_type:
-                        prop_schema["type"] = current_type + ["null"]
+                        prop_schema["type"] = [*current_type, "null"]
                 elif "type" not in prop_schema:
                     prop_schema["type"] = ["object", "null"]
 

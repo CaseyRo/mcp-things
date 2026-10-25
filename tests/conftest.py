@@ -1,13 +1,14 @@
 """Pytest configuration and shared fixtures for Things MCP tests."""
 
-import pytest
-import unittest.mock as mock
-from typing import List, Dict, Any, Optional
-import time
-import uuid
 import subprocess
 import sys
+import time
+import unittest.mock as mock
+import uuid
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -19,7 +20,6 @@ from things_mcp.settings import get_settings
 get_settings()  # Trigger settings load
 
 import mcp.types as types  # noqa: E402 - must load after settings
-
 
 # ============================================================================
 # Test helpers
@@ -58,16 +58,16 @@ pytest_plugins = ["tests.pytest_test_results"]
 
 
 def create_mock_todo(
-    uuid_str: Optional[str] = None,
+    uuid_str: str | None = None,
     title: str = "Test Todo",
-    notes: Optional[str] = None,
+    notes: str | None = None,
     status: str = "open",
-    tags: Optional[List[str]] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    project: Optional[str] = None,
-    area: Optional[str] = None,
-) -> Dict[str, Any]:
+    tags: list[str] | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    project: str | None = None,
+    area: str | None = None,
+) -> dict[str, Any]:
     """Create a mock todo dictionary matching things-py format."""
     return {
         "uuid": uuid_str or f"test-todo-{uuid.uuid4().hex[:8]}",
@@ -88,16 +88,16 @@ def create_mock_todo(
 
 
 def create_mock_project(
-    uuid_str: Optional[str] = None,
+    uuid_str: str | None = None,
     title: str = "Test Project",
-    notes: Optional[str] = None,
+    notes: str | None = None,
     status: str = "open",
-    tags: Optional[List[str]] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    area: Optional[str] = None,
-    items: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
+    tags: list[str] | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    area: str | None = None,
+    items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Create a mock project dictionary matching things-py format."""
     return {
         "uuid": uuid_str or f"test-project-{uuid.uuid4().hex[:8]}",
@@ -114,10 +114,10 @@ def create_mock_project(
 
 
 def create_mock_area(
-    uuid_str: Optional[str] = None,
+    uuid_str: str | None = None,
     title: str = "Test Area",
-    notes: Optional[str] = None,
-) -> Dict[str, Any]:
+    notes: str | None = None,
+) -> dict[str, Any]:
     """Create a mock area dictionary matching things-py format."""
     return {
         "uuid": uuid_str or f"test-area-{uuid.uuid4().hex[:8]}",
@@ -128,10 +128,10 @@ def create_mock_area(
 
 
 def create_mock_tag(
-    uuid_str: Optional[str] = None,
+    uuid_str: str | None = None,
     title: str = "test-tag",
-    shortcut: Optional[str] = None,
-) -> Dict[str, Any]:
+    shortcut: str | None = None,
+) -> dict[str, Any]:
     """Create a mock tag dictionary matching things-py format."""
     return {
         "uuid": uuid_str or f"test-tag-{uuid.uuid4().hex[:8]}",
@@ -288,9 +288,9 @@ class TestDataTracker:
     """Track created test items for automatic cleanup."""
 
     def __init__(self):
-        self.created_todos: List[str] = []
-        self.created_projects: List[str] = []
-        self.created_tags: List[str] = []
+        self.created_todos: list[str] = []
+        self.created_projects: list[str] = []
+        self.created_tags: list[str] = []
 
     def add_todo(self, todo_id: str):
         """Track a created todo."""
@@ -481,9 +481,9 @@ def mcp_server_process():
     Only used for tests that require a real HTTP server (marked with @pytest.mark.real).
     Most tests should use mcp_test_client fixture instead.
     """
+    import os
     import subprocess
     import sys
-    import os
     from pathlib import Path
 
     # Use the entry point script at project root
@@ -511,7 +511,7 @@ def mcp_server_process():
         # Verify server is running
         if process.poll() is not None:
             # Server died - check stderr
-            stdout, stderr = process.communicate()
+            _stdout, stderr = process.communicate()
             pytest.skip(f"Server failed to start: {stderr}")
 
         yield process
@@ -537,8 +537,9 @@ async def mcp_client(mcp_server_process):
 
     Only used for tests marked with @pytest.mark.real.
     """
-    from tests.mcp_client import create_mcp_client
     import httpx
+
+    from tests.mcp_client import create_mcp_client
 
     # Wait and verify server is accessible
     settings = get_settings()
@@ -576,9 +577,7 @@ async def mcp_client(mcp_server_process):
 # ============================================================================
 
 
-def assert_text_content(
-    response: List[Any], expected_text_contains: Optional[str] = None
-):
+def assert_text_content(response: list[Any], expected_text_contains: str | None = None):
     """Assert that response is a list of TextContent with expected content."""
     assert isinstance(response, list)
     assert len(response) > 0
@@ -590,7 +589,7 @@ def assert_text_content(
 
 
 def assert_error_response(
-    response: List[Any], expected_error_contains: Optional[str] = None
+    response: list[Any], expected_error_contains: str | None = None
 ):
     """Assert that response indicates an error."""
     assert isinstance(response, list)

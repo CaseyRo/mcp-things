@@ -20,13 +20,12 @@ import statistics
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import httpx
 from dotenv import dotenv_values
-
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -61,7 +60,7 @@ class OperationResult:
 
     @property
     def all_ms(self) -> list[float]:
-        return [self.cold_ms] + self.warm_ms
+        return [self.cold_ms, *self.warm_ms]
 
     def percentile(self, latencies: list[float], p: float) -> float:
         if not latencies:
@@ -285,7 +284,7 @@ def run_benchmark(server_url: str, api_key: str, iterations: int) -> dict:
     client.close()
 
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "server": server_url,
         "iterations": iterations,
         "results": results,

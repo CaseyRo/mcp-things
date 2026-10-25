@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +213,7 @@ def search(query: str) -> list[dict[str, Any]]:
 
 
 # Pass-through for write-adjacent reads that need things-py directly
-def get(uuid: str) -> Optional[dict[str, Any]]:
+def get(uuid: str) -> dict[str, Any] | None:
     """Get a single item by UUID — always uses things-py (not worth caching)."""
     import things
 

@@ -8,8 +8,9 @@ Uses TestClient for faster tests (no subprocess overhead) and real server
 for tests requiring Things 3 integration.
 """
 
-import pytest
 import time
+
+import pytest
 
 from tests.conftest import generate_test_title
 

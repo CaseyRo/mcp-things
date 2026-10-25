@@ -4,14 +4,14 @@ Enhanced logging configuration for Things MCP server.
 Provides structured logging with multiple outputs and log levels.
 """
 
+import json
 import logging
 import logging.handlers
-import json
 import re
 import stat
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 # Create logs directory if it doesn't exist, with restrictive permissions
 LOGS_DIR = Path.home() / ".things-mcp" / "logs"
@@ -38,11 +38,11 @@ SENSITIVE_FIELDS = {
 }
 
 
-def _is_sensitive_field(field_name: Optional[str]) -> bool:
+def _is_sensitive_field(field_name: str | None) -> bool:
     return bool(field_name and field_name.lower() in SENSITIVE_FIELDS)
 
 
-def redact_sensitive_data(value: Any, field_name: Optional[str] = None) -> Any:
+def redact_sensitive_data(value: Any, field_name: str | None = None) -> Any:
     """Redact sensitive values while preserving structural hints."""
     if field_name and _is_sensitive_field(field_name):
         if isinstance(value, dict):
@@ -68,7 +68,7 @@ def redact_sensitive_data(value: Any, field_name: Optional[str] = None) -> Any:
     return value
 
 
-def sanitize_for_logging(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def sanitize_for_logging(data: dict[str, Any] | None) -> dict[str, Any]:
     """Return a copy of data with sensitive fields redacted."""
     if not data:
         return {}
@@ -289,7 +289,7 @@ def log_operation_start(operation: str, **kwargs) -> None:
 
 
 def log_operation_end(
-    operation: str, success: bool, duration: float = None, **kwargs
+    operation: str, success: bool, duration: float | None = None, **kwargs
 ) -> None:
     """Log the end of an operation."""
     logger = logging.getLogger(__name__)
@@ -322,7 +322,7 @@ def log_retry_attempt(
     )
 
 
-def log_circuit_breaker_state(state: str, failure_count: int = None) -> None:
+def log_circuit_breaker_state(state: str, failure_count: int | None = None) -> None:
     """Log circuit breaker state changes."""
     logger = logging.getLogger(__name__)
     extra = {"circuit_breaker_state": state}
@@ -332,7 +332,7 @@ def log_circuit_breaker_state(state: str, failure_count: int = None) -> None:
     logger.warning("Circuit breaker state changed", extra=extra)
 
 
-def log_dead_letter_queue(operation: str, params: Dict[str, Any], error: str) -> None:
+def log_dead_letter_queue(operation: str, params: dict[str, Any], error: str) -> None:
     """Log when an operation is added to the dead letter queue."""
     logger = logging.getLogger(__name__)
     logger.error(

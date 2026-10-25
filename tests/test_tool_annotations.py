@@ -23,7 +23,6 @@ from things_mcp.tool_annotations import (
     tags_for,
 )
 
-
 EXPECTED_TOOL_COUNT = 32
 
 # Tools that perform irreversible-ish mutations (delete / cancel / merge).

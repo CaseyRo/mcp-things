@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.conftest import create_mock_todo, create_mock_project, tool_text
+from tests.conftest import create_mock_project, create_mock_todo, tool_text
 
 
 class TestWeeklyReview:

@@ -10,7 +10,7 @@ may respond with JSON or SSE (text/event-stream); we parse both.
 
 import json
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -21,7 +21,7 @@ MCP_SESSION_ID_HEADER = "mcp-session-id"
 MCP_PROTOCOL_VERSION_HEADER = "mcp-protocol-version"
 
 
-def _parse_sse_response(body: bytes) -> Dict[str, Any]:
+def _parse_sse_response(body: bytes) -> dict[str, Any]:
     """Parse first JSON-RPC response from SSE body (skip priming/empty events)."""
     text = body.decode("utf-8")
     # SSE: "data:" lines (single or joined by \\n) carry payloads; skip empty
@@ -92,8 +92,8 @@ class MCPClient:
         self.endpoint = f"{self.base_url}/mcp"
         self.timeout = timeout
         self.client = httpx.AsyncClient(timeout=timeout)
-        self._session_id: Optional[str] = None
-        self._protocol_version: Optional[str] = None
+        self._session_id: str | None = None
+        self._protocol_version: str | None = None
 
     async def close(self):
         """Close the HTTP client."""
@@ -102,9 +102,9 @@ class MCPClient:
     def _create_request(
         self,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
-        request_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+        request_id: str | None = None,
+    ) -> dict[str, Any]:
         """Create a JSON-RPC 2.0 request message.
 
         Args:
@@ -161,7 +161,7 @@ class MCPClient:
             if "result" in result and "protocolVersion" in result["result"]:
                 self._protocol_version = str(result["result"]["protocolVersion"])
 
-    async def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send a JSON-RPC request and parse response.
 
         Args:
@@ -218,7 +218,7 @@ class MCPClient:
 
         return result
 
-    async def list_tools(self) -> Dict[str, Any]:
+    async def list_tools(self) -> dict[str, Any]:
         """List available tools from the server.
 
         Returns:
@@ -242,9 +242,9 @@ class MCPClient:
     async def call_tool(
         self,
         name: str,
-        arguments: Optional[Dict[str, Any]] = None,
-        request_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        arguments: dict[str, Any] | None = None,
+        request_id: str | None = None,
+    ) -> dict[str, Any]:
         """Call a tool by name with arguments.
 
         Args:
@@ -292,8 +292,8 @@ class MCPClient:
         return response
 
     async def call_tool_with_n8n_params(
-        self, name: str, arguments: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, name: str, arguments: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Call a tool with n8n-specific extra parameters to test compatibility.
 
         Args:
@@ -332,7 +332,7 @@ class MCPClient:
         return response
 
 
-async def create_mcp_client(base_url: Optional[str] = None) -> MCPClient:
+async def create_mcp_client(base_url: str | None = None) -> MCPClient:
     """Create an MCP client with default settings.
 
     Args:

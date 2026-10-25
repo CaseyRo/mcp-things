@@ -7,8 +7,9 @@ import subprocess
 import time
 import urllib.parse
 import webbrowser
-from typing import Any, Dict, Optional, Union
-from .utils import circuit_breaker, rate_limiter, is_things_running
+from typing import Any
+
+from .utils import circuit_breaker, is_things_running, rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def launch_things() -> bool:
 
         return is_things_running()
     except Exception as e:
-        logger.error(f"Error launching Things: {str(e)}")
+        logger.error(f"Error launching Things: {e!s}")
         return False
 
 
@@ -119,7 +120,7 @@ def execute_url(url: str) -> bool:
         return False
 
 
-def execute_xcallback_url(action: str, params: Dict[str, Any]) -> bool:
+def execute_xcallback_url(action: str, params: dict[str, Any]) -> bool:
     """Execute a Things X-Callback-URL.
 
     Args:
@@ -147,7 +148,7 @@ def execute_xcallback_url(action: str, params: Dict[str, Any]) -> bool:
     return execute_url(url)
 
 
-def construct_url(command: str, params: Dict[str, Any]) -> str:
+def construct_url(command: str, params: dict[str, Any]) -> str:
     """Construct a Things URL from command and parameters."""
     # Use parameters as provided. urllib.parse.quote will handle encoding of
     # spaces and literal plus signs correctly (" " -> "%20", "+" -> "%2B").
@@ -173,7 +174,7 @@ def construct_url(command: str, params: Dict[str, Any]) -> str:
             )
             # Note: We continue without a token, which may cause the operation to fail
     except Exception as e:
-        logger.error(f"Error getting auth token: {str(e)}")
+        logger.error(f"Error getting auth token: {e!s}")
         # Continue without token - the operation may fail
 
     # Disable JSON API for now as it's causing formatting issues
@@ -251,15 +252,15 @@ def should_use_json_api() -> bool:
 
 def add_todo(
     title: str,
-    notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    checklist_items: Optional[list[str]] = None,
-    list_id: Optional[str] = None,
-    list_title: Optional[str] = None,
-    heading: Optional[str] = None,
-    completed: Optional[bool] = None,
+    notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+    checklist_items: list[str] | None = None,
+    list_id: str | None = None,
+    list_title: str | None = None,
+    heading: str | None = None,
+    completed: bool | None = None,
 ) -> str:
     """Construct URL to add a new todo."""
     params = {
@@ -282,13 +283,13 @@ def add_todo(
 
 def add_project(
     title: str,
-    notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    area_id: Optional[str] = None,
-    area_title: Optional[str] = None,
-    todos: Optional[list[str]] = None,
+    notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+    area_id: str | None = None,
+    area_title: str | None = None,
+    todos: list[str] | None = None,
 ) -> str:
     """Construct URL to add a new project."""
     params = {
@@ -313,20 +314,20 @@ def add_project(
 
 def update_todo(
     id: str,
-    title: Optional[str] = None,
-    notes: Optional[str] = None,
-    prepend_notes: Optional[str] = None,
-    append_notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[Union[list[str], str]] = None,
-    add_tags: Optional[Union[list[str], str]] = None,
-    checklist_items: Optional[list[str]] = None,
-    prepend_checklist_items: Optional[list[str]] = None,
-    append_checklist_items: Optional[list[str]] = None,
-    list_id: Optional[str] = None,
-    completed: Optional[bool] = None,
-    canceled: Optional[bool] = None,
+    title: str | None = None,
+    notes: str | None = None,
+    prepend_notes: str | None = None,
+    append_notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | str | None = None,
+    add_tags: list[str] | str | None = None,
+    checklist_items: list[str] | None = None,
+    prepend_checklist_items: list[str] | None = None,
+    append_checklist_items: list[str] | None = None,
+    list_id: str | None = None,
+    completed: bool | None = None,
+    canceled: bool | None = None,
 ) -> str:
     """Construct URL to update an existing todo.
 
@@ -373,17 +374,17 @@ def update_todo(
 
 def update_project(
     id: str,
-    title: Optional[str] = None,
-    notes: Optional[str] = None,
-    prepend_notes: Optional[str] = None,
-    append_notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[Union[list[str], str]] = None,
-    add_tags: Optional[Union[list[str], str]] = None,
-    area_id: Optional[str] = None,
-    completed: Optional[bool] = None,
-    canceled: Optional[bool] = None,
+    title: str | None = None,
+    notes: str | None = None,
+    prepend_notes: str | None = None,
+    append_notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | str | None = None,
+    add_tags: list[str] | str | None = None,
+    area_id: str | None = None,
+    completed: bool | None = None,
+    canceled: bool | None = None,
 ) -> str:
     """Construct URL to update an existing project.
 
@@ -421,7 +422,7 @@ def update_project(
 
 
 def show(
-    id: str, query: Optional[str] = None, filter_tags: Optional[list[str]] = None
+    id: str, query: str | None = None, filter_tags: list[str] | None = None
 ) -> str:
     """Construct URL to show a specific item or list."""
     params = {"id": id, "query": query, "filter": filter_tags}
@@ -440,17 +441,17 @@ def search(query: str) -> str:
 
 def build_todo_object(
     title: str,
-    notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    checklist_items: Optional[list[Dict[str, Any]]] = None,
-    list_id: Optional[str] = None,
-    heading: Optional[str] = None,
-    heading_id: Optional[str] = None,
-    completed: Optional[bool] = None,
-    canceled: Optional[bool] = None,
-) -> Dict[str, Any]:
+    notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+    checklist_items: list[dict[str, Any]] | None = None,
+    list_id: str | None = None,
+    heading: str | None = None,
+    heading_id: str | None = None,
+    completed: bool | None = None,
+    canceled: bool | None = None,
+) -> dict[str, Any]:
     """Build a to-do object for the JSON API.
 
     Args:
@@ -469,7 +470,7 @@ def build_todo_object(
     Returns:
         Dict suitable for Things JSON API
     """
-    attributes: Dict[str, Any] = {"title": title}
+    attributes: dict[str, Any] = {"title": title}
 
     if notes is not None:
         attributes["notes"] = notes
@@ -497,16 +498,16 @@ def build_todo_object(
 
 def build_project_object(
     title: str,
-    notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    area_id: Optional[str] = None,
-    area: Optional[str] = None,
-    items: Optional[list[Dict[str, Any]]] = None,
-    completed: Optional[bool] = None,
-    canceled: Optional[bool] = None,
-) -> Dict[str, Any]:
+    notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+    area_id: str | None = None,
+    area: str | None = None,
+    items: list[dict[str, Any]] | None = None,
+    completed: bool | None = None,
+    canceled: bool | None = None,
+) -> dict[str, Any]:
     """Build a project object for the JSON API.
 
     Args:
@@ -524,7 +525,7 @@ def build_project_object(
     Returns:
         Dict suitable for Things JSON API
     """
-    attributes: Dict[str, Any] = {"title": title}
+    attributes: dict[str, Any] = {"title": title}
 
     if notes is not None:
         attributes["notes"] = notes
@@ -548,7 +549,7 @@ def build_project_object(
     return {"type": "project", "attributes": attributes}
 
 
-def build_heading_object(title: str, archived: Optional[bool] = None) -> Dict[str, Any]:
+def build_heading_object(title: str, archived: bool | None = None) -> dict[str, Any]:
     """Build a heading object for the JSON API.
 
     Args:
@@ -558,15 +559,15 @@ def build_heading_object(title: str, archived: Optional[bool] = None) -> Dict[st
     Returns:
         Dict suitable for Things JSON API
     """
-    attributes: Dict[str, Any] = {"title": title}
+    attributes: dict[str, Any] = {"title": title}
     if archived is not None:
         attributes["archived"] = archived
     return {"type": "heading", "attributes": attributes}
 
 
 def build_checklist_item(
-    title: str, completed: Optional[bool] = None, canceled: Optional[bool] = None
-) -> Dict[str, Any]:
+    title: str, completed: bool | None = None, canceled: bool | None = None
+) -> dict[str, Any]:
     """Build a checklist item object for the JSON API.
 
     Args:
@@ -577,7 +578,7 @@ def build_checklist_item(
     Returns:
         Dict suitable for Things JSON API
     """
-    attributes: Dict[str, Any] = {"title": title}
+    attributes: dict[str, Any] = {"title": title}
     if completed is not None:
         attributes["completed"] = completed
     if canceled is not None:
@@ -585,7 +586,7 @@ def build_checklist_item(
     return {"type": "checklist-item", "attributes": attributes}
 
 
-def construct_json_url(items: list[Dict[str, Any]]) -> str:
+def construct_json_url(items: list[dict[str, Any]]) -> str:
     """Construct a Things JSON URL for bulk operations.
 
     Args:
@@ -615,7 +616,7 @@ def construct_json_url(items: list[Dict[str, Any]]) -> str:
     return url
 
 
-def execute_json(items: list[Dict[str, Any]]) -> bool:
+def execute_json(items: list[dict[str, Any]]) -> bool:
     """Execute a Things JSON API request for bulk operations.
 
     Args:
@@ -630,14 +631,14 @@ def execute_json(items: list[Dict[str, Any]]) -> bool:
 
 def add_project_with_tasks(
     title: str,
-    tasks: list[Dict[str, Any]],
-    notes: Optional[str] = None,
-    when: Optional[str] = None,
-    deadline: Optional[str] = None,
-    tags: Optional[list[str]] = None,
-    area: Optional[str] = None,
-    area_id: Optional[str] = None,
-    headings: Optional[Dict[str, list[Dict[str, Any]]]] = None,
+    tasks: list[dict[str, Any]],
+    notes: str | None = None,
+    when: str | None = None,
+    deadline: str | None = None,
+    tags: list[str] | None = None,
+    area: str | None = None,
+    area_id: str | None = None,
+    headings: dict[str, list[dict[str, Any]]] | None = None,
 ) -> str:
     """Construct JSON URL to create a project with tasks atomically.
 
@@ -659,7 +660,7 @@ def add_project_with_tasks(
         URL string for the Things JSON API
     """
     # Build project items (tasks and headings)
-    items: list[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
 
     # Add tasks without headings first
     for task in tasks:

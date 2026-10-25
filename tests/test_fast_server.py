@@ -102,24 +102,27 @@ class TestServerStats:
         assert summary["top_tools"][0][1] == 2
 
     def test_uptime_seconds(self):
-        from things_mcp.server_core import ServerStats
         import time
+
+        from things_mcp.server_core import ServerStats
 
         stats = ServerStats()
         stats.start_time = time.time() - 30
         assert "s" in stats.get_uptime()
 
     def test_uptime_minutes(self):
-        from things_mcp.server_core import ServerStats
         import time
+
+        from things_mcp.server_core import ServerStats
 
         stats = ServerStats()
         stats.start_time = time.time() - 120
         assert "m" in stats.get_uptime()
 
     def test_uptime_hours(self):
-        from things_mcp.server_core import ServerStats
         import time
+
+        from things_mcp.server_core import ServerStats
 
         stats = ServerStats()
         stats.start_time = time.time() - 7200

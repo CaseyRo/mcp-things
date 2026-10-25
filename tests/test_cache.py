@@ -1,9 +1,9 @@
 """Tests for cache module - ThingsCache, @cached decorator, and cache utilities."""
 
 import time
-import pytest
 from unittest.mock import patch
 
+import pytest
 
 pytestmark = [pytest.mark.unit]
 

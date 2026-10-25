@@ -5,14 +5,14 @@ Ensures tags exist before applying them.
 """
 
 import logging
-from typing import List
-from .applescript_bridge import run_applescript, escape_applescript_string
+
+from .applescript_bridge import escape_applescript_string, run_applescript
 from .input_validation import validate_tag_names
 
 logger = logging.getLogger(__name__)
 
 
-def ensure_tags_exist(tags: List[str]) -> bool:
+def ensure_tags_exist(tags: list[str]) -> bool:
     """
     Ensure all tags exist in Things before using them.
     Creates missing tags using AppleScript.
@@ -73,11 +73,11 @@ def ensure_tags_exist(tags: List[str]) -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Error ensuring tags exist: {str(e)}")
+        logger.error(f"Error ensuring tags exist: {e!s}")
         return False
 
 
-def get_existing_tags() -> List[str]:
+def get_existing_tags() -> list[str]:
     """
     Get list of all existing tags in Things.
 
@@ -106,5 +106,5 @@ def get_existing_tags() -> List[str]:
         return []
 
     except Exception as e:
-        logger.error(f"Error getting existing tags: {str(e)}")
+        logger.error(f"Error getting existing tags: {e!s}")
         return []

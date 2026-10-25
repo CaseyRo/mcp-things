@@ -4,35 +4,35 @@ These tools handle the "Organize" stage of GTD - putting things where they belon
 """
 
 import time
-from typing import Optional, List, Dict, Any
+from typing import Any
 
 import things
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
+from .applescript_bridge import escape_applescript_string, run_applescript
+from .cache import invalidate_caches_for
+from .input_validation import validate_name, validate_notes_length, validate_tag_names
+from .logging_config import get_logger
 from .models import ToolEnvelope, WriteResult, output_schema_for
 from .reader import read_back
-from .tool_results import readback, write_result
-from .utils import app_state
-from .url_scheme import (
-    add_todo,
-    update_todo,
-    update_project,
-    execute_url,
-    launch_things,
-    add_project_with_tasks,
-)
-from .logging_config import get_logger
-from .cache import invalidate_caches_for
+from .repeat import Rule, parse_rule, with_rule
+from .resolvers import resolve_list_id
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
-from .applescript_bridge import run_applescript, escape_applescript_string
+from .tool_results import readback, write_result
 from .triage_tracker import triage_tracker
-from .input_validation import validate_tag_names, validate_name, validate_notes_length
-from .resolvers import resolve_list_id
+from .url_scheme import (
+    add_project_with_tasks,
+    add_todo,
+    execute_url,
+    launch_things,
+    update_project,
+    update_todo,
+)
+from .utils import app_state
 from .write_overlay import record_write
-from .repeat import Rule, parse_rule, with_rule
 
 logger = get_logger(__name__)
 
@@ -50,7 +50,7 @@ def _error_result(message: str):
 _CLEAR_DATE_SENTINELS = frozenset({"", "none", "clear", "remove", "null"})
 
 
-def _normalize_clearable_date(value: Optional[str]) -> Optional[str]:
+def _normalize_clearable_date(value: str | None) -> str | None:
     """Normalize a clearable date field (``when`` / ``deadline``) for updates.
 
     Maps any clear-sentinel (case-insensitive, whitespace-trimmed) to the empty
@@ -150,13 +150,13 @@ def register_gtd_organize_tools(mcp: FastMCP):
     async def schedule_task(
         title: str,
         when: str,
-        deadline: Optional[str] = None,
-        project: Optional[str] = None,
-        area: Optional[str] = None,
-        context: Optional[List[str]] = None,
-        checklist: Optional[List[str]] = None,
-        notes: Optional[str] = None,
-        repeat: Optional[str] = None,
+        deadline: str | None = None,
+        project: str | None = None,
+        area: str | None = None,
+        context: list[str] | None = None,
+        checklist: list[str] | None = None,
+        notes: str | None = None,
+        repeat: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Create a task with specific scheduling and organization.
@@ -289,11 +289,11 @@ def register_gtd_organize_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def delegate_task(
-        task_id: Optional[str] = None,
-        task_title: Optional[str] = None,
+        task_id: str | None = None,
+        task_title: str | None = None,
         delegated_to: str = "",
-        follow_up_date: Optional[str] = None,
-        notes: Optional[str] = None,
+        follow_up_date: str | None = None,
+        notes: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Delegate a task and track it as 'Waiting For'.
@@ -404,10 +404,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def defer_task(
-        task_id: Optional[str] = None,
-        task_title: Optional[str] = None,
+        task_id: str | None = None,
+        task_title: str | None = None,
         defer_to: str = "",
-        reason: Optional[str] = None,
+        reason: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Defer a task to a later time.
@@ -537,11 +537,11 @@ def register_gtd_organize_tools(mcp: FastMCP):
     )
     async def plan_project(
         title: str,
-        tasks: List[Dict[str, Any]],
-        notes: Optional[str] = None,
-        when: Optional[str] = None,
-        deadline: Optional[str] = None,
-        area: Optional[str] = None,
+        tasks: list[dict[str, Any]],
+        notes: str | None = None,
+        when: str | None = None,
+        deadline: str | None = None,
+        area: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Create a project with initial tasks atomically.
@@ -635,21 +635,21 @@ def register_gtd_organize_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def modify_task(
-        task_id: Optional[str] = None,
-        task_title: Optional[str] = None,
-        title: Optional[str] = None,
-        notes: Optional[str] = None,
-        add_notes: Optional[str] = None,
-        when: Optional[str] = None,
-        deadline: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        add_tags: Optional[List[str]] = None,
-        checklist: Optional[List[str]] = None,
-        add_checklist: Optional[List[str]] = None,
-        project: Optional[str] = None,
-        area: Optional[str] = None,
-        canceled: Optional[bool] = None,
-        repeat: Optional[str] = None,
+        task_id: str | None = None,
+        task_title: str | None = None,
+        title: str | None = None,
+        notes: str | None = None,
+        add_notes: str | None = None,
+        when: str | None = None,
+        deadline: str | None = None,
+        tags: list[str] | None = None,
+        add_tags: list[str] | None = None,
+        checklist: list[str] | None = None,
+        add_checklist: list[str] | None = None,
+        project: str | None = None,
+        area: str | None = None,
+        canceled: bool | None = None,
+        repeat: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] General task modification for updates not covered by specific tools.
@@ -857,8 +857,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
     )
     async def create_area(
         name: str,
-        tags: Optional[List[str]] = None,
-        projects: Optional[List[str]] = None,
+        tags: list[str] | None = None,
+        projects: list[str] | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Create a new area in Things, optionally with initial projects.
@@ -971,17 +971,17 @@ def register_gtd_organize_tools(mcp: FastMCP):
     )
     async def modify_project(
         name_or_uuid: str,
-        title: Optional[str] = None,
-        notes: Optional[str] = None,
-        prepend_notes: Optional[str] = None,
-        append_notes: Optional[str] = None,
-        when: Optional[str] = None,
-        deadline: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        add_tags: Optional[List[str]] = None,
-        area: Optional[str] = None,
-        completed: Optional[bool] = None,
-        canceled: Optional[bool] = None,
+        title: str | None = None,
+        notes: str | None = None,
+        prepend_notes: str | None = None,
+        append_notes: str | None = None,
+        when: str | None = None,
+        deadline: str | None = None,
+        tags: list[str] | None = None,
+        add_tags: list[str] | None = None,
+        area: str | None = None,
+        completed: bool | None = None,
+        canceled: bool | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Update a project's properties.
@@ -1124,8 +1124,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
     )
     async def modify_area(
         name_or_uuid: str,
-        new_name: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        new_name: str | None = None,
+        tags: list[str] | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Rename an area or update its tags.

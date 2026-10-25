@@ -5,7 +5,6 @@ AppleScript or other system interfaces.
 """
 
 import re
-from typing import List, Optional
 
 from fastmcp.exceptions import ToolError
 
@@ -59,7 +58,7 @@ def validate_notes_length(notes: str) -> None:
         raise ToolError(f"Notes exceed maximum length of {MAX_NOTES_LENGTH} characters")
 
 
-def validate_tag_names(tags: Optional[List[str]]) -> None:
+def validate_tag_names(tags: list[str] | None) -> None:
     """Validate tag names against safe character pattern.
 
     Raises ToolError if any tag contains characters that could enable
@@ -90,7 +89,7 @@ def validate_uuid(value: str, field: str = "task_id") -> None:
 
 
 def validate_uuid_list(
-    values: List[str], field: str = "task_ids", max_length: int = 50
+    values: list[str], field: str = "task_ids", max_length: int = 50
 ) -> None:
     """Validate a list of Things UUIDs.
 

@@ -1,6 +1,6 @@
 """Tests for log redaction patterns."""
 
-from things_mcp.logging_config import _redact_message_text, REDACTION_TOKEN
+from things_mcp.logging_config import REDACTION_TOKEN, _redact_message_text
 
 
 class TestRedactMessageText:
