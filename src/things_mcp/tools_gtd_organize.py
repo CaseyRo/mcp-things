@@ -552,7 +552,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         Args:
             title: Project title
-            tasks: List of task objects - each with 'title' and optional 'when', 'notes', 'tags'
+            tasks: List of task objects - each with 'title' and optional 'when',
+                'notes', 'tags', 'deadline', 'checklist' (list of checklist item titles)
             notes: Project notes
             when: Project schedule
             deadline: Project deadline
@@ -560,7 +561,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
 
         Example tasks:
             [
-                {"title": "Research options", "when": "anytime"},
+                {"title": "Research options", "when": "anytime",
+                 "checklist": ["Vendor A", "Vendor B"]},
                 {"title": "Draft proposal", "when": "anytime"},
                 {"title": "Review with team"}
             ]

@@ -154,7 +154,14 @@ def someday() -> list[dict[str, Any]]:
     return things.someday()
 
 
+def _each_status(fn, status: list[str], **kwargs) -> list[dict[str, Any]]:
+    """Run ``fn`` once per status: both backends filter on a single status."""
+    return [row for s in status for row in fn(status=s, **kwargs)]
+
+
 def todos(**kwargs) -> list[dict[str, Any]]:
+    if isinstance(kwargs.get("status"), list):
+        return _each_status(todos, **kwargs)
     r = _get_sqlite_reader()
     if r:
         rows = r.get_todos(**kwargs)
@@ -175,6 +182,8 @@ def todos(**kwargs) -> list[dict[str, Any]]:
 
 
 def projects(**kwargs) -> list[dict[str, Any]]:
+    if isinstance(kwargs.get("status"), list):
+        return _each_status(projects, **kwargs)
     r = _get_sqlite_reader()
     if r:
         return r.get_projects(**kwargs)
@@ -201,15 +210,17 @@ def tags() -> list[dict[str, Any]]:
     return things.tags()
 
 
-def search(query: str) -> list[dict[str, Any]]:
+def search(query: str, status: str | list[str] = "incomplete") -> list[dict[str, Any]]:
+    if isinstance(status, list):
+        return [row for s in status for row in search(query, s)]
     r = _get_sqlite_reader()
     if r:
-        rows = r.search(query)
+        rows = r.search(query, status=status)
     else:
         import things
 
-        rows = things.search(query)
-    return _merge_overlay(rows, query=query, status="incomplete")
+        rows = things.search(query, status=status)
+    return _merge_overlay(rows, query=query, status=status)
 
 
 # Pass-through for write-adjacent reads that need things-py directly

@@ -445,7 +445,7 @@ def build_todo_object(
     when: str | None = None,
     deadline: str | None = None,
     tags: list[str] | None = None,
-    checklist_items: list[dict[str, Any]] | None = None,
+    checklist_items: list[str | dict[str, Any]] | None = None,
     list_id: str | None = None,
     heading: str | None = None,
     heading_id: str | None = None,
@@ -460,7 +460,7 @@ def build_todo_object(
         when: Schedule (today, tomorrow, evening, anytime, someday, or date)
         deadline: Deadline date
         tags: List of tag names
-        checklist_items: List of checklist item dicts with 'title' and optional 'completed'
+        checklist_items: Checklist item titles, or item dicts from build_checklist_item
         list_id: UUID of project to add to
         heading: Name of heading within project
         heading_id: UUID of heading within project
@@ -481,7 +481,10 @@ def build_todo_object(
     if tags:
         attributes["tags"] = tags
     if checklist_items:
-        attributes["checklist-items"] = checklist_items
+        attributes["checklist-items"] = [
+            build_checklist_item(i) if isinstance(i, str) else i
+            for i in checklist_items
+        ]
     if list_id is not None:
         attributes["list-id"] = list_id
     if heading is not None:
@@ -662,38 +665,28 @@ def add_project_with_tasks(
     # Build project items (tasks and headings)
     items: list[dict[str, Any]] = []
 
-    # Add tasks without headings first
-    for task in tasks:
-        task_obj = build_todo_object(
+    def todo(task: dict[str, Any]) -> dict[str, Any]:
+        # `checklist` is the tool-facing key; `checklist_items` predates it.
+        checklist = task.get("checklist") or task.get("checklist_items")
+        if isinstance(checklist, str):  # tasks are untyped dicts: one per line
+            checklist = checklist.splitlines()
+        return build_todo_object(
             title=task.get("title", ""),
             notes=task.get("notes"),
             when=task.get("when"),
             deadline=task.get("deadline"),
             tags=task.get("tags"),
-            checklist_items=[
-                build_checklist_item(item) if isinstance(item, str) else item
-                for item in task.get("checklist_items", [])
-            ]
-            if task.get("checklist_items")
-            else None,
+            checklist_items=checklist,
         )
-        items.append(task_obj)
+
+    # Add tasks without headings first
+    items.extend(todo(task) for task in tasks)
 
     # Add headings with their tasks
     if headings:
         for heading_name, heading_tasks in headings.items():
-            # Add the heading
             items.append(build_heading_object(heading_name))
-            # Add tasks under this heading
-            for task in heading_tasks:
-                task_obj = build_todo_object(
-                    title=task.get("title", ""),
-                    notes=task.get("notes"),
-                    when=task.get("when"),
-                    deadline=task.get("deadline"),
-                    tags=task.get("tags"),
-                )
-                items.append(task_obj)
+            items.extend(todo(task) for task in heading_tasks)
 
     # Build the project object with all items
     project = build_project_object(

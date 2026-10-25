@@ -40,6 +40,13 @@ def _resolve_title(uuid: str | None) -> str | None:
     return None
 
 
+def _by_status(fn, statuses: list[str] | None, **kwargs) -> list[dict[str, Any]]:
+    """Call a things-py lister once per status (it filters on one at a time)."""
+    return [
+        row for s in statuses or ["incomplete"] for row in fn(status=s, **kwargs) or []
+    ]
+
+
 def _normalise_checklist(raw: Any) -> list[dict[str, Any]]:
     """Coerce a raw checklist into the shape expected by the Pydantic model."""
     if not isinstance(raw, list):
@@ -71,6 +78,13 @@ def _repeat_text(todo: dict[str, Any]) -> str | None:
     return rule.text if rule else None
 
 
+def status_of(row: dict[str, Any]) -> str:
+    """A row's status. things-py returns incomplete|completed|canceled, but
+    legacy AppleScript-style mocks/fixtures say "open"; anything else is open."""
+    raw = row.get("status")
+    return raw if raw in ("completed", "canceled") else "incomplete"
+
+
 def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
     """Project a things-py todo row into the canonical Todo shape.
 
@@ -83,17 +97,6 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
     area_uuid = todo.get("area")
     area_title = todo.get("area_title") or _resolve_title(area_uuid)
 
-    # Normalise status. Real things-py returns incomplete|completed|canceled,
-    # but legacy AppleScript-style mocks/fixtures use "open"; coerce so the
-    # pydantic Todo model still validates.
-    raw_status = todo.get("status")
-    if raw_status in (None, "", "open"):
-        status = "incomplete"
-    elif raw_status in ("incomplete", "completed", "canceled"):
-        status = raw_status
-    else:
-        status = "incomplete"
-
     start = todo.get("start") or None
     if start == "Someday" and todo.get("start_date"):
         start = "Upcoming"  # Things stores a scheduled to-do as Someday + a start date
@@ -103,7 +106,7 @@ def to_dict_todo(todo: dict[str, Any]) -> dict[str, Any]:
         "uuid": todo.get("uuid", ""),
         "title": todo.get("title", ""),
         "type": todo.get("type", "to-do"),
-        "status": status,
+        "status": status_of(todo),
         "notes": todo.get("notes") or None,
         "tags": list(todo.get("tags") or []),
         "checklist": _normalise_checklist(todo.get("checklist")),
@@ -195,17 +198,23 @@ def render_todo(todo: dict[str, Any]) -> str:
 
 
 def to_dict_project(
-    project: dict[str, Any], include_items: bool = False
+    project: dict[str, Any],
+    include_items: bool = False,
+    status: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Project a things-py project row into the canonical Project shape."""
+    """Project a things-py project row into the canonical Project shape.
+
+    ``status`` picks which embedded tasks ``include_items`` returns
+    (default incomplete).
+    """
     area_uuid = project.get("area")
     area_title = project.get("area_title") or _resolve_title(area_uuid)
 
     tasks: list[dict[str, Any]] = []
     if include_items:
         try:
-            todo_rows = things.todos(project=project["uuid"])
-            tasks = [to_dict_todo(t) for t in (todo_rows or [])]
+            todo_rows = _by_status(things.todos, status, project=project["uuid"])
+            tasks = [to_dict_todo(t) for t in todo_rows]
         except Exception:
             logger.debug(
                 "Failed to fetch tasks for project %s",
@@ -233,7 +242,11 @@ def to_dict_project(
     }
 
 
-def render_project(project: dict[str, Any], include_items: bool = False) -> str:
+def render_project(
+    project: dict[str, Any],
+    include_items: bool = False,
+    status: list[str] | None = None,
+) -> str:
     """Render a project as the legacy text block."""
     project_text = f"Title: {project['title']}\nUUID: {project['uuid']}"
 
@@ -251,7 +264,7 @@ def render_project(project: dict[str, Any], include_items: bool = False) -> str:
         project_text += f"\nNotes: {project['notes']}"
 
     if include_items:
-        todos = things.todos(project=project["uuid"])
+        todos = _by_status(things.todos, status, project=project["uuid"])
         if todos:
             project_text += "\n\nTasks:"
             for todo in todos:
@@ -265,21 +278,29 @@ def render_project(project: dict[str, Any], include_items: bool = False) -> str:
 # ---------------------------------------------------------------------------
 
 
-def to_dict_area(area: dict[str, Any], include_items: bool = False) -> dict[str, Any]:
-    """Project a things-py area row into the canonical Area shape."""
+def to_dict_area(
+    area: dict[str, Any],
+    include_items: bool = False,
+    status: list[str] | None = None,
+) -> dict[str, Any]:
+    """Project a things-py area row into the canonical Area shape.
+
+    ``status`` picks which embedded projects and tasks ``include_items``
+    returns (default incomplete).
+    """
     projects: list[dict[str, Any]] = []
     tasks: list[dict[str, Any]] = []
     if include_items:
         try:
-            project_rows = things.projects(area=area["uuid"])
-            projects = [to_dict_project(p) for p in (project_rows or [])]
+            project_rows = _by_status(things.projects, status, area=area["uuid"])
+            projects = [to_dict_project(p) for p in project_rows]
         except Exception:
             logger.debug(
                 "Failed to fetch projects for area %s", area.get("uuid"), exc_info=True
             )
         try:
-            todo_rows = things.todos(area=area["uuid"])
-            tasks = [to_dict_todo(t) for t in (todo_rows or []) if not t.get("project")]
+            todo_rows = _by_status(things.todos, status, area=area["uuid"])
+            tasks = [to_dict_todo(t) for t in todo_rows if not t.get("project")]
         except Exception:
             logger.debug(
                 "Failed to fetch todos for area %s", area.get("uuid"), exc_info=True
@@ -295,7 +316,11 @@ def to_dict_area(area: dict[str, Any], include_items: bool = False) -> dict[str,
     }
 
 
-def render_area(area: dict[str, Any], include_items: bool = False) -> str:
+def render_area(
+    area: dict[str, Any],
+    include_items: bool = False,
+    status: list[str] | None = None,
+) -> str:
     """Render an area as the legacy text block."""
     area_text = f"Title: {area['title']}\nUUID: {area['uuid']}"
 
@@ -303,13 +328,13 @@ def render_area(area: dict[str, Any], include_items: bool = False) -> str:
         area_text += f"\nNotes: {area['notes']}"
 
     if include_items:
-        projects = things.projects(area=area["uuid"])
+        projects = _by_status(things.projects, status, area=area["uuid"])
         if projects:
             area_text += "\n\nProjects:"
             for project in projects:
                 area_text += f"\n- {project['title']}"
 
-        todos = things.todos(area=area["uuid"])
+        todos = _by_status(things.todos, status, area=area["uuid"])
         if todos:
             area_text += "\n\nTasks:"
             for todo in todos:

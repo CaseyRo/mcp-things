@@ -5,8 +5,10 @@ AppleScript or other system interfaces.
 """
 
 import re
+from typing import Annotated, Literal
 
 from fastmcp.exceptions import ToolError
+from pydantic import Field
 
 # Tag names: word chars, spaces, hyphens, @prefix. Reject anything else.
 TAG_NAME_PATTERN = re.compile(r"^[@\w\s\-]+$")
@@ -29,6 +31,33 @@ VALID_LIST_NAMES = {
 
 # Things UUIDs: alphanumeric plus hyphens, typically 10-30 chars
 THINGS_UUID_PATTERN = re.compile(r"^[A-Za-z0-9\-_]{6,40}$")
+
+
+# One status vocabulary for every read tool (CDI-1543): get-tasks, search-tasks,
+# get-projects and get-areas all take `status` with these values.
+TaskStatus = Literal["incomplete", "completed", "canceled"]
+ALL_STATUSES: list[TaskStatus] = ["incomplete", "completed", "canceled"]
+
+# List first: the schema flattener advertises only the first branch of a union.
+StatusFilter = Annotated[
+    list[TaskStatus] | TaskStatus | None,
+    Field(
+        description=(
+            'Statuses to return: any of "incomplete", "completed", "canceled", '
+            'as a list (a single value also works). ["completed", "canceled"] '
+            'is "finished either way". Default ["incomplete"].'
+        )
+    ),
+]
+
+
+def status_list(
+    status: list[TaskStatus] | TaskStatus | None, default: list[TaskStatus]
+) -> list[TaskStatus]:
+    """Normalise a `status` argument to a de-duplicated list (empty -> default)."""
+    if not status:
+        return list(default)
+    return [status] if isinstance(status, str) else list(dict.fromkeys(status))
 
 
 MAX_NAME_LENGTH = 255

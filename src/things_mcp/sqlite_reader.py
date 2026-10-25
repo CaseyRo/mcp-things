@@ -804,7 +804,7 @@ class ThingsSQLiteReader:
 
         return result
 
-    def search(self, query: str) -> list[dict[str, Any]]:
+    def search(self, query: str, status: str = "incomplete") -> list[dict[str, Any]]:
         """
         Search tasks by title and notes using LIKE.
 
@@ -812,6 +812,13 @@ class ThingsSQLiteReader:
         """
         if not query:
             return []
+        status_val = {
+            "incomplete": STATUS_INCOMPLETE,
+            "completed": STATUS_COMPLETED,
+            "canceled": STATUS_CANCELED,
+        }.get(status)
+        if status_val is None:
+            raise ValueError(f"Invalid status: {status!r}")
 
         like_pattern = f"%{query}%"
         sql = f"""
@@ -819,7 +826,7 @@ class ThingsSQLiteReader:
             WHERE
                 {_NOT_RECURRING}
                 AND {_NOT_TRASHED}
-                AND {_IS_INCOMPLETE}
+                AND TASK.status = {status_val}
                 AND (
                     TASK.title LIKE ?
                     OR TASK.notes LIKE ?
@@ -832,7 +839,7 @@ class ThingsSQLiteReader:
         def _fallback():
             import things
 
-            return things.search(query)
+            return things.search(query, status=status)
 
         result = self._execute_with_fallback(
             sql, (like_pattern, like_pattern, like_pattern), _fallback

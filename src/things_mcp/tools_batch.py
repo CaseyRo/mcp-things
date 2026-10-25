@@ -56,6 +56,9 @@ class CaptureItem(BaseModel):
         None, description="Context tags like @computer, @phone"
     )
     deadline: str | None = Field(None, description="Deadline in YYYY-MM-DD format")
+    checklist: list[str] | None = Field(
+        None, description="Checklist items (native, tickable sub-rows), in order"
+    )
 
 
 class TriageDecision(BaseModel):
@@ -144,7 +147,7 @@ def register_batch_tools(mcp: FastMCP):
         Use when: Capturing multiple items at once (meeting notes, braindump, etc.)
 
         Args:
-            items: List of items to capture (1-50). Each has title (required), notes, when, tags, deadline.
+            items: List of items to capture (1-50). Each has title (required), notes, when, tags, deadline, checklist.
             default_when: Default schedule for items without an explicit 'when' value.
         """
         if ctx:
@@ -181,6 +184,7 @@ def register_batch_tools(mcp: FastMCP):
                     when=effective_when,
                     deadline=item.deadline,
                     tags=item.tags,
+                    checklist_items=item.checklist,
                 )
                 todo_objects.append(todo_obj)
 
@@ -224,6 +228,7 @@ def register_batch_tools(mcp: FastMCP):
                     tags=item.tags,
                     when=item.when or default_when,
                     deadline=item.deadline,
+                    checklist=item.checklist,
                 )
                 thing_ids.append(row["uuid"] if row else None)
                 if rb.get("unapplied"):
