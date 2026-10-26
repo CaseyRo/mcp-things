@@ -89,6 +89,7 @@ def unapplied(
     tags: list[str] | None = None,
     when: str | None = None,
     deadline: str | None = None,
+    checklist: list[str] | None = None,
 ) -> list[str]:
     """Requested fields the read-back to-do does not show (CDI-1588).
 
@@ -115,6 +116,9 @@ def unapplied(
         misses.append(f"reminder (Things shows {todo['reminder_time'] or 'none'})")
     if _iso(deadline) and todo["deadline"] != deadline:
         misses.append(f"deadline (Things shows {todo['deadline'] or 'none'})")
+    got = [c["title"] for c in todo.get("checklist") or []]
+    if checklist and got != [c.strip() for c in checklist if c.strip()]:
+        misses.append(f"checklist (Things shows {len(got)} items)")
     return misses
 
 

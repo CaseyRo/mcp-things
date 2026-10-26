@@ -2,6 +2,7 @@
 
 import pytest
 from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 
 from things_mcp.models import (
     Area,
@@ -254,5 +255,5 @@ class TestModelInvariants:
         assert env.meta == {}
 
     def test_todo_status_enum_enforced(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             Todo(uuid="X", title="X", status="bogus")

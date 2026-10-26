@@ -1,9 +1,9 @@
 """Tests for url_scheme module - URL construction and JSON API builders."""
 
-import pytest
 from unittest.mock import patch
 from urllib.parse import unquote
 
+import pytest
 
 pytestmark = [pytest.mark.unit]
 

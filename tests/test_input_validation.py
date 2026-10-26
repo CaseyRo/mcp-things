@@ -3,7 +3,7 @@
 import pytest
 from fastmcp.exceptions import ToolError
 
-from things_mcp.input_validation import validate_tag_names, validate_show_id
+from things_mcp.input_validation import validate_show_id, validate_tag_names
 
 
 class TestValidateTagNames:

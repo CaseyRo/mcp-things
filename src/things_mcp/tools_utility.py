@@ -7,23 +7,25 @@ All tools in this module return ``ToolResult`` with a ``ToolEnvelope`` in
 See ``openspec/changes/structured-json-tool-output/`` for the contract.
 """
 
-from typing import Optional
-
-from . import reader as db
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
+from . import reader as db
+from .cache import get_cache_stats
 from .formatters import (
     render_area,
     render_project,
     render_tag,
     render_todo,
+    status_of,
     to_dict_area,
     to_dict_project,
     to_dict_tag,
     to_dict_todo,
 )
+from .input_validation import StatusFilter, status_list, validate_show_id
+from .logging_config import get_logger
 from .models import (
     Area,
     CacheStats,
@@ -36,16 +38,13 @@ from .models import (
     TriageInsights,
     output_schema_for,
 )
-from .tool_results import make_result
-from .utils import app_state
-from .url_scheme import show, launch_things
-from .logging_config import get_logger
-from .cache import get_cache_stats
-from .tool_annotations import TOOL_ANNOTATIONS, tags_for
-from .triage_tracker import triage_tracker
-from .settings import get_dashboard_url
-from .input_validation import validate_show_id
 from .resolvers import resolve_item
+from .settings import get_dashboard_url
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
+from .tool_results import make_result
+from .triage_tracker import triage_tracker
+from .url_scheme import launch_things, show
+from .utils import app_state
 
 logger = get_logger(__name__)
 
@@ -66,11 +65,12 @@ def register_utility_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
     async def search_tasks(
-        query: Optional[str] = None,
-        status: Optional[str] = None,
-        tag: Optional[str] = None,
-        area: Optional[str] = None,
-        deadline: Optional[str] = None,
+        query: str | None = None,
+        status: StatusFilter = None,
+        tag: str | None = None,
+        area: str | None = None,
+        project: str | None = None,
+        deadline: str | None = None,
         limit: int = 20,
         ctx: Context = None,
     ) -> ToolResult:
@@ -79,6 +79,9 @@ def register_utility_tools(mcp: FastMCP):
         GTD Stage: Utility
         Use when: Looking for a specific task or filtering by criteria.
         Results are capped at `limit` (default 20). Increase limit to see more.
+        Every filter applies together with `query`; `status` defaults to
+        incomplete, e.g. search_tasks(query="invoice", status=["completed",
+        "canceled"]) finds finished ones.
 
         Note on `area`: `area` filters by an *area of responsibility* (name or
         UUID). Things' built-in lists — Inbox, Today, Anytime, Someday, Upcoming,
@@ -89,10 +92,10 @@ def register_utility_tools(mcp: FastMCP):
 
         Args:
             query: Search text (matches title and notes)
-            status: Filter by status - incomplete, completed, canceled
             tag: Filter by tag (context)
             area: Filter by area of responsibility (name or UUID), NOT a built-in
                 list. For Inbox/Today/Anytime/etc. use get-tasks(view=...).
+            project: Filter by project name or UUID (same as get-tasks)
             deadline: Filter by deadline date
             limit: Maximum results to return (default 20, max 200)
         """
@@ -118,25 +121,36 @@ def register_utility_tools(mcp: FastMCP):
                 "The `area` filter is for areas of responsibility only."
             )
 
+        statuses = status_list(status, ["incomplete"])
         try:
             kwargs = {}
-            if status:
-                kwargs["status"] = status
             if tag:
                 kwargs["tag"] = tag
-            if area:
-                kwargs["area"] = area
             if deadline:
                 kwargs["deadline"] = deadline
 
             if query:
-                todos = db.search(query)
-            elif kwargs:
-                todos = db.todos(**kwargs)
+                todos = db.search(query, status=statuses)
+            elif status or tag or area or project or deadline:
+                todos = db.todos(status=statuses, **kwargs)
             else:
                 _error_result(
-                    "Provide query or at least one filter (status, tag, area, deadline)"
+                    "Provide query or at least one filter "
+                    "(status, tag, area, project, deadline)"
                 )
+
+            # Area/project match by UUID or title, exactly like get-tasks.
+            # Applied here (not in SQL) so they also narrow a `query` search.
+            todos = [
+                t
+                for t in todos or []
+                if status_of(t) in statuses
+                and (not tag or tag in (t.get("tags") or []))
+                and (not area or area in (t.get("area"), t.get("area_title")))
+                and (
+                    not project or project in (t.get("project"), t.get("project_title"))
+                )
+            ]
 
             if not todos:
                 # CDI-1255: distinguish a genuine empty result from a possibly
@@ -154,7 +168,7 @@ def register_utility_tools(mcp: FastMCP):
                     data=[],
                     summary=msg,
                     text=msg,
-                    meta={"index_stale": stale},
+                    meta={"index_stale": stale, "status": statuses},
                 )
 
             effective_limit = min(max(1, limit), 200)
@@ -179,7 +193,7 @@ def register_utility_tools(mcp: FastMCP):
                     "Use limit= to see more.*"
                 )
 
-            meta = {"total_count": total_count, "shown": len(shown)}
+            meta = {"total_count": total_count, "shown": len(shown), "status": statuses}
             if total_count > effective_limit:
                 meta["truncated"] = True
 
@@ -199,26 +213,37 @@ def register_utility_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[list[Project]]),
     )
     async def get_projects(
-        include_items: bool = False, ctx: Context = None
+        include_items: bool = False,
+        status: StatusFilter = None,
+        ctx: Context = None,
     ) -> ToolResult:
-        """[tasks-gtd] Get all projects from Things.
+        """[tasks-gtd] Get projects from Things (open ones unless `status` says otherwise).
+
+        `status` filters the projects and, with include_items, their tasks:
+        get_projects(status=["completed", "canceled"]) finds finished or
+        abandoned projects.
 
         Args:
             include_items: Include tasks within projects
         """
-        projects = db.projects() or []
+        statuses = status_list(status, ["incomplete"])
+        projects = db.projects(status=statuses) or []
+        meta = {"status": statuses}
 
         if not projects:
             return make_result(
-                data=[], summary="No projects found", text="No projects found"
+                data=[],
+                summary="No projects found",
+                text="No projects found",
+                meta=meta,
             )
 
-        data = [to_dict_project(p, include_items) for p in projects]
+        data = [to_dict_project(p, include_items, statuses) for p in projects]
         text_body = "\n\n---\n\n".join(
-            render_project(p, include_items) for p in projects
+            render_project(p, include_items, statuses) for p in projects
         )
         summary = f"{len(projects)} project{'s' if len(projects) != 1 else ''}"
-        return make_result(data=data, summary=summary, text=text_body)
+        return make_result(data=data, summary=summary, text=text_body, meta=meta)
 
     @mcp.tool(
         name="get-areas",
@@ -227,21 +252,34 @@ def register_utility_tools(mcp: FastMCP):
         timeout=5,
         output_schema=output_schema_for(ToolEnvelope[list[Area]]),
     )
-    async def get_areas(include_items: bool = False, ctx: Context = None) -> ToolResult:
+    async def get_areas(
+        include_items: bool = False,
+        status: StatusFilter = None,
+        ctx: Context = None,
+    ) -> ToolResult:
         """[tasks-gtd] Get all areas from Things.
+
+        Areas have no status of their own; `status` filters the projects and
+        tasks that include_items embeds (default incomplete).
 
         Args:
             include_items: Include projects and tasks within areas
         """
+        statuses = status_list(status, ["incomplete"])
         areas = db.areas() or []
+        meta = {"status": statuses}
 
         if not areas:
-            return make_result(data=[], summary="No areas found", text="No areas found")
+            return make_result(
+                data=[], summary="No areas found", text="No areas found", meta=meta
+            )
 
-        data = [to_dict_area(a, include_items) for a in areas]
-        text_body = "\n\n---\n\n".join(render_area(a, include_items) for a in areas)
+        data = [to_dict_area(a, include_items, statuses) for a in areas]
+        text_body = "\n\n---\n\n".join(
+            render_area(a, include_items, statuses) for a in areas
+        )
         summary = f"{len(areas)} area{'s' if len(areas) != 1 else ''}"
-        return make_result(data=data, summary=summary, text=text_body)
+        return make_result(data=data, summary=summary, text=text_body, meta=meta)
 
     @mcp.tool(
         name="get-project",
@@ -522,8 +560,8 @@ def register_utility_tools(mcp: FastMCP):
     )
     async def triage_insights_tool(
         days: int = 7,
-        category: Optional[str] = None,
-        action: Optional[str] = None,
+        category: str | None = None,
+        action: str | None = None,
         show_trends: bool = False,
         ctx: Context = None,
     ) -> ToolResult:

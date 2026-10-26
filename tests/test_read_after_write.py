@@ -51,10 +51,17 @@ class TestInboxIsNotAnArea:
 
     @pytest.mark.asyncio
     async def test_real_area_name_still_works(self):
-        # A genuine area name is passed straight through to the reader filter.
-        self.things.todos.return_value = [create_mock_todo(title="Area task")]
-        result = await self.search_tasks(area="Work")
-        assert "Area task" in tool_text(result)
+        # A genuine area name matches the area's title (or its UUID).
+        self.things.todos.return_value = [
+            {
+                **create_mock_todo(title="Area task", area="AREA-1"),
+                "area_title": "Work",
+            },
+            create_mock_todo(title="Elsewhere", area="AREA-2"),
+        ]
+        text = tool_text(await self.search_tasks(area="Work"))
+        assert "Area task" in text and "Elsewhere" not in text
+        assert "Area task" in tool_text(await self.search_tasks(area="AREA-1"))
 
     @pytest.mark.asyncio
     async def test_get_tasks_rejects_area_inbox(self):
@@ -121,7 +128,7 @@ class TestReaderOverlayMerge:
         monkeypatch.setattr(reader, "_get_sqlite_reader", lambda: None)
         import things
 
-        monkeypatch.setattr(things, "search", lambda q: [], raising=False)
+        monkeypatch.setattr(things, "search", lambda q, **kw: [], raising=False)
 
         get_overlay().record("Freshly captured task")
         rows = reader.search("Freshly")
@@ -167,7 +174,7 @@ class TestReaderOverlayMerge:
         monkeypatch.setattr(
             things,
             "search",
-            lambda q: [{"uuid": "real-1", "title": "Now persisted"}],
+            lambda q, **kw: [{"uuid": "real-1", "title": "Now persisted"}],
             raising=False,
         )
 

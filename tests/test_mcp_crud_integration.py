@@ -4,8 +4,9 @@ Tests verify complete Create-Read-Update-Delete workflows work correctly
 through actual MCP protocol calls using streamable-http transport.
 """
 
-import pytest
 import time
+
+import pytest
 import things
 
 from tests.conftest import generate_test_title

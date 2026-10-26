@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Wrapper script to run pytest with proper output handling."""
 
-import sys
-import subprocess
 import os
+import subprocess
+import sys
 
 if __name__ == "__main__":
     # Write debug info to file to verify script is running
@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     # Run pytest directly - uv should handle the environment
     # Use python -m pytest to ensure we use the right pytest
-    args = ["python", "-u", "-m", "pytest", "tests"] + sys.argv[1:]
+    args = ["python", "-u", "-m", "pytest", "tests", *sys.argv[1:]]
 
     # Run with real-time output
     result = subprocess.run(args, bufsize=0)

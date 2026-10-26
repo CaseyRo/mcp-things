@@ -4,11 +4,12 @@ These tests verify that the server can start and endpoints respond.
 Note: These are integration tests that may require Things 3 to be available.
 """
 
-import pytest
 import subprocess
-import time
 import sys
+import time
 from pathlib import Path
+
+import pytest
 
 try:
     import httpx

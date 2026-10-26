@@ -17,19 +17,16 @@ See: `openspec/changes/structured-json-tool-output/` for the full contract.
 
 from __future__ import annotations
 
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-
-DataT = TypeVar("DataT")
-
 
 # ---------------------------------------------------------------------------
 # Envelope
 # ---------------------------------------------------------------------------
 
 
-class ToolEnvelope(BaseModel, Generic[DataT]):
+class ToolEnvelope[DataT](BaseModel):
     """Uniform JSON envelope returned by every tool's `structured_content`.
 
     Hardened to never raise at construction time on an internal path:

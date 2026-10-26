@@ -5,12 +5,12 @@ without requiring Things 3 to be running.
 """
 
 from pathlib import Path
+from unittest import mock
 
 import pytest
-from unittest import mock
 from fastmcp.exceptions import ToolError
 
-from tests.conftest import create_mock_todo, create_mock_project, tool_text
+from tests.conftest import create_mock_project, create_mock_todo, tool_text
 
 
 class TestGetTasks:

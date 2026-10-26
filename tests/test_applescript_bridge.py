@@ -2,7 +2,6 @@
 
 from unittest import mock
 
-
 from things_mcp.applescript_bridge import (
     _script_metadata,
     _wrap_script_for_background,

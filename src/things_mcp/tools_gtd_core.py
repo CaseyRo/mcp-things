@@ -7,31 +7,32 @@ These tools form the "input" side of GTD:
 """
 
 import time
-from typing import Literal, Optional, List, Union
+from typing import Literal
 
-from . import reader as db
-from .reader import read_back
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
-from .formatters import render_todo, to_dict_todo
-from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
-from .tool_results import make_result, readback, write_result
-from .utils import app_state
-from .url_scheme import (
-    add_todo,
-    update_todo,
-    execute_url,
-    launch_things,
-    add_project_with_tasks,
-)
-from .logging_config import get_logger
+from . import reader as db
 from .cache import invalidate_caches_for
+from .formatters import render_todo, status_of, to_dict_todo
+from .input_validation import ALL_STATUSES, StatusFilter, status_list
+from .logging_config import get_logger
+from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
+from .reader import read_back
+from .settings import get_dashboard_url
 from .tag_handler import ensure_tags_exist
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
+from .tool_results import make_result, readback, write_result
 from .triage_tracker import triage_tracker
-from .settings import get_dashboard_url
+from .url_scheme import (
+    add_project_with_tasks,
+    add_todo,
+    execute_url,
+    launch_things,
+    update_todo,
+)
+from .utils import app_state
 from .write_overlay import record_write
 
 logger = get_logger(__name__)
@@ -55,32 +56,40 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[list[Todo]]),
     )
     async def get_tasks(
-        view: Optional[
-            Literal[
-                "inbox",
-                "today",
-                "tomorrow",
-                "upcoming",
-                "anytime",
-                "someday",
-                "logbook",
-                "trash",
-                "deadlines",
-            ]
-        ] = None,
-        context: Optional[Union[str, List[str]]] = None,
-        energy: Optional[str] = None,
-        time_available: Optional[str] = None,
-        area: Optional[str] = None,
-        project: Optional[str] = None,
+        view: Literal[
+            "inbox",
+            "today",
+            "tomorrow",
+            "upcoming",
+            "anytime",
+            "someday",
+            "logbook",
+            "trash",
+            "deadlines",
+        ]
+        | None = None,
+        context: str | list[str] | None = None,
+        energy: str | None = None,
+        time_available: str | None = None,
+        area: str | None = None,
+        project: str | None = None,
+        status: StatusFilter = None,
         include_completed: bool = False,
         limit: int = 50,
         ctx: Context = None,
     ) -> ToolResult:
-        """[tasks-gtd] Get tasks filtered by view, context, energy, and time available.
+        """[tasks-gtd] Get tasks filtered by view, status, context, energy, and time available.
 
         GTD Stage: Engage
         Use when: Choosing what to work on based on current context and constraints.
+
+        View and status: the view picks the list, `status` filters within it.
+        Without `status`, a view shows what Things shows there: logbook gives
+        completed and canceled, trash gives every status, every other view
+        gives incomplete. inbox/today/tomorrow/upcoming/anytime/someday only
+        hold open to-dos, so a finished status finds nothing there; omit `view`
+        (or use deadlines) to search all to-dos by status, e.g.
+        get_tasks(status=["canceled"]).
 
         Context is your FIRST filter in GTD. Common contexts:
         - @computer, @phone, @office, @home, @errands, @anywhere
@@ -106,7 +115,8 @@ def register_gtd_core_tools(mcp: FastMCP):
             time_available: Time estimate tag (e.g., "5min", "15min", "30min", "1hr+")
             area: Filter by area name or UUID
             project: Filter by project name or UUID
-            include_completed: Include completed tasks (default False)
+            include_completed: Deprecated, use status. True means
+                status=["incomplete", "completed"]; ignored when status is set.
             limit: Maximum number of tasks to return (default 50, max 200)
 
         Examples:
@@ -135,6 +145,17 @@ def register_gtd_core_tools(mcp: FastMCP):
                 f"Use view='{list_name}' (not area='{area}') to list its contents."
             )
 
+        # `status` wins; otherwise each view defaults to what Things shows there.
+        if view == "logbook":
+            default = ["completed", "canceled"]
+        elif view == "trash":
+            default = ALL_STATUSES
+        elif include_completed:  # deprecated alias
+            default = ["incomplete", "completed"]
+        else:
+            default = ["incomplete"]
+        statuses = status_list(status, default)
+
         try:
             # Build query based on view
             if view == "inbox":
@@ -161,14 +182,9 @@ def register_gtd_core_tools(mcp: FastMCP):
                 todos = db.trash()
             elif view == "deadlines":
                 # Get tasks with deadlines
-                todos = db.todos(deadline=True)
+                todos = db.todos(status=statuses, deadline=True)
             elif view is None:
-                # No view specified, get all incomplete tasks
-                todos = (
-                    db.todos(status="incomplete")
-                    if not include_completed
-                    else db.todos()
-                )
+                todos = db.todos(status=statuses)
             else:
                 _error_result(
                     f"Unknown view '{view}'. Valid views: inbox, today, tomorrow, upcoming, anytime, someday, logbook, trash, deadlines"
@@ -210,9 +226,8 @@ def register_gtd_core_tools(mcp: FastMCP):
                     if t.get("project") == project or t.get("project_title") == project
                 ]
 
-            # Filter completed unless requested
-            if not include_completed and view not in ("logbook",):
-                todos = [t for t in todos if t.get("status") != "completed"]
+            # The views return what Things shows; `status` narrows that.
+            todos = [t for t in todos if status_of(t) in statuses]
 
             if not todos:
                 filters = []
@@ -231,6 +246,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                     data=[],
                     summary=f"No tasks found ({filter_str}).",
                     text=empty_text,
+                    meta={"status": statuses},
                 )
 
             # Apply limit
@@ -271,6 +287,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             meta: dict = {
                 "total_count": total_count,
                 "shown": len(shown),
+                "status": statuses,
             }
             if total_count > effective_limit:
                 meta["truncated"] = True
@@ -296,9 +313,9 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[FocusResult]),
     )
     async def focus_mode(
-        context: Optional[str] = None,
-        energy: Optional[str] = None,
-        time_available: Optional[str] = None,
+        context: str | None = None,
+        energy: str | None = None,
+        time_available: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Get the single most important task to work on right now.
@@ -323,9 +340,9 @@ def register_gtd_core_tools(mcp: FastMCP):
             today_str = date.today().isoformat()
             selected_task = None
             selection_reason = ""
-            selection_kind: Optional[
-                Literal["overdue", "today_with_deadline", "today", "anytime"]
-            ] = None
+            selection_kind: (
+                Literal["overdue", "today_with_deadline", "today", "anytime"] | None
+            ) = None
 
             # 1. Check for overdue tasks with deadlines
             all_todos = db.todos(status="incomplete")
@@ -458,9 +475,9 @@ def register_gtd_core_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[WriteResult]),
     )
     async def complete_task(
-        task_id: Optional[str] = None,
-        task_title: Optional[str] = None,
-        completion_notes: Optional[str] = None,
+        task_id: str | None = None,
+        task_title: str | None = None,
+        completion_notes: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Mark a task as complete.
@@ -606,9 +623,10 @@ def register_gtd_core_tools(mcp: FastMCP):
     )
     async def capture_task(
         title: str,
-        notes: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        when: Optional[str] = None,
+        notes: str | None = None,
+        tags: list[str] | None = None,
+        when: str | None = None,
+        checklist: list[str] | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Quick capture a task to Inbox for later processing.
@@ -624,6 +642,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             when: Optional schedule (today, tomorrow, evening, anytime, someday, or YYYY-MM-DD). If omitted, goes to inbox.
                 Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
                 a plain date keeps an existing reminder, anytime/someday removes it.
+            checklist: Checklist items (native, tickable sub-rows), in order (optional)
         """
         try:
             # Ensure Things app is running
@@ -636,7 +655,13 @@ def register_gtd_core_tools(mcp: FastMCP):
                 ensure_tags_exist(tags)
 
             # Create task (no when/list specified = inbox)
-            url = add_todo(title=title, notes=notes, tags=tags, when=when)
+            url = add_todo(
+                title=title,
+                notes=notes,
+                tags=tags,
+                when=when,
+                checklist_items=checklist,
+            )
             since = time.time() - 1
             success = execute_url(url)
 
@@ -664,7 +689,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                 )
             # CDI-1588: the URL scheme returns no UUID; read the new row back.
             row = (await read_back([title], since)).get(title)
-            note, meta = readback(row, tags=tags, when=when)
+            note, meta = readback(row, tags=tags, when=when, checklist=checklist)
             return write_result(
                 summary=f"{summary}. {note}",
                 thing_id=row["uuid"] if row else None,
@@ -686,7 +711,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         annotations=TOOL_ANNOTATIONS["process-inbox"],
         tags=tags_for("process-inbox"),
         timeout=5,
-        output_schema=output_schema_for(ToolEnvelope[Union[Todo, list[Todo]]]),
+        output_schema=output_schema_for(ToolEnvelope[Todo | list[Todo]]),
     )
     async def process_inbox(
         all: bool = False,
@@ -856,7 +881,7 @@ def register_gtd_core_tools(mcp: FastMCP):
     )
     async def convert_to_project(
         task_id: str,
-        first_action: Optional[str] = None,
+        first_action: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Convert a task into a project when it requires multiple steps.

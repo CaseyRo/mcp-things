@@ -4,13 +4,14 @@ Caching module for Things MCP server.
 Provides intelligent caching for frequently accessed data to improve performance.
 """
 
-import time
-import json
 import hashlib
+import json
 import logging
-from typing import Any, Dict, Optional, Callable, Tuple
+import time
+from collections.abc import Callable
 from functools import wraps
 from threading import Lock
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class ThingsCache:
         Args:
             default_ttl: Default time-to-live for cache entries in seconds
         """
-        self.cache: Dict[str, Tuple[Any, float]] = {}
+        self.cache: dict[str, tuple[Any, float]] = {}
         self.default_ttl = default_ttl
         self.lock = Lock()
         self.hit_count = 0
@@ -41,7 +42,7 @@ class ThingsCache:
         # Use hash for shorter keys
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    def get(self, operation: str, **kwargs) -> Optional[Any]:
+    def get(self, operation: str, **kwargs) -> Any | None:
         """
         Get a value from cache if it exists and hasn't expired.
 
@@ -69,9 +70,7 @@ class ThingsCache:
             self.miss_count += 1
             return None
 
-    def set(
-        self, operation: str, value: Any, ttl: Optional[int] = None, **kwargs
-    ) -> None:
+    def set(self, operation: str, value: Any, ttl: int | None = None, **kwargs) -> None:
         """
         Set a value in the cache.
 
@@ -89,7 +88,7 @@ class ThingsCache:
             self.cache[key] = (value, expiry_time)
             logger.debug(f"Cache set for {operation}: {key}, TTL: {ttl}s")
 
-    def invalidate(self, operation: Optional[str] = None, **kwargs) -> None:
+    def invalidate(self, operation: str | None = None, **kwargs) -> None:
         """
         Invalidate cache entries.
 
@@ -143,7 +142,7 @@ class ThingsCache:
 
         return removed_count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         with self.lock:
             total_requests = self.hit_count + self.miss_count
@@ -164,7 +163,7 @@ class ThingsCache:
 _cache = ThingsCache()
 
 
-def cached(ttl: Optional[int] = None, invalidate_on: Optional[list] = None):
+def cached(ttl: int | None = None, invalidate_on: list | None = None):
     """
     Decorator for caching function results.
 
@@ -219,7 +218,7 @@ def invalidate_caches_for(operations: list) -> None:
         _cache.invalidate(operation)
 
 
-def get_cache_stats() -> Dict[str, Any]:
+def get_cache_stats() -> dict[str, Any]:
     """Get cache statistics."""
     return _cache.get_stats()
 

@@ -21,10 +21,10 @@ get_settings()  # Load .env
 
 import things  # noqa: E402
 from fastmcp.exceptions import ToolError  # noqa: E402
+
+from things_mcp.applescript_bridge import run_applescript  # noqa: E402
 from things_mcp.fast_server import mcp  # noqa: E402
 from things_mcp.utils import is_things_running  # noqa: E402
-from things_mcp.applescript_bridge import run_applescript  # noqa: E402
-
 
 # ============================================================================
 # Helpers

@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 
 class TestResultsPlugin:
@@ -14,7 +14,7 @@ class TestResultsPlugin:
         self.results_dir = Path("test-results")
         self.results_dir.mkdir(exist_ok=True)
         self.results_file = self.results_dir / "test-results.md"
-        self.current_run: Dict[str, Any] = {
+        self.current_run: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "tests": [],
             "summary": {},
@@ -100,12 +100,12 @@ class TestResultsPlugin:
         with open(json_file, "w") as f:
             json.dump(runs, f, indent=2)
 
-    def _load_existing_runs(self) -> List[Dict[str, Any]]:
+    def _load_existing_runs(self) -> list[dict[str, Any]]:
         """Load existing test runs from JSON if available."""
         json_file = self.results_dir / "test-results.json"
         if json_file.exists():
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     runs = json.load(f)
                     # Remove current run if it exists (in case of re-run)
                     runs = [
@@ -118,7 +118,7 @@ class TestResultsPlugin:
                 pass
         return []
 
-    def _write_markdown(self, runs: List[Dict[str, Any]]):
+    def _write_markdown(self, runs: list[dict[str, Any]]):
         """Write test results to Markdown file."""
         md_lines = [
             "# Test Results History",

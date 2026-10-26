@@ -9,8 +9,6 @@ header, or only one of the two required types, are still rejected with 406;
 ``AcceptHeaderFixMiddleware`` rewrites those before they reach the SDK.
 """
 
-from typing import List
-
 from starlette.middleware import Middleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -53,7 +51,7 @@ class AcceptHeaderFixMiddleware:
         await self.app(scope, receive, send)
 
 
-def get_streamable_http_middleware() -> List[Middleware]:
+def get_streamable_http_middleware() -> list[Middleware]:
     """Get middleware list for streamable-http transport.
 
     Returns middleware configured for clients that use streamable-http

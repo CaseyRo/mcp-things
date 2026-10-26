@@ -154,7 +154,7 @@ def main():
                     if hasattr(tm, attr):
                         value = getattr(tm, attr)
                         if isinstance(value, dict) and len(value) > 0:
-                            first_item = list(value.values())[0]
+                            first_item = next(iter(value.values()))
                             if hasattr(first_item, "name"):
                                 print(f"Found tools in tool_manager.{attr}")
                                 tools = list(value.values())

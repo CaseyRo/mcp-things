@@ -4,8 +4,8 @@ Tests the client compatibility transformations for n8n and ChatGPT.
 """
 
 from things_mcp.server_core import (
-    _flatten_anyof_for_n8n,
     _add_additional_properties_false,
+    _flatten_anyof_for_n8n,
     _make_all_fields_required,
 )
 

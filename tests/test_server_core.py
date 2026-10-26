@@ -11,7 +11,6 @@ import pytest
 
 from things_mcp.server_core import ClientCompatibilityMiddleware
 
-
 pytestmark = [pytest.mark.unit]
 
 

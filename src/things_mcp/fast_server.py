@@ -18,37 +18,38 @@ Architecture:
 import random
 import signal
 import sys
+from datetime import UTC
 
-from .server_core import (
-    create_mcp_server,
-    get_binding_host,
-    get_binding_port,
-    DEFAULT_HOST,
-    HOST_ENV_VAR,
-    server_stats,
-    GTD_QUOTES,
-)
+from .cache import get_cache_stats
 from .client_compat import (
     get_streamable_http_middleware,
 )
-from .settings import get_transport, is_debug_enabled
-from .cache import get_cache_stats
-from .utils import app_state
-from .url_scheme import launch_things
 from .config import (
-    ensure_auth_token,
     enforce_file_permissions,
+    ensure_auth_token,
 )
-from .logging_config import setup_logging, get_logger
+from .logging_config import get_logger, setup_logging
+from .prompts import register_prompts
+from .resources import register_resources
+from .server_core import (
+    DEFAULT_HOST,
+    GTD_QUOTES,
+    HOST_ENV_VAR,
+    create_mcp_server,
+    get_binding_host,
+    get_binding_port,
+    server_stats,
+)
+from .settings import get_transport, is_debug_enabled
+from .tools_batch import register_batch_tools
 
 # Import tool registration functions
 from .tools_gtd_core import register_gtd_core_tools
 from .tools_gtd_organize import register_gtd_organize_tools
 from .tools_gtd_reflect import register_gtd_reflect_tools
 from .tools_utility import register_utility_tools
-from .tools_batch import register_batch_tools
-from .resources import register_resources
-from .prompts import register_prompts
+from .url_scheme import launch_things
+from .utils import app_state
 
 # Configure enhanced logging
 # Console shows DEBUG if THINGS_MCP_DEBUG=true, otherwise INFO
@@ -256,13 +257,14 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     Returns:
         ASGI application with streamable-http transport endpoint.
     """
+    import json
+    from pathlib import Path
+
     from starlette.applications import Starlette
-    from starlette.routing import Mount
     from starlette.responses import HTMLResponse, JSONResponse
+    from starlette.routing import Mount
 
     from .triage_tracker import triage_tracker
-    from pathlib import Path
-    import json
 
     # Dashboard template path (co-located in package)
     _dashboard_path = Path(__file__).parent / "dashboard.html"
@@ -308,10 +310,11 @@ def _create_combined_app(mcp_instance, transport_mode: str):
     #     Route("/dashboard", dashboard_page),
     #     Route("/dashboard/data", dashboard_data),
     # ]
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from starlette.routing import Route
 
-    _start = datetime.now(timezone.utc)
+    _start = datetime.now(UTC)
     try:
         from things_mcp import __version__ as _v
     except ImportError:
@@ -324,9 +327,7 @@ def _create_combined_app(mcp_instance, transport_mode: str):
                 "service": "mcp-things",
                 "version": _v,
                 "upstream_reachable": True,
-                "uptime_seconds": int(
-                    (datetime.now(timezone.utc) - _start).total_seconds()
-                ),
+                "uptime_seconds": int((datetime.now(UTC) - _start).total_seconds()),
             }
         )
 
@@ -428,7 +429,7 @@ def run_things_mcp_server():
             else:
                 logger.error("Unable to launch Things app. Some operations may fail.")
         except Exception as e:
-            logger.error(f"Error launching Things app: {str(e)}")
+            logger.error(f"Error launching Things app: {e!s}")
     else:
         logger.info("Things app is running and ready for operations")
 

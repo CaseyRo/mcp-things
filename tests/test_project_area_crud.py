@@ -5,17 +5,17 @@ merge-areas, enhanced plan-project/create-area, security (escape, validation),
 and GTD layer updates (convert-to-project, process-inbox, weekly/daily review).
 """
 
-import pytest
 from unittest import mock
+
+import pytest
 from fastmcp.exceptions import ToolError
 
 from tests.conftest import (
-    create_mock_todo,
-    create_mock_project,
     create_mock_area,
+    create_mock_project,
+    create_mock_todo,
     tool_text,
 )
-
 
 # ============================================================================
 # Helpers

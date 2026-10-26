@@ -233,7 +233,7 @@ The server provides **32 GTD-native tools** organized by methodology stage:
 
 | Tool | Purpose |
 |------|---------|
-| `capture-task` | Quick capture to Inbox without organizing |
+| `capture-task` | Quick capture to Inbox without organizing (optional native `checklist`) |
 
 ### Clarify
 
@@ -251,7 +251,7 @@ The server provides **32 GTD-native tools** organized by methodology stage:
 | `defer-task` | Move to Someday/Maybe or schedule for future date |
 | `modify-task` | Update task properties (title, notes, tags, cancel, server-side `repeat`) |
 | `modify-project` | Update project properties (title, notes, area, complete/cancel) |
-| `plan-project` | Create project with initial tasks atomically |
+| `plan-project` | Create project with initial tasks atomically (each task may carry a `checklist`) |
 | `create-area` | Create a new area of responsibility (optionally with projects) |
 | `modify-area` | Rename an area or update its tags |
 | `delete-area` | Remove an area (safety guard: blocks if loose to-dos exist) |
@@ -279,13 +279,25 @@ N-item versions of the singular tools for high-throughput cleanups (each returns
 
 | Tool | Purpose |
 |------|---------|
-| `bulk-capture` | Capture many tasks to the Inbox in one call |
+| `bulk-capture` | Capture many tasks to the Inbox in one call (each item may carry a `checklist`) |
 | `bulk-complete` | Complete many tasks by ID |
 | `bulk-cancel` | Cancel many tasks by ID |
 | `bulk-modify` | Apply the same property changes to many tasks |
 | `bulk-triage` | Record triage decisions (complete/cancel/defer/delegate) across many inbox items |
 
 Plus the utility tools `search-tasks`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+
+### Status filtering
+
+`get-tasks`, `search-tasks`, `get-projects` and `get-areas` share one `status`
+parameter: a list of `incomplete`, `completed`, `canceled` (a single value also
+works), default `["incomplete"]`. `get-projects(status=["completed", "canceled"])`
+finds finished or abandoned projects; on `get-areas` it filters the projects and
+tasks that `include_items` embeds, since areas have no status. On `get-tasks` the
+`view` picks the list and `status` filters within it: without `status`,
+`view="logbook"` returns completed and canceled and `view="trash"` every status.
+`include_completed` still works as a deprecated alias for
+`status=["incomplete", "completed"]` and is ignored when `status` is set.
 
 ## Resources and Prompts
 

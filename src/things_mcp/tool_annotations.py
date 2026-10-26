@@ -22,10 +22,7 @@ and ``destructive``. They are additive metadata; existing parameters and
 return shapes are unchanged.
 """
 
-from typing import Dict, Set
-
 import mcp.types as types
-
 
 # ---------------------------------------------------------------------------
 # Annotation factories — one ToolAnnotations per tool so each carries its own
@@ -108,7 +105,7 @@ DESTRUCTIVE_ANNOTATIONS = types.ToolAnnotations(
 )
 
 
-TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
+TOOL_ANNOTATIONS: dict[str, types.ToolAnnotations] = {
     # === GTD Engage Tools ===
     "get-tasks": _read_only("Get Tasks"),
     "focus-mode": _read_only("Focus Mode"),
@@ -157,11 +154,11 @@ TOOL_ANNOTATIONS: Dict[str, types.ToolAnnotations] = {
 # `destructive` = irreversible-ish mutation (always paired with `write`).
 # ---------------------------------------------------------------------------
 
-_READ: Set[str] = {"read"}
-_WRITE: Set[str] = {"write"}
-_DESTRUCTIVE: Set[str] = {"write", "destructive"}
+_READ: set[str] = {"read"}
+_WRITE: set[str] = {"write"}
+_DESTRUCTIVE: set[str] = {"write", "destructive"}
 
-TOOL_TAGS: Dict[str, Set[str]] = {
+TOOL_TAGS: dict[str, set[str]] = {
     # === GTD Engage Tools ===
     "get-tasks": set(_READ),
     "focus-mode": set(_READ),
@@ -204,7 +201,7 @@ TOOL_TAGS: Dict[str, Set[str]] = {
 }
 
 
-def tags_for(name: str) -> Set[str]:
+def tags_for(name: str) -> set[str]:
     """Return a fresh copy of the capability tags for a tool.
 
     Returns a new set so callers (the ``@mcp.tool(tags=...)`` registrations)

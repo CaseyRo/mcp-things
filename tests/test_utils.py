@@ -1,8 +1,8 @@
 """Tests for utils module - CircuitBreaker, RateLimiter, DeadLetterQueue."""
 
 import time
-import pytest
 
+import pytest
 
 pytestmark = [pytest.mark.unit]
 

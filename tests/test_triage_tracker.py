@@ -4,7 +4,6 @@ import pytest
 
 from things_mcp.triage_tracker import TriageTracker, categorize_task
 
-
 # === Categorization Tests ===
 
 

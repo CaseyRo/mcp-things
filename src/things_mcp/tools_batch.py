@@ -9,33 +9,33 @@ The `bulk-*` prefix denotes the N-item version of a singular tool:
 """
 
 import time
-from typing import Optional, List, Literal
+from typing import Literal
 
 import things
-from pydantic import BaseModel, Field, model_validator
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
+from pydantic import BaseModel, Field, model_validator
 
+from .applescript_bridge import run_applescript
+from .cache import invalidate_caches_for
+from .input_validation import validate_tag_names, validate_uuid_list
+from .logging_config import get_logger
 from .models import BulkItemError, BulkResult, ToolEnvelope, output_schema_for
 from .reader import read_back
+from .resolvers import resolve_list_id
+from .tag_handler import ensure_tags_exist
+from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .tool_results import bulk_result, readback
+from .triage_tracker import triage_tracker
 from .url_scheme import (
     build_todo_object,
     execute_json,
-    update_todo,
     execute_url,
     launch_things,
+    update_todo,
 )
-from .applescript_bridge import run_applescript
-from .logging_config import get_logger
-from .cache import invalidate_caches_for
-from .tag_handler import ensure_tags_exist
-from .triage_tracker import triage_tracker
 from .utils import app_state
-from .input_validation import validate_uuid_list, validate_tag_names
-from .tool_annotations import TOOL_ANNOTATIONS, tags_for
-from .resolvers import resolve_list_id
 from .write_overlay import record_write
 
 logger = get_logger(__name__)
@@ -48,16 +48,17 @@ class CaptureItem(BaseModel):
     """A single item for bulk capture."""
 
     title: str = Field(..., description="What needs to be done")
-    notes: Optional[str] = Field(None, description="Additional details")
-    when: Optional[Literal["today", "tomorrow", "evening", "anytime", "someday"]] = (
-        Field(
-            None, description="Schedule override (takes precedence over default_when)"
-        )
+    notes: str | None = Field(None, description="Additional details")
+    when: Literal["today", "tomorrow", "evening", "anytime", "someday"] | None = Field(
+        None, description="Schedule override (takes precedence over default_when)"
     )
-    tags: Optional[List[str]] = Field(
+    tags: list[str] | None = Field(
         None, description="Context tags like @computer, @phone"
     )
-    deadline: Optional[str] = Field(None, description="Deadline in YYYY-MM-DD format")
+    deadline: str | None = Field(None, description="Deadline in YYYY-MM-DD format")
+    checklist: list[str] | None = Field(
+        None, description="Checklist items (native, tickable sub-rows), in order"
+    )
 
 
 class TriageDecision(BaseModel):
@@ -74,17 +75,17 @@ class TriageDecision(BaseModel):
     action: Literal["complete", "cancel", "defer", "schedule", "delegate", "assign"] = (
         Field(..., description="What to do with this task")
     )
-    when: Optional[str] = Field(
+    when: str | None = Field(
         None,
         description="Required for defer/schedule (e.g. 'tomorrow', 'next-week', 'someday', YYYY-MM-DD)",
     )
-    delegated_to: Optional[str] = Field(
+    delegated_to: str | None = Field(
         None, description="Required for delegate — who to hand this to"
     )
-    project: Optional[str] = Field(
+    project: str | None = Field(
         None, description="Required for assign — project name or UUID"
     )
-    notes: Optional[str] = Field(None, description="Optional notes to append")
+    notes: str | None = Field(None, description="Optional notes to append")
 
     @model_validator(mode="after")
     def check_required_fields(self):
@@ -109,7 +110,7 @@ def _ensure_things_running():
             _error_result("Unable to launch Things app")
 
 
-def _prefetch_titles(task_ids: List[str]) -> dict:
+def _prefetch_titles(task_ids: list[str]) -> dict:
     """Pre-fetch task titles for result messages. Returns {uuid: title}."""
     titles = {}
     for tid in task_ids:
@@ -135,10 +136,9 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_capture(
-        items: List[CaptureItem] = Field(..., min_length=1, max_length=50),
-        default_when: Optional[
-            Literal["today", "tomorrow", "evening", "anytime", "someday"]
-        ] = None,
+        items: list[CaptureItem] = Field(..., min_length=1, max_length=50),
+        default_when: Literal["today", "tomorrow", "evening", "anytime", "someday"]
+        | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Create multiple inbox items in one call. Batch version of capture-task.
@@ -147,7 +147,7 @@ def register_batch_tools(mcp: FastMCP):
         Use when: Capturing multiple items at once (meeting notes, braindump, etc.)
 
         Args:
-            items: List of items to capture (1-50). Each has title (required), notes, when, tags, deadline.
+            items: List of items to capture (1-50). Each has title (required), notes, when, tags, deadline, checklist.
             default_when: Default schedule for items without an explicit 'when' value.
         """
         if ctx:
@@ -184,6 +184,7 @@ def register_batch_tools(mcp: FastMCP):
                     when=effective_when,
                     deadline=item.deadline,
                     tags=item.tags,
+                    checklist_items=item.checklist,
                 )
                 todo_objects.append(todo_obj)
 
@@ -227,6 +228,7 @@ def register_batch_tools(mcp: FastMCP):
                     tags=item.tags,
                     when=item.when or default_when,
                     deadline=item.deadline,
+                    checklist=item.checklist,
                 )
                 thing_ids.append(row["uuid"] if row else None)
                 if rb.get("unapplied"):
@@ -273,7 +275,7 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_complete(
-        task_ids: List[str] = Field(..., min_length=1, max_length=50),
+        task_ids: list[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Mark multiple tasks complete in one call. Batch version of complete-task.
@@ -362,7 +364,7 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_cancel(
-        task_ids: List[str] = Field(..., min_length=1, max_length=50),
+        task_ids: list[str] = Field(..., min_length=1, max_length=50),
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Cancel multiple tasks in one call. Batch version of modify-task(canceled=True).
@@ -449,11 +451,11 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_modify(
-        task_ids: List[str] = Field(..., min_length=1, max_length=50),
-        when: Optional[str] = None,
-        add_tags: Optional[List[str]] = None,
-        project: Optional[str] = None,
-        area: Optional[str] = None,
+        task_ids: list[str] = Field(..., min_length=1, max_length=50),
+        when: str | None = None,
+        add_tags: list[str] | None = None,
+        project: str | None = None,
+        area: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Apply the same modification to multiple tasks. Batch version of modify-task.
@@ -572,7 +574,7 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_triage(
-        decisions: List[TriageDecision] = Field(..., min_length=1, max_length=100),
+        decisions: list[TriageDecision] = Field(..., min_length=1, max_length=100),
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Process multiple inbox decisions in one call. Use after process-inbox(all=True).

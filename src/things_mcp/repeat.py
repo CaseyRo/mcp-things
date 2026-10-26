@@ -27,7 +27,7 @@ import threading
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 from .logging_config import get_logger
 
@@ -124,7 +124,7 @@ def _add_months(d: date, months: int) -> date:
     return date(y, m, min(d.day, calendar.monthrange(y, m)[1]))
 
 
-def _in_month(rule: Rule, y: int, m: int) -> Optional[date]:
+def _in_month(rule: Rule, y: int, m: int) -> date | None:
     last = calendar.monthrange(y, m)[1]
     if rule.kind == "monthday":
         return date(y, m, last if rule.n == -1 else min(rule.n, last))
@@ -162,7 +162,7 @@ def next_date(rule: Rule, after: date) -> date:
 # -- notes marker -------------------------------------------------------------
 
 
-def rule_in(notes: Optional[str]) -> Optional[Rule]:
+def rule_in(notes: str | None) -> Rule | None:
     """The server-side rule carried in ``notes``, if any."""
     m = _MARKER_RE.search(notes or "")
     if not m:
@@ -173,7 +173,7 @@ def rule_in(notes: Optional[str]) -> Optional[Rule]:
         return None
 
 
-def with_rule(notes: Optional[str], rule: Optional[Rule]) -> str:
+def with_rule(notes: str | None, rule: Rule | None) -> str:
     """``notes`` with its repeat line replaced by ``rule`` (or removed)."""
     base = _MARKER_LINE_RE.sub("", notes or "").rstrip()
     if rule is None:
@@ -188,7 +188,7 @@ def with_rule(notes: Optional[str], rule: Optional[Rule]) -> str:
 # -- next occurrence ----------------------------------------------------------
 
 
-def _day(value: Any) -> Optional[date]:
+def _day(value: Any) -> date | None:
     return date.fromisoformat(str(value)[:10]) if value else None
 
 
@@ -232,7 +232,7 @@ def plan_next(row: dict[str, Any], rule: Rule) -> dict[str, Any]:
 _lock = threading.Lock()
 
 
-def _load(path: Path) -> Optional[dict[str, Any]]:
+def _load(path: Path) -> dict[str, Any] | None:
     try:
         return json.loads(path.read_text())
     except FileNotFoundError:

@@ -6,8 +6,10 @@ This version uses the modern FastMCP pattern for better maintainability.
 
 import logging
 import sys
+
 from rich.console import Console
 from rich.logging import RichHandler
+
 from src.things_mcp.fast_server import run_things_mcp_server
 from src.things_mcp.shutdown import setup_interrupt_handler
 

@@ -1,9 +1,9 @@
 """Gracefully handle shutdown signals."""
 
 import asyncio
+import logging
 import os
 import signal
-import logging
 
 
 def setup_interrupt_handler(logger: logging.Logger | None = None) -> None:

@@ -3,18 +3,18 @@
 These tools support the "Reflect" stage of GTD - reviewing and updating your system.
 """
 
-from . import reader as db
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
 
+from . import reader as db
 from .formatters import to_dict_todo
 from .logging_config import get_logger
 from .models import ReviewReport, ToolEnvelope, output_schema_for
+from .settings import get_dashboard_url
 from .tool_annotations import TOOL_ANNOTATIONS, tags_for
 from .tool_results import make_result
 from .triage_tracker import triage_tracker
-from .settings import get_dashboard_url
 
 logger = get_logger(__name__)
 
