@@ -1,0 +1,73 @@
+name: Bug report
+description: Something mcp-things did wrong
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Before you paste anything, remove your API key (`tmcp_…`) and your Things auth token. Task titles are only needed if the bug depends on them. [Troubleshooting](https://github.com/CaseyRo/mcp-things/blob/source/docs/troubleshooting.md) covers the common problems.
+  - type: dropdown
+    id: client
+    attributes:
+      label: Which client?
+      options:
+        - Claude Desktop
+        - Claude Code
+        - ChatGPT
+        - n8n
+        - Node-RED
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: The tool that misbehaved, if you know it.
+      placeholder: capture-task
+  - type: input
+    id: version
+    attributes:
+      label: mcp-things version
+      description: Run `git describe --tags` in your checkout.
+      placeholder: v2.1.30
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: macOS and Things version
+      placeholder: macOS 26.1, Things 3.22
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Ask the assistant to …
+        2. …
+  - type: textarea
+    id: log
+    attributes:
+      label: Server log
+      description: The last 50 lines of the server's stderr. Tool calls log name, duration and outcome, never your task content.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: "`curl http://127.0.0.1:8009/health` answers"
+        - label: I removed API keys and tokens
+          required: true

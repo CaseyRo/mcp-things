@@ -1,0 +1,44 @@
+name: Client compatibility
+description: A client can't list or call the tools
+labels: ["client-compat", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Each client validates tool schemas differently. The exact error text is the most useful thing you can give. Known quirks are in [docs/clients](https://github.com/CaseyRo/mcp-things/tree/source/docs/clients).
+  - type: input
+    id: client
+    attributes:
+      label: Client and version
+      placeholder: n8n 1.98, MCP Client Tool node
+    validations:
+      required: true
+  - type: dropdown
+    id: reach
+    attributes:
+      label: How does the client reach the server?
+      options:
+        - Directly on 127.0.0.1
+        - Through a tunnel or proxy
+        - Through mcp-remote
+        - Other
+  - type: textarea
+    id: error
+    attributes:
+      label: Error text
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: tool
+    attributes:
+      label: Which tool, and the arguments sent
+      description: If the client shows the raw request.
+  - type: input
+    id: version
+    attributes:
+      label: mcp-things version
+      description: Run `git describe --tags` in your checkout.
+      placeholder: v2.1.30
+    validations:
+      required: true

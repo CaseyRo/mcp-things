@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/CaseyRo/mcp-things/discussions/categories/q-a
+    about: Ask in Discussions; answers there help the next person too.
+  - name: Report a security vulnerability
+    url: https://github.com/CaseyRo/mcp-things/security/advisories/new
+    about: Please report privately, not in a public issue.
