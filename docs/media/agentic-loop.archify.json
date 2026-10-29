@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "A to-do that does itself: Things, mcp-things and an agent session",
+    "output": "docs/media/agentic-loop.html",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "phone",
+      "type": "external",
+      "icon": "person",
+      "label": "iPhone \u00b7 Watch",
+      "sublabel": "capture a to-do",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "things-cloud",
+      "type": "cloud",
+      "label": "Things Cloud",
+      "sublabel": "sync",
+      "pos": [
+        290,
+        40
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "things-mac",
+      "type": "frontend",
+      "label": "Things 3",
+      "sublabel": "always-on Mac",
+      "pos": [
+        580,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "mcp-things",
+      "type": "backend",
+      "label": "mcp-things",
+      "sublabel": "reads SQLite \u00b7 writes things:///",
+      "tag": "32 GTD tools",
+      "pos": [
+        910,
+        40
+      ],
+      "size": [
+        210,
+        64
+      ]
+    },
+    {
+      "id": "clients",
+      "type": "external",
+      "label": "MCP clients",
+      "sublabel": "Claude \u00b7 ChatGPT \u00b7 n8n",
+      "pos": [
+        1250,
+        40
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "trigger",
+      "type": "backend",
+      "icon": "clock",
+      "label": "Session trigger",
+      "sublabel": "tag claude + repo, When date",
+      "tag": "launchd \u00b7 60 s",
+      "pos": [
+        580,
+        250
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "session",
+      "type": "backend",
+      "icon": "active",
+      "label": "Claude Code session",
+      "sublabel": "in the tagged repo",
+      "tag": "plan mode first",
+      "pos": [
+        910,
+        250
+      ],
+      "size": [
+        210,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Always-on Mac",
+      "wraps": [
+        "things-mac",
+        "mcp-things",
+        "trigger",
+        "session"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "capture",
+      "from": "phone",
+      "to": "things-cloud",
+      "label": "capture",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sync",
+      "from": "things-cloud",
+      "to": "things-mac",
+      "label": "sync, both ways"
+    },
+    {
+      "id": "poll",
+      "from": "trigger",
+      "to": "things-mac",
+      "label": "poll \u00b7 started \u00b7 complete"
+    },
+    {
+      "id": "start",
+      "from": "trigger",
+      "to": "session",
+      "label": "start, watch until it ends",
+      "variant": "emphasis"
+    },
+    {
+      "id": "follow-ups",
+      "from": "session",
+      "to": "mcp-things",
+      "label": "file follow-ups",
+      "variant": "dashed"
+    },
+    {
+      "id": "read-write",
+      "from": "mcp-things",
+      "to": "things-mac",
+      "label": "read \u00b7 write"
+    },
+    {
+      "id": "mcp",
+      "from": "clients",
+      "to": "mcp-things",
+      "label": "MCP \u00b7 bearer key",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The loop",
+      "items": [
+        "Capture on the phone, tagged claude plus a repo",
+        "Within a minute a session opens in that repo",
+        "Session ends: the to-do completes and syncs back",
+        "A repeating to-do spawns its next occurrence"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Guardrails",
+      "items": [
+        "Only tagged to-dos start anything",
+        "The When date holds work until it's due",
+        "Plan mode unless the to-do says go",
+        "started tag: each to-do runs once"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Same server, any client",
+      "items": [
+        "Claude Desktop and Code in conversation",
+        "ChatGPT with strict-mode schemas",
+        "n8n and Node-RED on a schedule"
+      ]
+    }
+  ]
+}

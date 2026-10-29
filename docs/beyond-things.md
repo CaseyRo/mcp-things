@@ -30,7 +30,9 @@ The pattern the author runs every day:
    next occurrence, which is how scheduled routines run.
 7. Your phone shows it done.
 
-<!-- DEMO 2: the agentic loop diagram -->
+![A to-do captured on the phone syncs to Things on the Mac; a trigger starts a Claude Code session in the tagged repo; the session files follow-ups through mcp-things; the trigger completes the to-do when the session ends](media/agentic-loop.gif)
+
+*Static, theme-aware version: [SVG](media/agentic-loop.svg) · [WebM](media/agentic-loop.webm). Drawn with Archify; source: [agentic-loop.archify.json](media/agentic-loop.archify.json).*
 
 The trigger is not part of the server. A runnable version, with plan mode as the
 default and a test for its decision logic, is in
