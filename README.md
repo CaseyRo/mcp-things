@@ -131,7 +131,7 @@ Every tool returns readable text plus a typed JSON envelope (`data`, `summary`, 
 
 ## More than a Things remote
 
-A to-do can start work on its own. Tag it for an agent and a repository, and a small trigger opens a coding session in that repo, does the job and ticks the to-do off when the session ends; the session can file its own follow-ups through this server. Because the Things apps are native and fast on the Mac, iPhone, iPad and Watch, they are where commitments actually get written down, which makes Things a good centre for a personal operating system with agents at the edges.
+A to-do can start work on its own. Tag it for an agent and a repository, and a small trigger opens a coding session in that repo, does the job and ticks the to-do off when the session ends; the session can file its own follow-ups through this server. Because the Things apps are native and fast on the Mac, iPhone, iPad and Watch, they are where commitments actually get written down, which makes Things a good centre for a personal operating system with agents at the edges. More on that in [My best work happened in the bathtub](https://casey.berlin/writings/2026/11/my-best-work-happened-in-the-bathtub/).
 
 ![A to-do captured on the phone starts a Claude Code session in the tagged repo and completes when the session ends](docs/media/agentic-loop.gif)
 

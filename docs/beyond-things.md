@@ -56,4 +56,4 @@ Because the apps are native and fast, they actually get used, and because they
 get used, they are the most accurate picture of your work you have. mcp-things
 turns that picture into something agents can read and act on.
 
-<!-- BLOG: link the "Things as an operating system" post on casey.berlin/writings once it is live -->
+The longer story, and how this fits with notes, mail and calendar: [My best work happened in the bathtub](https://casey.berlin/writings/2026/11/my-best-work-happened-in-the-bathtub/).
