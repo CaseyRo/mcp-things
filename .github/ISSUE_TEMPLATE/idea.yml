@@ -1,0 +1,38 @@
+name: Idea
+description: Something an assistant should be able to do in Things
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas framed as a situation work best: what you were trying to get done, and where the assistant fell short. Open-ended thoughts fit [Discussions](https://github.com/CaseyRo/mcp-things/discussions) too.
+  - type: dropdown
+    id: stage
+    attributes:
+      label: GTD stage
+      options:
+        - Capture
+        - Clarify
+        - Organize
+        - Reflect
+        - Engage
+        - Beyond Things (automations, agents)
+    validations:
+      required: true
+  - type: textarea
+    id: situation
+    attributes:
+      label: The situation
+      placeholder: During my weekly review I wanted to …
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: What should the assistant be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: How do you work around it today?
