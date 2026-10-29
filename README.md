@@ -4,7 +4,9 @@ Let Claude, ChatGPT, n8n or any other MCP client work in your [Things 3](https:/
 
 For Things 3 users on a Mac. This repository is a fork of [excelsier/things-fastmcp](https://github.com/excelsier/things-fastmcp), itself based on [hald/things-mcp](https://github.com/hald/things-mcp); see [History](#history).
 
-<!-- DEMO: create, edit and cancel a to-do, Claude Desktop beside Things -->
+![Claude Desktop creates, edits and cancels a to-do while Things updates beside it](docs/media/demo.gif)
+
+*Claude Desktop (left) and Things 3 (right), one real take. The stopwatch shows real time from each prompt until Things changes; the long wait in step 1 is played at 4×. [MP4 version](docs/media/demo.mp4).*
 
 > **Proven at scale.** In a single June 2026 session this server drove a full top-to-bottom cleanup of a 350+ item Things database: 109 completions, 36 cancellations and bulk-routing reference material to other tools. Across ~150 mutating calls, including 50-item `bulk-complete` / `bulk-cancel` batches, every write landed; the one transient HTTP 502 recovered on an identical retry.
 
