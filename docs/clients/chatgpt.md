@@ -135,7 +135,7 @@ def _make_all_fields_required(schema: dict) -> dict:
 Invalid schema: anyOf is not supported in strict mode
 ```
 
-**Solution:** Flatten `anyOf` constructs to JSON Schema type arrays. This is the same solution we use for n8n compatibility - see `docs/n8n-fastmcp-compatibility.md`.
+**Solution:** Flatten `anyOf` constructs to JSON Schema type arrays. This is the same solution we use for n8n compatibility - see [n8n.md](n8n.md).
 
 ## Complete Transformation Pipeline
 
@@ -221,4 +221,4 @@ Document the differences between MCP spec schemas and what various clients actua
 
 ## See Also
 
-- `docs/n8n-fastmcp-compatibility.md` - n8n-specific compatibility (anyOf flattening, parameter stripping)
+- [n8n.md](n8n.md) - n8n-specific compatibility (anyOf flattening, parameter stripping)

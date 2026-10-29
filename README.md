@@ -1,112 +1,39 @@
 # Things 3 GTD MCP Server
 
-A **Model Context Protocol (MCP) server** for [Things 3](https://culturedcode.com/things/) that brings GTD (Getting Things Done) methodology to AI assistants. It is for Things 3 users on a Mac who want Claude, ChatGPT, n8n or any other MCP client to capture, organize and review their tasks.
+Let Claude, ChatGPT, n8n or any other MCP client work in your [Things 3](https://culturedcode.com/things/) the way GTD intends: capture, clarify, organize, review and engage. 32 tools, built around how an assistant thinks about tasks rather than how the database is shaped.
 
-This repository is a fork of [excelsier/things-fastmcp](https://github.com/excelsier/things-fastmcp) by Yaroslav Krempovych, which is itself based on [hald/things-mcp](https://github.com/hald/things-mcp) by Harald Lindstrøm. See [History](#history) and [Credits](#credits).
+For Things 3 users on a Mac. This repository is a fork of [excelsier/things-fastmcp](https://github.com/excelsier/things-fastmcp), itself based on [hald/things-mcp](https://github.com/hald/things-mcp); see [History](#history).
+
+![Claude Desktop creates, edits and cancels a to-do while Things updates beside it](docs/media/demo.gif)
+
+*One real take: Claude Desktop creates, edits and cancels a to-do while Things 3 updates beside it. The stopwatch shows real time from each prompt until Things changes; longer waits play at 4×. [MP4 version](docs/media/demo.mp4).*
+
+> **Proven at scale.** In a single June 2026 session this server drove a full top-to-bottom cleanup of a 350+ item Things database: 109 completions, 36 cancellations and bulk-routing reference material to other tools. Across ~150 mutating calls, including 50-item `bulk-complete` / `bulk-cancel` batches, every write landed; the one transient HTTP 502 recovered on an identical retry.
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/caseyberlin)
 
-## Installation
+## Quick start
 
-Not published to PyPI (dropped 2026-06). Install from source; see [Quick Start](#quick-start).
-
-> **Note:** Review the [Privacy Notice](PRIVACY.md) and [Terms of Use](TERMS_OF_USE.md) before installation.
-
-## What Is This?
-
-This MCP server enables AI assistants like Claude to manage your tasks in Things 3 using natural language. But more than just a task API, it's designed around David Allen's **GTD methodology** — helping you capture, clarify, organize, reflect, and engage with your work the way GTD intended.
-
-> **Proven at scale.** In a single June 2026 session this server drove a full top-to-bottom cleanup of a 350+ item Things database — classifying every project and task, then executing 109 completions, 36 cancellations, and bulk-routing reference material out to other tools. Across ~150 mutating calls (including 50-item `bulk-complete` / `bulk-cancel` batches) every write landed, with the lone transient HTTP 502 recovering cleanly on an identical retry.
-
-### The Vision
-
-> "Your head's a crappy office." — David Allen
-
-The goal isn't to expose database operations to an AI. It's to give AI assistants the tools to help you *practice GTD* effectively:
-
-- **Capture** thoughts quickly without organizing
-- **Clarify** inbox items with GTD decision guidance
-- **Organize** tasks by context, energy, and time available
-- **Reflect** with daily and weekly reviews that surface stalled projects
-- **Engage** by finding the right task for your current context
-
-![GTD Health Dashboard Demo](docs/images/dashboard-demo.gif)
-
-## History
-
-This project evolved through several stages:
-
-1. **[things-mcp](https://github.com/hald/things-mcp)** by Harald Lindstrøm — Original MCP implementation exposing Things 3 operations
-2. **[things-fastmcp](https://github.com/excelsier/things-fastmcp)** by Yaroslav Krempovych: moved to the FastMCP framework with async tools, caching and reliability features (this repo's fork parent)
-3. **GTD-Native Tools** — Redesigned from REST-style CRUD operations to intent-based tools aligned with GTD's five stages
-
-The shift from "database wrapper" to "GTD assistant" reflects a key insight about MCP design: **tools should match how agents think about problems**, not how APIs are structured.
-
-## Future Direction
-
-This is an evolving experiment in GTD-native AI tooling. Potential directions:
-
-- **Smarter context detection** based on time, location, calendar
-- **GTD coaching** — proactive suggestions during reviews
-- **Multi-app GTD** — extending the pattern beyond Things 3
-
-Contributions and ideas welcome.
-
-## Quick Start
-
-### Prerequisites
-
-- **macOS** (required — uses AppleScript and URL schemes)
-- **Things 3** with scripting permissions enabled
-- **Things URL scheme token** (Things > Settings > General > Enable Things URLs), needed for write tools
-- **Python 3.12+** and the **uv** package manager
-- **FastMCP 4** (`fastmcp>=4.0.10,<5.0.0`, installed by `uv sync`)
-
-### Installation
+You need macOS, Things 3 with Things URLs enabled (Things → Settings → General), Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Clone and install
-git clone https://github.com/CaseyRo/mcp-things.git
-cd mcp-things
+git clone https://github.com/CaseyRo/mcp-things.git && cd mcp-things
 uv sync
-
-# Configure Things 3 authentication token
-uv run python scripts/configure_token.py
+uv run python scripts/configure_token.py   # stores the Things URL token, needed for writes
+uv run server                              # http://127.0.0.1:8009/mcp, prints your API key
 ```
 
-### Running
+Connect Claude Code:
 
 ```bash
-# Binds to 127.0.0.1:8009 (`uv run dev` is an alias for the same entry point)
-uv run server
+claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key" things http://127.0.0.1:8009/mcp
 ```
 
-The MCP endpoint is `http://127.0.0.1:8009/mcp` (streamable HTTP, stateless). `GET /health` and `GET /healthz` return a small JSON status document.
+Claude Desktop, ChatGPT, n8n, running under launchd and reaching the server from another machine: **[docs/setup.md](docs/setup.md)**.
 
-### Running under launchd
+> Review the [Privacy Notice](PRIVACY.md) and [Terms of Use](TERMS_OF_USE.md) before installing.
 
-The server must run as a native macOS process (not in Docker) because it drives Things through AppleScript and the Things URL scheme. To keep it running, add a LaunchAgent such as `~/Library/LaunchAgents/com.example.mcp-things.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>com.example.mcp-things</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/path/to/mcp-things/.venv/bin/server</string>
-  </array>
-  <key>WorkingDirectory</key><string>/path/to/mcp-things</string>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-</dict>
-</plist>
-```
-
-Load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.mcp-things.plist`. Settings are read from `.env` in the working directory. macOS asks for Automation access to Things the first time; the grant is tied to the Python interpreter in `.venv`, so re-grant it if you recreate the environment with a different Python.
-
-### Configuration
+## Configuration
 
 Settings come from environment variables or `.env` (see `.env.example`).
 
@@ -116,336 +43,129 @@ Settings come from environment variables or `.env` (see `.env.example`).
 | `THINGS_MCP_PORT` | `8009` | Listen port |
 | `THINGS_MCP_TRANSPORT` | `streamable-http` | Transport (the only supported value) |
 | `THINGS_AUTH_TOKEN` | empty | Things URL scheme token; required for write tools |
-| `THINGS_MCP_API_KEY` | auto-generated | Bearer token clients must send (see below) |
-| `THINGS_MCP_PUBLIC_URL` | unset | Public HTTPS URL of the server, used as the auth base URL when it sits behind a proxy |
+| `THINGS_MCP_API_KEY` | auto-generated | Bearer token clients must send |
+| `THINGS_MCP_PUBLIC_URL` | unset | Public HTTPS URL of the server, used as the auth base URL behind a proxy |
 | `THINGS_MCP_DEBUG` | `false` | Verbose console logging |
 | `THINGS_MCP_DISABLE_BACKGROUND_OSASCRIPT` | `false` | Bring Things to the foreground during AppleScript calls (debugging) |
 | `RETRY_ATTEMPTS` | `3` | Retries for failed operations (1 to 10) |
 | `RETRY_DELAY` | `1.0` | Seconds between retries |
 | `THINGSDB` | auto-detected | Path to the Things SQLite database |
 
-On first startup, the server auto-generates a secure API key and saves it to `.env`. The key is printed to the console:
+Every MCP request needs `Authorization: Bearer <THINGS_MCP_API_KEY>`. The key is generated on first start and saved to `.env`; only `/health` and `/healthz` are open.
 
-```
-  API Key: tmcp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  Configure MCP clients with: Authorization: Bearer <key>
-```
+## Why GTD-native tools
 
-### Authentication
+> "Your head's a crappy office." — David Allen
 
-All MCP endpoints require bearer token authentication (`THINGS_MCP_API_KEY`). Write operations additionally require `THINGS_AUTH_TOKEN` (Things app URL scheme token). The API key is managed automatically:
+The goal isn't to expose database operations to an AI. It's to give an assistant the tools to help you practice GTD:
 
-- **First run:** A `tmcp_`-prefixed key is generated and saved to `.env` as `THINGS_MCP_API_KEY`
-- **Subsequent runs:** The existing key is loaded from `.env`
-- **Regenerate:** Delete the `THINGS_MCP_API_KEY=` line from `.env` and restart — a new key is generated
-- **Manual set:** Set `THINGS_MCP_API_KEY=your-key` in `.env` before starting
+- **Capture** thoughts quickly without organizing
+- **Clarify** inbox items with GTD decision guidance
+- **Organize** tasks by context, energy and time available
+- **Reflect** with daily and weekly reviews that surface stalled projects
+- **Engage** by finding the right task for your current context
 
-Only the health endpoints are unauthenticated. To reach the server from another machine, keep it on loopback and put an authenticating tunnel or reverse proxy in front of it; set `THINGS_MCP_PUBLIC_URL` to its public URL.
+Tools should match how agents think about a problem, not how an API is structured. "Capture this" and "what should I do with 15 minutes at the computer?" are one call each.
 
-### Claude Desktop Integration
+## Tools
 
-First, start the server (it must be running for Claude to connect):
-
-```bash
-uv run server
-```
-
-Copy the API key from the console output, then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "things": {
-      "url": "http://127.0.0.1:8009/mcp",
-      "headers": {
-        "Authorization": "Bearer tmcp_your-key-here"
-      }
-    }
-  }
-}
-```
-
-> **Fallback:** If your Claude Desktop version doesn't support `url`, use the mcp-remote bridge:
->
-> ```json
-> {
->   "mcpServers": {
->     "things": {
->       "command": "npx",
->       "args": ["mcp-remote", "--header", "Authorization: Bearer tmcp_your-key-here", "http://127.0.0.1:8009/mcp"]
->     }
->   }
-> }
-> ```
-
-### Claude Code Integration
-
-```bash
-claude mcp add --transport http --header "Authorization: Bearer tmcp_your-key-here" things http://127.0.0.1:8009/mcp
-```
-
-## Update runbook (launchd, cc1)
-
-A merge to `source` does **not** deploy this server: launchd runs the live checkout,
-and nothing restarts it. Update by hand, and only from a clean default branch:
-
-    cd /Users/caseyromkes/dev/CDiT-infrastructure/mcp/mcp-things
-    git status --porcelain            # must print nothing
-    git branch --show-current         # must be source
-    git pull --ff-only
-    uv sync --locked                  # keeps .python-version (3.12.11): do NOT change it
-    launchctl kickstart -k gui/501/de.cdit.mcp-things
-    launchctl print gui/501/de.cdit.mcp-things | grep -E 'pid =|state ='
-    curl -s http://<cc1-tailnet-ip>:8009/health
-    tail -n 50 ~/Library/Logs/mcp-things.err.log
-
-Never `pkill -f` this server. A `pkill -f` pattern has matched and killed the live
-sibling service before. Use `launchctl kickstart` only.
-
-If a tool call **hangs** after the restart (osascript waits forever), the Things
-Automation grant has moved off the interpreter. Roll back to the previous checkout
-and restart:
-
-    git checkout <previous-sha> && uv sync --locked
-    launchctl kickstart -k gui/501/de.cdit.mcp-things
-
-## Tool response shape
-
-Every tool returns both a human-readable text block (the existing markdown formatting) and a JSON `structuredContent` envelope so MCP clients can read fields without parsing prose. The envelope is uniform across all 32 tools:
-
-```json
-{
-  "data": <typed payload | list | null>,
-  "summary": "one-sentence headline",
-  "meta": {"total_count": 12, "truncated": false, "...": "..."}
-}
-```
-
-Per-tool payload types are defined in `src/things_mcp/models.py` (`Todo`, `Project`, `Area`, `Tag`, `WriteResult`, `BulkResult`, `FocusResult`, `ReviewReport`, `TriageInsights`, …). Each tool publishes its `outputSchema` in `tools/list`, and the `ClientCompatibilityMiddleware` applies the same anyOf-flattening + ChatGPT strict-mode transforms it does to inputs.
-
-**Migration note for downstream consumers:** if you previously regex-parsed the markdown body (Things URLs, deadline dates, project titles), prefer reading from `structuredContent` going forward. The text block is preserved field-for-field for back-compat, but the JSON envelope is the supported contract.
-
-## GTD Tools
-
-The server provides **32 GTD-native tools** organized by methodology stage:
+Full parameters for every tool: **[docs/tools.md](docs/tools.md)**.
 
 ### Capture
 
 | Tool | Purpose |
 |------|---------|
-| `capture-task` | Quick capture to Inbox without organizing (optional native `checklist`) |
+| `capture-task` | Quick capture to the Inbox without organizing (optional native `checklist`) |
 
 ### Clarify
 
 | Tool | Purpose |
 |------|---------|
-| `process-inbox` | Process oldest inbox item with GTD decision guidance |
-| `convert-to-project` | Transform a task into a multi-step project |
+| `process-inbox` | Process the oldest inbox item with GTD decision guidance |
+| `convert-to-project` | Turn a task into a multi-step project |
 
 ### Organize
 
 | Tool | Purpose |
 |------|---------|
-| `schedule-task` | Create organized tasks with context, dates, projects, and an optional server-side `repeat` rule |
-| `delegate-task` | Mark task as "Waiting For" with person and follow-up |
-| `defer-task` | Move to Someday/Maybe or schedule for future date |
-| `modify-task` | Update task properties (title, notes, tags, cancel, server-side `repeat`) |
-| `modify-project` | Update project properties (title, notes, area, complete/cancel) |
-| `plan-project` | Create project with initial tasks atomically (each task may carry a `checklist`) |
-| `create-area` | Create a new area of responsibility (optionally with projects) |
+| `schedule-task` | Create an organized task with context, dates, project and an optional `repeat` rule |
+| `delegate-task` | Mark a task "Waiting For" with person and follow-up |
+| `defer-task` | Move to Someday/Maybe or schedule for a future date |
+| `modify-task` | Update title, notes, tags, dates, `repeat`; cancel |
+| `modify-project` | Update a project; complete or cancel it |
+| `plan-project` | Create a project with its first tasks in one step |
+| `create-area` | Create an area of responsibility, optionally with projects |
 | `modify-area` | Rename an area or update its tags |
-| `delete-area` | Remove an area (safety guard: blocks if loose to-dos exist) |
-| `merge-areas` | Move all contents from one area to another, then delete source |
+| `delete-area` | Remove an area (refuses while it holds loose to-dos) |
+| `merge-areas` | Move everything from one area to another, then delete the source |
 
 ### Reflect
 
 | Tool | Purpose |
 |------|---------|
-| `daily-review` | Today's tasks, overdue items/projects, inbox status |
+| `daily-review` | Today's tasks, overdue items and projects, inbox status |
 | `weekly-review` | Stalled projects, unassigned projects, waiting-for items, triage activity |
-| `triage-insights` | Analyze triage patterns and trends |
+| `triage-insights` | Patterns and trends in how you triage |
 
 ### Engage
 
 | Tool | Purpose |
 |------|---------|
-| `get-tasks` | Context-first task retrieval (replaces 7 view tools) |
-| `focus-mode` | Get single most important task for current context |
-| `complete-task` | Mark task done by ID or fuzzy title match |
+| `get-tasks` | Context-first task retrieval: view, status, context, energy, time |
+| `focus-mode` | The single most important task for your current context |
+| `complete-task` | Mark a task done by ID or fuzzy title match |
 
 ### Batch
 
-N-item versions of the singular tools for high-throughput cleanups (each returns per-item `succeeded_ids` / `failed_ids`):
-
 | Tool | Purpose |
 |------|---------|
-| `bulk-capture` | Capture many tasks to the Inbox in one call (each item may carry a `checklist`) |
+| `bulk-capture` | Capture many tasks to the Inbox in one call |
 | `bulk-complete` | Complete many tasks by ID |
 | `bulk-cancel` | Cancel many tasks by ID |
-| `bulk-modify` | Apply the same property changes to many tasks |
-| `bulk-triage` | Record triage decisions (complete/cancel/defer/delegate) across many inbox items |
+| `bulk-modify` | Apply the same changes to many tasks |
+| `bulk-triage` | Record triage decisions across many inbox items |
 
-Plus the utility tools `search-tasks`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app`, and `get-cache-stats`.
+Plus `search-tasks`, `get-projects`, `get-project`, `get-areas`, `get-area`, `get-tags`, `show-in-app` and `get-cache-stats`, the resources `things://inbox/count`, `things://today`, `things://stalled-projects`, `things://triage/stats`, `things://contexts`, `things://config`, and the prompts `weekly-review`, `process-inbox-to-zero` and `plan-project`.
 
-### Status filtering
+Every tool returns readable text plus a typed JSON envelope (`data`, `summary`, `meta`). The Things URL scheme cannot delete a to-do, so "delete" means cancel; canceled items stay in the Logbook.
 
-`get-tasks`, `search-tasks`, `get-projects` and `get-areas` share one `status`
-parameter: a list of `incomplete`, `completed`, `canceled` (a single value also
-works), default `["incomplete"]`. `get-projects(status=["completed", "canceled"])`
-finds finished or abandoned projects; on `get-areas` it filters the projects and
-tasks that `include_items` embeds, since areas have no status. On `get-tasks` the
-`view` picks the list and `status` filters within it: without `status`,
-`view="logbook"` returns completed and canceled and `view="trash"` every status.
-`include_completed` still works as a deprecated alias for
-`status=["incomplete", "completed"]` and is ignored when `status` is set.
+## More than a Things remote
 
-## Resources and Prompts
+A to-do can start work on its own. Tag it for an agent and a repository, and a small trigger opens a coding session in that repo, does the job and ticks the to-do off when the session ends; the session can file its own follow-ups through this server. Because the Things apps are native and fast on the Mac, iPhone, iPad and Watch, they are where commitments actually get written down, which makes Things a good centre for a personal operating system with agents at the edges.
 
-- Resources: `things://inbox/count`, `things://today`, `things://stalled-projects`, `things://triage/stats`, `things://contexts`, `things://config`
-- Prompts: `weekly-review`, `process-inbox-to-zero`, `plan-project`
+## Documentation
 
-## GTD Health Dashboard (disabled)
+| Page | What's in it |
+|------|--------------|
+| [Setup](docs/setup.md) | Install, run, launchd, authentication, every client, remote access |
+| [Tools](docs/tools.md) | All 32 tools with parameters, response shape, status filtering, dates and repeats |
+| [Architecture](docs/architecture.md) | How reads and writes work, read-back, why it's native, source map |
+| [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes; collecting a log |
+| [Development](docs/development.md) | Adding tools, tests, OpenSpec, CI and releases |
+| [ChatGPT](docs/clients/chatgpt.md) · [n8n](docs/clients/n8n.md) | Client-specific notes |
+| [Migration](docs/MIGRATION.md) | Moving from the old CRUD tools |
 
-`src/things_mcp/dashboard.html` is a triage-pattern dashboard (KPIs, action and category breakdowns, weekly trend). Its `/dashboard` routes are currently commented out in `fast_server.py`, so it is not served. The same triage data is available through the `triage-insights` tool and the `things://triage/stats` resource.
+## Found a bug? Missing a tool?
 
-![GTD Health Dashboard](docs/images/dashboard-full.png)
+Please [open an issue](https://github.com/CaseyRo/mcp-things/issues/new/choose). Questions and ideas are welcome in [Discussions](https://github.com/CaseyRo/mcp-things/discussions). Contributions too: start with [docs/development.md](docs/development.md).
 
-## GTD Context Tags
+## History
 
-For best results, use consistent GTD tags in Things 3:
+1. **[things-mcp](https://github.com/hald/things-mcp)** by Harald Lindstrøm: the original MCP implementation exposing Things 3 operations.
+2. **[things-fastmcp](https://github.com/excelsier/things-fastmcp)** by Yaroslav Krempovych: moved to FastMCP with async tools, caching and reliability features (this repo's fork parent).
+3. **GTD-native tools**: redesigned from REST-style CRUD operations to intent-based tools aligned with GTD's five stages.
 
-```
-Contexts: @computer, @phone, @office, @home, @errands, @anywhere
-Energy:   high-energy, low-energy
-Time:     5min, 15min, 30min, 1hr+
-Status:   waiting-for
-People:   @person-name (for agenda items)
-```
+## Thanks
 
-## Repository Structure
-
-| File/Directory | Purpose |
-|----------------|---------|
-| `README.md` | This file — project overview and quick start |
-| `docs/` | Documentation (DEVELOPERS.md, MIGRATION.md, TESTING.md, compatibility guides) |
-| `CLAUDE.md` | Guidance for AI coding agents working on this repo |
-| `openspec/` | Spec-driven development framework and change proposals |
-| `src/things_mcp/` | Main source code |
-| `tests/` | Test suite (unit + integration) |
-| `scripts/` | Utility scripts (configure_token.py, run_tests.sh, etc.) |
-| `PRIVACY.md` | Privacy notice |
-| `TERMS_OF_USE.md` | Terms of use |
-| `CHANGELOG.md` | Version history |
-
-### Key Source Files
-
-```
-src/things_mcp/
-├── fast_server.py        # Entry point, ASGI app, health endpoints
-├── server_core.py        # Server factory, client middleware, schema transforms
-├── auth.py               # Bearer token auth (BearerTokenVerifier for FastMCP)
-├── input_validation.py   # Input validation (tag names, show-in-app IDs)
-├── tools_gtd_core.py     # Engage/Capture/Clarify tools
-├── tools_gtd_organize.py # Organize stage tools
-├── tools_gtd_reflect.py  # Reflect stage tools
-├── tools_utility.py      # Utility tools (search, list, insights)
-├── triage_tracker.py     # Triage action recording and analytics
-├── dashboard.html        # GTD Health Dashboard (Cultured Code style)
-├── url_scheme.py         # Things URL scheme builders (write operations)
-├── applescript_bridge.py # AppleScript execution layer
-├── formatters.py         # Output formatting for responses
-├── cache.py              # @cached decorator for read operations
-├── utils.py              # Circuit breaker, rate limiter, helpers
-└── tag_handler.py        # Auto-creates missing tags
-```
-
-### OpenSpec
-
-This project uses **OpenSpec** for spec-driven development. The `openspec/` directory contains:
-
-- `project.md` — Project conventions and architecture
-- `changes/` — Active and archived change proposals
-
-When planning significant changes, create a proposal in `openspec/changes/<change-id>/` with design docs and requirement specs before implementation.
-
-## Development
-
-For development setup, architecture details, testing, and contribution guidelines, see **[docs/DEVELOPERS.md](docs/DEVELOPERS.md)**.
-
-Quick commands:
-
-```bash
-uv sync
-
-# Run tests (default is CI-safe: excludes Things 3 / real tests)
-uv run pytest
-
-# Run real integration tests only (Things 3 required, local/deployment)
-uv run python -m pytest tests -m real
-
-# Lint and format
-uv run ruff check . && uv run ruff format .
-```
-
-CI (`.github/workflows/ci.yml`) runs `pip-audit`, ruff and the tests as the `test` check, which is required before a pull request can merge into the default branch, `source`.
-
-## Usage Telemetry
-
-A small middleware (`src/things_mcp/usage.py`) writes one JSON line per tool call to stderr: server name, tool name, duration, outcome and MCP protocol version. It never records arguments or results. Tool failures raise `ToolError`, so they are logged with `outcome: error`.
-
-## Releases
-
-Releases are git tags only and are not published to PyPI. After a change lands on `source`, the release workflow runs the tests and a `pip-audit`, then pushes the next `v*` patch tag. No commit bumps the version in `pyproject.toml`.
-
-## Credits
-
+- **[Cultured Code](https://culturedcode.com)**, for Things 3 and native apps on every Apple device that make this worth building
 - **[Harald Lindstrøm](https://github.com/hald)**: original [things-mcp](https://github.com/hald/things-mcp)
 - **[Yaroslav Krempovych](https://github.com/excelsier)**: [things-fastmcp](https://github.com/excelsier/things-fastmcp), the upstream of this fork
-- **[Jonathan Lowin](https://github.com/jlowin)** — FastMCP framework
-- **[things.py](https://github.com/thingsapi/things.py)** — Things 3 Python library
-- **[David Allen](https://gettingthingsdone.com/)** — GTD methodology
-- **[Cultured Code](https://culturedcode.com)** — Things 3
-
-## Support
+- **[Jonathan Lowin](https://github.com/jlowin)**: FastMCP
+- **[things.py](https://github.com/thingsapi/things.py)**: the Things 3 Python library
+- **[David Allen](https://gettingthingsdone.com/)**: GTD
 
 If this server saves you time, you can [buy me a coffee](https://buymeacoffee.com/caseyberlin).
 
 ## License
 
 MIT License, see [LICENSE](LICENSE).
-
-## Links
-
-- [GitHub Issues](https://github.com/CaseyRo/mcp-things/issues)
-- [FastMCP Documentation](https://gofastmcp.com)
-- [Things 3 URL Scheme](https://culturedcode.com/things/support/articles/2803573/)
-- [GTD Methodology](https://gettingthingsdone.com/)
-
----
-
-## Removed Tools
-
-The following legacy CRUD-style tools have been removed in favor of GTD-native tools. If you were using these tools, update your code to use the replacements below:
-
-| Removed Tool | Replacement |
-|--------------|-------------|
-| `get-inbox` | `get-tasks(list_filter="inbox")` |
-| `get-today` | `get-tasks(list_filter="today")` |
-| `get-upcoming` | `get-tasks(list_filter="upcoming")` |
-| `get-anytime` | `get-tasks(list_filter="anytime")` |
-| `get-someday` | `get-tasks(list_filter="someday")` |
-| `get-logbook` | `get-tasks(list_filter="logbook")` |
-| `get-trash` | `get-tasks(list_filter="trash")` |
-| `get-todos` | `get-tasks()` |
-| `get-tagged-items` | `get-tasks(tag="tag-name")` |
-| `get-recent` | `get-tasks(list_filter="logbook")` |
-| `search-todos` | `search-tasks` |
-| `search-advanced` | `search-tasks` |
-| `search-items` | `search-tasks` |
-| `add-todo` | `capture-task` or `schedule-task` |
-| `add-project` | `plan-project` |
-| `update-todo` | `modify-task` |
-| `update-project` | `modify-project` |
-| `show-item` | `show-in-app` |
-
-**Why?** The GTD-native tools are designed around how you actually work with tasks, not database operations. Instead of "add a todo", you "capture a thought" or "schedule a task with context". This matches how AI assistants naturally think about task management.

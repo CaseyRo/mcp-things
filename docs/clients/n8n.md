@@ -180,4 +180,4 @@ See `src/things_mcp/server_core.py` for the complete implementation including:
 
 ## See Also
 
-- `docs/chatgpt-fastmcp-compatibility.md` - ChatGPT-specific compatibility (additionalProperties, required fields)
+- [chatgpt.md](chatgpt.md) - ChatGPT-specific compatibility (additionalProperties, required fields)
