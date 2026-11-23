@@ -129,6 +129,17 @@ class Todo(BaseModel):
     )
 
 
+class SweepItem(Todo):
+    """A to-do as process-inbox all=True returns it: the Todo plus where and how old."""
+
+    age_days: int | None = Field(
+        default=None, description="Whole days since `created`."
+    )
+    bucket: Literal["Inbox", "Today"] | None = Field(
+        default=None, description="Which list the item was read from."
+    )
+
+
 class Project(BaseModel):
     """A Things 3 project. `tasks` is populated only for detail views."""
 

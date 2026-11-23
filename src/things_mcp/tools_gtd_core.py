@@ -6,6 +6,7 @@ These tools form the "input" side of GTD:
 - Clarify: process-inbox, convert-to-project
 """
 
+import datetime
 import time
 from typing import Literal
 
@@ -18,7 +19,14 @@ from .cache import invalidate_caches_for
 from .formatters import render_todo, status_of, to_dict_todo
 from .input_validation import ALL_STATUSES, StatusFilter, status_list
 from .logging_config import get_logger
-from .models import FocusResult, Todo, ToolEnvelope, WriteResult, output_schema_for
+from .models import (
+    FocusResult,
+    SweepItem,
+    Todo,
+    ToolEnvelope,
+    WriteResult,
+    output_schema_for,
+)
 from .reader import read_back
 from .settings import get_dashboard_url
 from .tag_handler import ensure_tags_exist
@@ -41,6 +49,18 @@ logger = get_logger(__name__)
 def _error_result(message: str):
     """Raise a ToolError for standardized MCP error handling."""
     raise ToolError(message)
+
+
+def _age_days(created) -> int | None:
+    """Whole days from a Things `created` value ("2026-11-20 09:14:00" or ISO) to today."""
+    if not created:
+        return None
+    try:
+        return (
+            datetime.date.today() - datetime.date.fromisoformat(str(created)[:10])
+        ).days
+    except ValueError:
+        return None
 
 
 def register_gtd_core_tools(mcp: FastMCP):
@@ -713,11 +733,12 @@ def register_gtd_core_tools(mcp: FastMCP):
         annotations=TOOL_ANNOTATIONS["process-inbox"],
         tags=tags_for("process-inbox"),
         timeout=5,
-        output_schema=output_schema_for(ToolEnvelope[Todo | list[Todo]]),
+        output_schema=output_schema_for(ToolEnvelope[Todo | list[SweepItem]]),
     )
     async def process_inbox(
         all: bool = False,
         limit: int = 50,
+        include_today: bool = False,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] Process inbox items using GTD methodology.
@@ -729,11 +750,24 @@ def register_gtd_core_tools(mcp: FastMCP):
         Args:
             all: If True, return all inbox items in compact format for bulk-triage. Default: False (one item at a time).
             limit: Maximum items to return when all=True (default 50, max 200).
+            include_today: With all=True, also return the open Today items, so one
+                call sweeps both lists. Each item then carries `bucket` ("Inbox" or
+                "Today") and `age_days` (whole days since it was created).
 
         Returns the oldest inbox item with GTD decision guidance (default), or all items in compact format.
         """
         try:
             inbox_items = db.inbox()
+            if all:
+                inbox_items = [{**t, "bucket": "Inbox"} for t in inbox_items]
+                if include_today:
+                    seen = {t.get("uuid") for t in inbox_items}
+                    inbox_items += [
+                        {**t, "bucket": "Today"}
+                        for t in db.today()
+                        if t.get("uuid") not in seen
+                        and t.get("type", "to-do") == "to-do"
+                    ]
 
             if not inbox_items:
                 # Surface triage insights at inbox-zero moment
@@ -778,7 +812,8 @@ def register_gtd_core_tools(mcp: FastMCP):
                 total_count = len(inbox_items)
                 items_to_show = inbox_items[:effective_limit]
 
-                output = f"**Inbox: {total_count} items**"
+                label = "Inbox and Today" if include_today else "Inbox"
+                output = f"**{label}: {total_count} items**"
                 if total_count > effective_limit:
                     output += f" (showing first {effective_limit})"
                 output += (
@@ -803,7 +838,10 @@ def register_gtd_core_tools(mcp: FastMCP):
                     tags_str = ""
                     if item.get("tags"):
                         tags_str = f" [{', '.join(item['tags'])}]"
-                    output += f"{i}. **{title}** (`{uuid}`){tags_str}{notes_preview}\n"
+                    age = _age_days(item.get("created"))
+                    where = f"{item['bucket']}, " if include_today else ""
+                    age_str = f" ({where}{age} d)" if age is not None else ""
+                    output += f"{i}. **{title}** (`{uuid}`){age_str}{tags_str}{notes_preview}\n"
 
                 if total_count > effective_limit:
                     output += (
@@ -811,8 +849,15 @@ def register_gtd_core_tools(mcp: FastMCP):
                         "Call again with higher limit or process remaining after.*"
                     )
 
-                data = [to_dict_todo(t) for t in items_to_show]
-                summary = f"{total_count} inbox item{'s' if total_count != 1 else ''}"
+                data = [
+                    {
+                        **to_dict_todo(t),
+                        "bucket": t["bucket"],
+                        "age_days": _age_days(t.get("created")),
+                    }
+                    for t in items_to_show
+                ]
+                summary = f"{total_count} {label.lower()} item{'s' if total_count != 1 else ''}"
                 if total_count > effective_limit:
                     summary += f" (showing first {effective_limit})"
                 meta = {

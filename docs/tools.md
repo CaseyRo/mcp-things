@@ -153,6 +153,7 @@ Process inbox items using GTD methodology.
 |---|---|---|
 | `all` |  | If True, return all inbox items in compact format for bulk-triage. Default: False (one item at a time). |
 | `limit` |  | Maximum items to return when all=True (default 50, max 200). |
+| `include_today` |  | With all=True, also return the open Today items, so one call sweeps both lists. Each item then carries `bucket` ("Inbox" or "Today") and `age_days` (whole days since it was created). |
 
 ### `convert-to-project`
 
