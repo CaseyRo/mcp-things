@@ -476,7 +476,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             )
             summary = f"Focus task: {enriched.get('title', '')} ({selection_reason})"
             return make_result(
-                data=payload.model_dump(),
+                data=payload.model_dump(by_alias=True),
                 summary=summary,
                 text=output,
             )
@@ -553,7 +553,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                             acknowledged=False,
                             thing_id=None,
                             summary=summary_msg,
-                        ).model_dump(),
+                        ).model_dump(by_alias=True),
                         summary=summary_msg,
                         text=no_match,
                         meta={"index_stale": stale},
@@ -573,7 +573,7 @@ def register_gtd_core_tools(mcp: FastMCP):
                             acknowledged=False,
                             thing_id=None,
                             summary=f"Multiple tasks matched '{task_title}'.",
-                        ).model_dump(),
+                        ).model_dump(by_alias=True),
                         summary=f"Found {len(matches)} tasks matching '{task_title}'.",
                         text=text_body,
                         meta={"match_count": len(matches)},

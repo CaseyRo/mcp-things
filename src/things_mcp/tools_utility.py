@@ -511,7 +511,9 @@ def register_utility_tools(mcp: FastMCP):
 
             payload = ShowInAppResult(opened=id)
             summary = f"Opened '{id}' in Things"
-            return make_result(data=payload.model_dump(), summary=summary, text=summary)
+            return make_result(
+                data=payload.model_dump(by_alias=True), summary=summary, text=summary
+            )
 
         except ToolError:
             raise
@@ -549,7 +551,9 @@ def register_utility_tools(mcp: FastMCP):
             f"Cache: {stats['entries']} entries, "
             f"{stats['hit_rate']} hit rate over {stats['total_requests']} requests"
         )
-        return make_result(data=payload.model_dump(), summary=summary, text=text_body)
+        return make_result(
+            data=payload.model_dump(by_alias=True), summary=summary, text=text_body
+        )
 
     @mcp.tool(
         name="triage-insights",
@@ -593,7 +597,7 @@ def register_utility_tools(mcp: FastMCP):
                     "inbox items using bulk-complete, modify-task, defer-task, etc."
                 )
                 return make_result(
-                    data=empty_payload.model_dump(),
+                    data=empty_payload.model_dump(by_alias=True),
                     summary=f"No triage activity in the {period}.",
                     text=text_body,
                 )
@@ -695,7 +699,7 @@ def register_utility_tools(mcp: FastMCP):
 
             summary_line = f"{total} items triaged in the {period} ({avg}/day avg)"
             return make_result(
-                data=payload.model_dump(),
+                data=payload.model_dump(by_alias=True),
                 summary=summary_line,
                 text=text_body,
                 meta={"period_days": days},

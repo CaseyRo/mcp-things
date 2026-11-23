@@ -146,7 +146,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 f"{len(overdue)} overdue, {len(inbox or [])} inbox"
             )
             return make_result(
-                data=payload.model_dump(),
+                data=payload.model_dump(by_alias=True),
                 summary=summary,
                 text=output,
                 meta={
@@ -377,7 +377,7 @@ def register_gtd_reflect_tools(mcp: FastMCP):
                 f"{len(completed or [])} completed"
             )
             return make_result(
-                data=payload.model_dump(),
+                data=payload.model_dump(by_alias=True),
                 summary=summary,
                 text=output,
                 meta={
