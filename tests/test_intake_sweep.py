@@ -58,3 +58,14 @@ async def test_today_items_count_when_inbox_is_empty(monkeypatch, process_inbox)
         ("T1", "Today"),
         ("I1", "Today"),
     ]
+
+
+def test_output_schema_is_one_list_shape():
+    """process-inbox advertises one shape: the anyOf flattener used to keep only
+    the Todo branch of a Todo | list union, so every all=True result failed
+    validation at the Cloudflare portal (COS-279)."""
+    from things_mcp.models import SweepItem, ToolEnvelope, output_schema_for
+    from things_mcp.server_core import _flatten_anyof_for_n8n
+
+    flat = _flatten_anyof_for_n8n(output_schema_for(ToolEnvelope[list[SweepItem]]))
+    assert "array" in flat["properties"]["data"]["type"]

@@ -733,7 +733,7 @@ def register_gtd_core_tools(mcp: FastMCP):
         annotations=TOOL_ANNOTATIONS["process-inbox"],
         tags=tags_for("process-inbox"),
         timeout=5,
-        output_schema=output_schema_for(ToolEnvelope[Todo | list[SweepItem]]),
+        output_schema=output_schema_for(ToolEnvelope[list[SweepItem]]),
     )
     async def process_inbox(
         all: bool = False,
@@ -904,7 +904,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             output += "use `schedule-task` with `project=` to add it directly.*\n"
 
             return make_result(
-                data=to_dict_todo(enriched),
+                data=[to_dict_todo(enriched)],
                 summary=(
                     f"Processing inbox: {enriched.get('title', 'Untitled')} "
                     f"({remaining} remaining)"
