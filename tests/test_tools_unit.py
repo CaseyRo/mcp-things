@@ -318,8 +318,8 @@ class TestProcessInbox:
         assert "1 item remaining" in text
         assert "GTD Decision Tree" in text
         envelope = result.structured_content
-        assert envelope["data"]["uuid"] == "oldest-id"
-        assert envelope["data"]["title"] == "Oldest item"
+        assert envelope["data"][0]["uuid"] == "oldest-id"
+        assert envelope["data"][0]["title"] == "Oldest item"
         assert envelope["meta"]["remaining"] == 1
 
 

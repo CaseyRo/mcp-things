@@ -5,6 +5,7 @@ From here on, versions are git tags (`v*`), cut by the release workflow; entries
 ## Unreleased
 
 - `process-inbox` with `all=True` takes `include_today`: one call returns the Inbox and the open Today to-dos, each with `bucket` ("Inbox" or "Today") and `age_days` (whole days since created). Built for the nightly casey-os intake (COS-279).
+- fix(process-inbox): `data` is always a list (one item in the default mode). Its output schema was the union `Todo | list[Todo]`, which the anyOf flattener cut to `Todo`, so every `all=True` result failed validation at the Cloudflare portal (COS-279).
 - feat(modify-task): tick, untick, rename or remove one checklist item (`check_items`, `uncheck_items`, `rename_items`, `remove_items`), also on completed to-dos; goes through the JSON `update` and is read back; Things gives the items new UUIDs (COS-277)
 - feat(modify-task): `prepend_notes`, `completed=false` to reopen, `heading` / `heading_id`, `duplicate` (COS-277)
 - feat(bulk-complete): takes `task_title` and `completion_notes`, so it covers `complete-task`; `complete-task` is a deprecated alias and goes in the next release (COS-277)
