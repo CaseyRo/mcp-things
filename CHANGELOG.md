@@ -4,6 +4,7 @@ From here on, versions are git tags (`v*`), cut by the release workflow; entries
 
 ## Unreleased
 
+- fix: daily-review, weekly-review, focus-mode and the other payload tools dump their models by alias, so to-dos carry `list` instead of `list_label`. The output schema forbids `list_label`, and the Cloudflare portal rejected every such result with -32602 (COS-279).
 - `process-inbox` with `all=True` takes `include_today`: one call returns the Inbox and the open Today to-dos, each with `bucket` ("Inbox" or "Today") and `age_days` (whole days since created). Built for the nightly casey-os intake (COS-279).
 - fix(process-inbox): `data` is always a list (one item in the default mode). Its output schema was the union `Todo | list[Todo]`, which the anyOf flattener cut to `Todo`, so every `all=True` result failed validation at the Cloudflare portal (COS-279).
 - feat(modify-task): tick, untick, rename or remove one checklist item (`check_items`, `uncheck_items`, `rename_items`, `remove_items`), also on completed to-dos; goes through the JSON `update` and is read back; Things gives the items new UUIDs (COS-277)

@@ -69,3 +69,14 @@ def test_output_schema_is_one_list_shape():
 
     flat = _flatten_anyof_for_n8n(output_schema_for(ToolEnvelope[list[SweepItem]]))
     assert "array" in flat["properties"]["data"]["type"]
+
+
+def test_payload_dumps_use_the_list_alias():
+    """Review payloads dumped without by_alias leaked `list_label`, which the
+    output schema forbids, so the portal rejected daily-review, weekly-review
+    and focus-mode results (COS-279)."""
+    import pathlib
+
+    src = pathlib.Path(__file__).parents[1] / "src" / "things_mcp"
+    leaks = [p.name for p in src.glob("tools_*.py") if ".model_dump()" in p.read_text()]
+    assert leaks == []
