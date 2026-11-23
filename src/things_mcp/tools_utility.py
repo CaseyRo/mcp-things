@@ -590,7 +590,7 @@ def register_utility_tools(mcp: FastMCP):
                 text_body = (
                     f"No triage activity recorded in the {period}.\n\n"
                     "Triage actions are tracked automatically when you process "
-                    "inbox items using complete-task, modify-task, defer-task, etc."
+                    "inbox items using bulk-complete, modify-task, defer-task, etc."
                 )
                 return make_result(
                     data=empty_payload.model_dump(),

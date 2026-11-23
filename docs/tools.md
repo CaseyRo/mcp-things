@@ -7,10 +7,13 @@ query the Things database directly.
 - [Response shape](#response-shape)
 - [Status filtering](#status-filtering)
 - [Dates, reminders and repeats](#dates-reminders-and-repeats)
+- [Notes are Markdown](#notes-are-markdown)
+- [Checklist items](#checklist-items)
 - [Deleting things](#deleting-things)
 - [Resources and prompts](#resources-and-prompts)
 - [GTD context tags](#gtd-context-tags)
 - [Tool reference](#capture) (generated from the live schemas)
+- [Deprecated tools](#deprecated-tools)
 - [Removed tools](#removed-tools)
 
 ## Response shape
@@ -66,6 +69,32 @@ Things offers no way to create a repeat rule from outside the app. A periodic
 sweep creates the next occurrence once one is completed, including completions
 you make in the Things app. Canceling an occurrence, or deleting the line, ends
 the series.
+
+## Notes are Markdown
+
+Things renders Markdown in notes (headings, lists, `**bold**`, links, code).
+`notes`, `add_notes`, `prepend_notes`, `completion_notes` and every capture
+tool pass the text through unchanged, line breaks included, and the read tools
+return the raw Markdown as stored. Things caps notes at 10,000 characters.
+
+## Checklist items
+
+`modify-task` can change one checklist item without retyping the list:
+`check_items`, `uncheck_items`, `rename_items` (`[{"item": "2", "title":
+"New"}]`) and `remove_items`. Name an item by its 1-based position, its exact
+title, or a title fragment that matches one item; a fragment that matches
+several returns the numbered list. It also works on completed to-dos.
+
+The Things URL and AppleScript commands cannot touch a single item, so the
+server resends the whole checklist through the `json` command with each item's
+state. Things rewrites the checklist: **every item gets a new UUID**. The
+result is read back from the database; `meta.checklist_confirmed` is `false`
+if it has not shown up within about four seconds.
+
+Also on `modify-task`: `prepend_notes`, `completed=false` to reopen a completed
+or canceled to-do, `heading` / `heading_id` to move a to-do under a heading in
+its project, and `duplicate=true` to copy it first (the other changes in the
+call go to the copy).
 
 ## Deleting things
 
@@ -207,15 +236,24 @@ General task modification for updates not covered by specific tools.
 | `title` |  | New title (replaces existing) |
 | `notes` |  | New notes (replaces existing) |
 | `add_notes` |  | Notes to append (preserves existing) |
+| `prepend_notes` |  | Notes to put before the existing notes |
 | `when` |  | New schedule (today, tomorrow, evening, anytime, someday, YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it. Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30); a plain date keeps an existing reminder, anytime/someday removes it. |
 | `deadline` |  | New deadline (YYYY-MM-DD). Pass "none"/"clear"/"remove"/ "null" to clear an existing deadline. |
 | `tags` |  | New tags (replaces existing) |
 | `add_tags` |  | Tags to add (preserves existing) |
 | `checklist` |  | New checklist items (replaces existing) |
 | `add_checklist` |  | Checklist items to append (preserves existing) |
+| `check_items` |  | Checklist items to tick (position, title or fragment) |
+| `uncheck_items` |  | Checklist items to untick |
+| `rename_items` |  | Checklist items to rename, each {item, title} |
+| `remove_items` |  | Checklist items to delete |
 | `project` |  | Project name or UUID to move task to |
 | `area` |  | Area name or UUID to move task to |
+| `heading` |  | Heading title inside the task's project (or the project given in `project`) to move the task under |
+| `heading_id` |  | Heading ID; takes precedence over heading |
+| `completed` |  | false reopens a completed or canceled task; true completes it. Ignored by Things on repeating to-dos. |
 | `canceled` |  | Set to true to trash/cancel the task |
+| `duplicate` |  | Duplicate the task first; the other changes in this call go to the copy and the original stays as it was. thing_id is the original; find the copy with search-tasks. |
 | `repeat` |  | Set a SERVER-SIDE repeat rule (same grammar as schedule-task, e.g. "monthly:2nd-saturday"); the rule goes into a "🔁 repeat:" notes line and mcp-things creates the next occurrence after this one is completed. Pass "none" to stop. Rejected for to-dos that Things already repeats natively. |
 
 ### `create-area`
@@ -289,7 +327,7 @@ Get the single most important task to work on right now.
 
 ### `complete-task`
 
-Mark a task as complete.
+Deprecated: use bulk-complete, which takes task_ids or task_title and completion_notes. This alias goes in the next release.
 
 *Use when:* Finishing a task. Provide task_id if known, or task_title to search.
 
@@ -445,13 +483,15 @@ Create multiple inbox items in one call. Batch version of capture-task.
 
 ### `bulk-complete`
 
-Mark multiple tasks complete in one call. Batch version of complete-task.
+Mark one or more tasks complete. Replaces complete-task.
 
-*Use when:* Completing several tasks at once (end-of-day cleanup, batch processing).
+*Use when:* Finishing a task, or several at once (end-of-day cleanup).
 
 | Parameter | Required | Description |
 |---|---|---|
-| `task_ids` | yes | List of task UUIDs to complete (1-50). |
+| `task_ids` |  | Task UUIDs to complete (1-50). |
+| `task_title` |  | Instead of task_ids: a title fragment that matches exactly one open task. Several matches return the list. |
+| `completion_notes` |  | Notes appended to each task before completing. |
 
 ### `bulk-cancel`
 
@@ -488,6 +528,12 @@ Process multiple inbox decisions in one call. Use after process-inbox(all=True).
 | `decisions` | yes | List of triage decisions (1-100). Each has task_id, action, and action-specific fields. |
 
 <!-- /GENERATED:tools -->
+
+## Deprecated tools
+
+| Deprecated tool | Use instead | Goes in |
+|---|---|---|
+| `complete-task` | `bulk-complete(task_ids=[...])` or `bulk-complete(task_title=..., completion_notes=...)` | the next release |
 
 ## Removed tools
 

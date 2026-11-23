@@ -9,7 +9,7 @@ The `bulk-*` prefix denotes the N-item version of a singular tool:
 """
 
 import time
-from typing import Literal
+from typing import Annotated, Literal
 
 import things
 from fastmcp import Context, FastMCP
@@ -275,17 +275,28 @@ def register_batch_tools(mcp: FastMCP):
         output_schema=output_schema_for(ToolEnvelope[BulkResult]),
     )
     async def bulk_complete(
-        task_ids: list[str] = Field(..., min_length=1, max_length=50),
+        task_ids: Annotated[list[str] | None, Field(max_length=50)] = None,
+        task_title: str | None = None,
+        completion_notes: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
-        """[tasks-gtd] Mark multiple tasks complete in one call. Batch version of complete-task.
+        """[tasks-gtd] Mark one or more tasks complete. Replaces complete-task.
 
         GTD Stage: Engage
-        Use when: Completing several tasks at once (end-of-day cleanup, batch processing).
+        Use when: Finishing a task, or several at once (end-of-day cleanup).
 
         Args:
-            task_ids: List of task UUIDs to complete (1-50).
+            task_ids: Task UUIDs to complete (1-50).
+            task_title: Instead of task_ids: a title fragment that matches
+                exactly one open task. Several matches return the list.
+            completion_notes: Notes appended to each task before completing.
         """
+        if not task_ids and not task_title:
+            raise ToolError("Provide task_ids or task_title.")
+        if not task_ids:
+            from .tools_gtd_organize import _resolve_task_by_title
+
+            task_ids = [_resolve_task_by_title(task_title)]
         if ctx:
             await ctx.report_progress(
                 progress=0, total=len(task_ids), message="Completing tasks"
@@ -296,6 +307,14 @@ def register_batch_tools(mcp: FastMCP):
         try:
             _ensure_things_running()
             titles = _prefetch_titles(task_ids)
+
+            if completion_notes:
+                for tid in task_ids:
+                    execute_url(
+                        update_todo(
+                            id=tid, append_notes=f"\n[Completed] {completion_notes}"
+                        )
+                    )
 
             # Single AppleScript with UUID loop
             uuid_list = ", ".join(f'"{tid}"' for tid in task_ids)

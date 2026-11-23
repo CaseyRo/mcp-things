@@ -91,7 +91,7 @@ Full parameters for every tool: **[docs/tools.md](docs/tools.md)**.
 | `schedule-task` | Create an organized task with context, dates, project and an optional `repeat` rule |
 | `delegate-task` | Mark a task "Waiting For" with person and follow-up |
 | `defer-task` | Move to Someday/Maybe or schedule for a future date |
-| `modify-task` | Update title, notes, tags, dates, `repeat`; cancel |
+| `modify-task` | Update title, Markdown notes, tags, dates, heading, `repeat`; tick, rename or remove one checklist item; reopen, duplicate, cancel |
 | `modify-project` | Update a project; complete or cancel it |
 | `plan-project` | Create a project with its first tasks in one step |
 | `create-area` | Create an area of responsibility, optionally with projects |
@@ -113,14 +113,14 @@ Full parameters for every tool: **[docs/tools.md](docs/tools.md)**.
 |------|---------|
 | `get-tasks` | Context-first task retrieval: view, status, context, energy, time |
 | `focus-mode` | The single most important task for your current context |
-| `complete-task` | Mark a task done by ID or fuzzy title match |
+| `complete-task` | Deprecated: use `bulk-complete` |
 
 ### Batch
 
 | Tool | Purpose |
 |------|---------|
 | `bulk-capture` | Capture many tasks to the Inbox in one call |
-| `bulk-complete` | Complete many tasks by ID |
+| `bulk-complete` | Complete one or many tasks by ID, or one by fuzzy title, with optional notes |
 | `bulk-cancel` | Cancel many tasks by ID |
 | `bulk-modify` | Apply the same changes to many tasks |
 | `bulk-triage` | Record triage decisions across many inbox items |

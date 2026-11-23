@@ -96,7 +96,7 @@ INSTRUCTIONS_TEXT = (
     "- **Clarify**: `process-inbox` - Process items with GTD decision tree\n"
     "- **Organize**: `schedule-task`, `delegate-task`, `defer-task`, `plan-project`\n"
     "- **Reflect**: `daily-review`, `weekly-review` - GTD-compliant reviews\n"
-    "- **Engage**: `get-tasks`, `focus-mode`, `complete-task` - Context-first task selection\n\n"
+    "- **Engage**: `get-tasks`, `focus-mode`, `bulk-complete` - Context-first task selection\n\n"
     "**GTD Context Tags**\n"
     "Filter tasks by context: @computer, @phone, @office, @home, @errands, @anywhere\n"
     "Use `get-tasks(context='@computer')` to see what you can do at your desk.\n\n"
