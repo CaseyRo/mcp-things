@@ -3,6 +3,7 @@
 These tools handle the "Organize" stage of GTD - putting things where they belong.
 """
 
+import asyncio
 import time
 from typing import Any
 
@@ -10,6 +11,7 @@ import things
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.tools import ToolResult
+from pydantic import BaseModel, Field
 
 from .applescript_bridge import escape_applescript_string, run_applescript
 from .cache import invalidate_caches_for
@@ -26,8 +28,10 @@ from .triage_tracker import triage_tracker
 from .url_scheme import (
     add_project_with_tasks,
     add_todo,
+    build_checklist_item,
     execute_url,
     launch_things,
+    update_checklist_json,
     update_project,
     update_todo,
 )
@@ -135,6 +139,112 @@ def _resolve_task_by_title(task_title: str) -> str:
             result += f"\n...and {len(matches) - 5} more."
         _error_result(result)
     return matches[0].get("uuid")
+
+
+class ChecklistRename(BaseModel):
+    """Rename one checklist item."""
+
+    item: str = Field(description="Current item title, or its 1-based position")
+    title: str = Field(description="New title for the item")
+
+
+def _pick_item(items: list[dict[str, Any]], selector: str) -> int:
+    """Index of the checklist item a selector names: a 1-based position, an
+    exact title (case-insensitive), or a title fragment that matches one item."""
+    sel = selector.strip()
+    if sel.isdigit():
+        pos = int(sel)
+        if 1 <= pos <= len(items):
+            return pos - 1
+        _error_result(f"Checklist has {len(items)} items; there is no item {pos}.")
+    titles = [str(i.get("title", "")).strip().lower() for i in items]
+    hits = [n for n, t in enumerate(titles) if t == sel.lower()]
+    if not hits:
+        hits = [n for n, t in enumerate(titles) if sel.lower() in t]
+    if len(hits) == 1:
+        return hits[0]
+    listing = "; ".join(f"{n + 1}. {i.get('title', '')}" for n, i in enumerate(items))
+    if not hits:
+        _error_result(f"No checklist item matches '{selector}'. Items: {listing}")
+    _error_result(
+        f"'{selector}' matches {len(hits)} checklist items; pass the position. "
+        f"Items: {listing}"
+    )
+
+
+def edit_checklist(
+    current: list[dict[str, Any]],
+    check: list[str] | None = None,
+    uncheck: list[str] | None = None,
+    rename: list[ChecklistRename] | None = None,
+    remove: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Apply item edits to a checklist read from the database and return the
+    full new checklist as JSON ``checklist-item`` objects. All selectors refer
+    to the checklist as it is now, before any edit in this call."""
+    if not current:
+        _error_result("This to-do has no checklist items.")
+    state = [
+        {
+            "title": str(i.get("title", "")),
+            "completed": i.get("status") == "completed",
+            "canceled": i.get("status") == "canceled",
+        }
+        for i in current
+    ]
+    for sel in check or []:
+        state[_pick_item(current, sel)].update(completed=True, canceled=False)
+    for sel in uncheck or []:
+        state[_pick_item(current, sel)].update(completed=False, canceled=False)
+    for r in rename or []:
+        validate_name(r.title, "checklist item title")
+        state[_pick_item(current, r.item)]["title"] = r.title
+    gone = {_pick_item(current, sel) for sel in remove or []}
+    return [
+        build_checklist_item(
+            s["title"],
+            completed=s["completed"] or None,
+            canceled=s["canceled"] or None,
+        )
+        for n, s in enumerate(state)
+        if n not in gone
+    ]
+
+
+def _checklist_shape(items: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    """(title, status) pairs, comparable between a read and a JSON payload."""
+    out = []
+    for i in items:
+        if "attributes" in i:
+            a = i["attributes"]
+            status = (
+                "canceled"
+                if a.get("canceled")
+                else "completed"
+                if a.get("completed")
+                else "incomplete"
+            )
+            out.append((a["title"], status))
+        else:
+            status = i.get("status") or "incomplete"
+            out.append(
+                (i.get("title", ""), "incomplete" if status == "open" else status)
+            )
+    return out
+
+
+async def _apply_checklist(task_id: str, items: list[dict[str, Any]]) -> bool:
+    """Send the new checklist and read it back. True once the database shows it."""
+    from . import reader as db
+
+    if not execute_url(update_checklist_json(task_id, items)):
+        _error_result("Failed to update the checklist")
+    want = _checklist_shape(items)
+    for _ in range(8):  # Things commits a moment after the URL opens
+        await asyncio.sleep(0.5)
+        if _checklist_shape(db.checklist_items(task_id) or []) == want:
+            return True
+    return False
 
 
 def register_gtd_organize_tools(mcp: FastMCP):
@@ -642,23 +752,42 @@ def register_gtd_organize_tools(mcp: FastMCP):
         title: str | None = None,
         notes: str | None = None,
         add_notes: str | None = None,
+        prepend_notes: str | None = None,
         when: str | None = None,
         deadline: str | None = None,
         tags: list[str] | None = None,
         add_tags: list[str] | None = None,
         checklist: list[str] | None = None,
         add_checklist: list[str] | None = None,
+        check_items: list[str] | None = None,
+        uncheck_items: list[str] | None = None,
+        rename_items: list[ChecklistRename] | None = None,
+        remove_items: list[str] | None = None,
         project: str | None = None,
         area: str | None = None,
+        heading: str | None = None,
+        heading_id: str | None = None,
+        completed: bool | None = None,
         canceled: bool | None = None,
+        duplicate: bool | None = None,
         repeat: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
         """[tasks-gtd] General task modification for updates not covered by specific tools.
 
         GTD Stage: Organize
-        Instead use: complete-task for completing, defer-task for rescheduling,
+        Instead use: bulk-complete for completing, defer-task for rescheduling,
                      delegate-task for delegation.
+
+        Notes are Markdown: Things renders it, and notes/add_notes/prepend_notes
+        pass it through unchanged, line breaks included.
+
+        Single checklist items (check_items, uncheck_items, rename_items,
+        remove_items) name an item by its 1-based position, its exact title, or
+        a title fragment that matches one item. They work on completed to-dos
+        too. Things rewrites the whole checklist to do this, so every checklist
+        item gets a new UUID. The result is read back; meta.checklist_confirmed
+        says whether the database shows it yet.
 
         A project UUID passed as task_id is routed to modify-project (checklist
         and project moves are rejected for projects).
@@ -682,6 +811,7 @@ def register_gtd_organize_tools(mcp: FastMCP):
             title: New title (replaces existing)
             notes: New notes (replaces existing)
             add_notes: Notes to append (preserves existing)
+            prepend_notes: Notes to put before the existing notes
             when: New schedule (today, tomorrow, evening, anytime, someday,
                 YYYY-MM-DD). Pass "none"/"clear"/"remove"/"null" to clear it.
                 Add @HH:MM for a reminder at that time (2026-11-14@09:00, tomorrow@08:30);
@@ -692,9 +822,21 @@ def register_gtd_organize_tools(mcp: FastMCP):
             add_tags: Tags to add (preserves existing)
             checklist: New checklist items (replaces existing)
             add_checklist: Checklist items to append (preserves existing)
+            check_items: Checklist items to tick (position, title or fragment)
+            uncheck_items: Checklist items to untick
+            rename_items: Checklist items to rename, each {item, title}
+            remove_items: Checklist items to delete
             project: Project name or UUID to move task to
             area: Area name or UUID to move task to
+            heading: Heading title inside the task's project (or the project
+                given in `project`) to move the task under
+            heading_id: Heading ID; takes precedence over heading
+            completed: false reopens a completed or canceled task; true
+                completes it. Ignored by Things on repeating to-dos.
             canceled: Set to true to trash/cancel the task
+            duplicate: Duplicate the task first; the other changes in this call
+                go to the copy and the original stays as it was. thing_id is
+                the original; find the copy with search-tasks.
             repeat: Set a SERVER-SIDE repeat rule (same grammar as
                 schedule-task, e.g. "monthly:2nd-saturday"); the rule goes into
                 a "🔁 repeat:" notes line and mcp-things creates the next
@@ -703,6 +845,17 @@ def register_gtd_organize_tools(mcp: FastMCP):
         """
         if not task_id and not task_title:
             _error_result("Provide either task_id or task_title to identify the task.")
+
+        item_edits = bool(check_items or uncheck_items or rename_items or remove_items)
+        if item_edits and (checklist or add_checklist):
+            _error_result(
+                "Use either checklist/add_checklist or the single-item edits "
+                "(check_items, uncheck_items, rename_items, remove_items), not both."
+            )
+        if item_edits and duplicate:
+            _error_result(
+                "Single checklist item edits cannot be combined with duplicate."
+            )
 
         # Normalize clearable date fields: map clear-sentinels to "" so the
         # URL scheme emits `when=`/`deadline=` (Things clears the field).
@@ -720,21 +873,33 @@ def register_gtd_organize_tools(mcp: FastMCP):
             # silent no-op in Things. Route it to modify-project instead.
             item = things.get(task_id) or {}
             if item.get("type") == "project":
-                if checklist or add_checklist or project or repeat is not None:
+                if (
+                    checklist
+                    or add_checklist
+                    or item_edits
+                    or project
+                    or heading
+                    or heading_id
+                    or duplicate
+                    or repeat is not None
+                ):
                     _error_result(
                         f"'{task_id}' is a project, not a task: checklist, "
-                        "repeat and project moves don't apply. Use modify-project."
+                        "repeat, heading, duplicate and project moves don't "
+                        "apply. Use modify-project."
                     )
                 return await modify_project(
                     name_or_uuid=task_id,
                     title=title,
                     notes=notes,
+                    prepend_notes=prepend_notes,
                     append_notes=add_notes,
                     when=when,
                     deadline=deadline,
                     tags=tags,
                     add_tags=add_tags,
                     area=area,
+                    completed=completed,
                     canceled=canceled,
                     ctx=ctx,
                 )
@@ -773,25 +938,47 @@ def register_gtd_organize_tools(mcp: FastMCP):
             elif area:
                 list_id = resolve_list_id(area, "area")
 
-            # Build URL
-            url = update_todo(
-                id=task_id,
-                title=title,
-                notes=notes,
-                append_notes=add_notes,
-                when=when,
-                deadline=deadline,
-                tags=tags,
-                add_tags=add_tags,
-                checklist_items=checklist,
-                append_checklist_items=add_checklist,
-                list_id=list_id,
-                canceled=canceled,
-            )
+            # Build the new checklist before any write, so a bad selector
+            # changes nothing.
+            new_checklist = None
+            if item_edits:
+                from . import reader as db
 
-            success = execute_url(url)
-            if not success:
-                _error_result("Failed to update task")
+                new_checklist = edit_checklist(
+                    db.checklist_items(task_id) or [],
+                    check=check_items,
+                    uncheck=uncheck_items,
+                    rename=rename_items,
+                    remove=remove_items,
+                )
+
+            url_fields = {
+                "title": title,
+                "notes": notes,
+                "prepend_notes": prepend_notes,
+                "append_notes": add_notes,
+                "when": when,
+                "deadline": deadline,
+                "tags": tags,
+                "add_tags": add_tags,
+                "checklist_items": checklist,
+                "append_checklist_items": add_checklist,
+                "list_id": list_id,
+                "heading": heading,
+                "heading_id": heading_id,
+                "completed": completed,
+                "canceled": canceled,
+                "duplicate": duplicate,
+            }
+            # A checklist-only call skips the URL update.
+            if not item_edits or any(v is not None for v in url_fields.values()):
+                success = execute_url(update_todo(id=task_id, **url_fields))
+                if not success:
+                    _error_result("Failed to update task")
+
+            checklist_confirmed = None
+            if new_checklist is not None:
+                checklist_confirmed = await _apply_checklist(task_id, new_checklist)
 
             invalidate_caches_for(["get-tasks", "get-projects", "get-inbox"])
 
@@ -819,6 +1006,10 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 logger.debug("Triage tracking failed (non-critical)")
 
             text_body = "Task updated successfully."
+            if duplicate:
+                text_body = "Task duplicated; the changes went to the copy."
+            if completed is False or canceled is False:
+                text_body = "Task reopened."
             if canceled:
                 text_body = "Task canceled."
             elif project:
@@ -829,6 +1020,12 @@ def register_gtd_organize_tools(mcp: FastMCP):
                 text_body += f"\nRepeat: {rule.text} ({_REPEAT_DOC})."
             elif stop_repeat:
                 text_body += "\nServer-side repeat removed."
+            if checklist_confirmed is not None:
+                text_body += (
+                    "\nChecklist updated and read back."
+                    if checklist_confirmed
+                    else "\nChecklist sent; the database does not show it yet."
+                )
 
             return write_result(
                 summary="Task canceled." if canceled else "Task updated.",
@@ -841,6 +1038,8 @@ def register_gtd_organize_tools(mcp: FastMCP):
                     "moved_to_area": area,
                     "repeat": rule.text if rule else None,
                     "repeat_kind": "server-side" if repeat is not None else None,
+                    "duplicated": bool(duplicate),
+                    "checklist_confirmed": checklist_confirmed,
                 },
             )
 

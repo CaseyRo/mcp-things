@@ -110,7 +110,7 @@ TOOL_ANNOTATIONS: dict[str, types.ToolAnnotations] = {
     "get-tasks": _read_only("Get Tasks"),
     "focus-mode": _read_only("Focus Mode"),
     # complete-task is reversible in Things 3 → idempotent, not destructive.
-    "complete-task": _update("Complete Task"),
+    "complete-task": _update("Complete Task (deprecated: use bulk-complete)"),
     # === GTD Capture Tools ===
     "capture-task": _add("Capture Task"),
     # === GTD Clarify Tools ===

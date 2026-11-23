@@ -480,7 +480,8 @@ def register_gtd_core_tools(mcp: FastMCP):
         completion_notes: str | None = None,
         ctx: Context = None,
     ) -> ToolResult:
-        """[tasks-gtd] Mark a task as complete.
+        """[tasks-gtd] Deprecated: use bulk-complete, which takes task_ids or
+        task_title and completion_notes. This alias goes in the next release.
 
         GTD Stage: Engage
         Use when: Finishing a task. Provide task_id if known, or task_title to search.
@@ -603,7 +604,8 @@ def register_gtd_core_tools(mcp: FastMCP):
                 summary=summary,
                 thing_id=task_id,
                 acknowledged=True,
-                text=summary,
+                text=f"{summary}\n(complete-task is deprecated; use bulk-complete.)",
+                meta={"deprecated": "complete-task: use bulk-complete"},
             )
 
         except ToolError:
@@ -848,7 +850,7 @@ def register_gtd_core_tools(mcp: FastMCP):
             output += "   - Multi-step -> Use convert-to-project\n"
             output += "   - **Single action ->** Continue...\n\n"
             output += "3. **Can it be done in <2 minutes?**\n"
-            output += "   - Yes -> **Do it now!** Then complete-task\n"
+            output += "   - Yes -> **Do it now!** Then bulk-complete\n"
             output += "   - No, delegate -> Use delegate-task\n"
             output += "   - No, schedule -> Use schedule-task\n"
             output += (

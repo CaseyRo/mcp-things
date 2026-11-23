@@ -2,6 +2,13 @@
 
 From here on, versions are git tags (`v*`), cut by the release workflow; entries below this line are the last committed bumps.
 
+## Unreleased
+
+- feat(modify-task): tick, untick, rename or remove one checklist item (`check_items`, `uncheck_items`, `rename_items`, `remove_items`), also on completed to-dos; goes through the JSON `update` and is read back; Things gives the items new UUIDs (COS-277)
+- feat(modify-task): `prepend_notes`, `completed=false` to reopen, `heading` / `heading_id`, `duplicate` (COS-277)
+- feat(bulk-complete): takes `task_title` and `completion_notes`, so it covers `complete-task`; `complete-task` is a deprecated alias and goes in the next release (COS-277)
+- docs: notes are Markdown and pass through unchanged (COS-277)
+
 ## [2.1.15] - 2026-09-27
 
 - chore(ci): phase-0 safety net — CI job 'test', fail-closed release tests, in-memory protocol tests (#37)

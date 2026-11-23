@@ -328,6 +328,9 @@ def update_todo(
     list_id: str | None = None,
     completed: bool | None = None,
     canceled: bool | None = None,
+    heading: str | None = None,
+    heading_id: str | None = None,
+    duplicate: bool | None = None,
 ) -> str:
     """Construct URL to update an existing todo.
 
@@ -345,8 +348,11 @@ def update_todo(
         prepend_checklist_items: Items to add at beginning of checklist
         append_checklist_items: Items to add at end of checklist
         list_id: UUID of project or area to move the task to
-        completed: Mark as completed
+        completed: Mark as completed (false reopens a completed or canceled to-do)
         canceled: Mark as canceled
+        heading: Title of a heading in the to-do's project to move it under
+        heading_id: ID of that heading (takes precedence over heading)
+        duplicate: Duplicate the to-do first and apply the update to the copy
     """
     params = {
         "id": id,
@@ -366,8 +372,11 @@ def update_todo(
         if append_checklist_items
         else None,
         "list-id": list_id,
+        "heading": heading,
+        "heading-id": heading_id,
         "completed": completed,
         "canceled": canceled,
+        "duplicate": duplicate,
     }
     return construct_url("update", {k: v for k, v in params.items() if v is not None})
 
@@ -617,6 +626,26 @@ def construct_json_url(items: list[dict[str, Any]]) -> str:
 
     logger.debug(f"Constructed JSON URL with {len(items)} items")
     return url
+
+
+def update_checklist_json(id: str, items: list[dict[str, Any]]) -> str:
+    """JSON URL that replaces a to-do's whole checklist with ``items``.
+
+    The URL and AppleScript commands cannot change one checklist item; the
+    JSON ``update`` operation can, by resending the full list with per-item
+    ``completed``/``canceled``. Things rewrites the checklist, so every item
+    gets a new UUID.
+    """
+    return construct_json_url(
+        [
+            {
+                "type": "to-do",
+                "operation": "update",
+                "id": id,
+                "attributes": {"checklist-items": items},
+            }
+        ]
+    )
 
 
 def execute_json(items: list[dict[str, Any]]) -> bool:
